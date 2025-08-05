@@ -23,17 +23,17 @@ import { ClientRequest } from "http";
 export class PrologDebugSession extends DebugSession {
   private static SCOPEREF = 1;
   public static THREAD_ID = 100;
-  private _prologDebugger: PrologDebugger;
-  private _runtimeExecutable: string;
+  private _prologDebugger!: PrologDebugger;
+  private _runtimeExecutable!: string;
   // private _runtimeArgs: string[];
-  private _startupQuery: string;
-  private _startFile: string;
-  private _cwd: string;
-  private _stopOnEntry: boolean;
-  private _traceCmds: ITraceCmds;
+  private _startupQuery!: string;
+  private _startFile!: string;
+  private _cwd!: string;
+  private _stopOnEntry!: boolean;
+  private _traceCmds!: ITraceCmds;
   private _currentVariables: DebugProtocol.Variable[] = [];
   private _stackFrames: DebugProtocol.StackFrame[] = [];
-  private _debugging: boolean;
+  private _debugging!: boolean;
 
   public constructor() {
     super();
@@ -42,7 +42,7 @@ export class PrologDebugSession extends DebugSession {
     this.setDebuggerPathFormat("native");
   }
   // Implements the initialization logic for the debugger
-  protected initializeRequest(
+  protected override initializeRequest(
     response: DebugProtocol.InitializeResponse,
     args: DebugProtocol.InitializeRequestArguments
   ): void {
@@ -85,7 +85,7 @@ export class PrologDebugSession extends DebugSession {
     this.sendResponse(response);
   }
   //Handles the 'attach' request from the debugger client
-  protected attachRequest(
+  protected override attachRequest(
     response: DebugProtocol.AttachResponse,
     args: DebugProtocol.AttachRequestArguments
   ) {
@@ -108,18 +108,20 @@ export class PrologDebugSession extends DebugSession {
     column: number;
   }) {
     // Construct a new StackFrame object with information from the provided frame
-    this._stackFrames.unshift(
-      new StackFrame(
-        frame.id,
-        `(${frame.level})${frame.name}`,
-        new Source(
-          path.basename(frame.file),// Extract the base name of the file
-          frame.file
-        ),
-        this.convertDebuggerLineToClient(frame.line),// Convert debugger line to client line
-        this.convertDebuggerColumnToClient(frame.column)// Convert debugger column to client column
-      )
-    );
+    if (frame.file && frame.name) {
+      this._stackFrames.unshift(
+        new StackFrame(
+          frame.id,
+          `(${frame.level})${frame.name}`,
+          new Source(
+            path.basename(frame.file),// Extract the base name of the file
+            frame.file
+          ),
+          this.convertDebuggerLineToClient(frame.line),// Convert debugger line to client line
+          this.convertDebuggerColumnToClient(frame.column)// Convert debugger column to client column
+        )
+      );
+    }
   }
 
   //Sets the current variables in the debugger session
@@ -127,12 +129,15 @@ export class PrologDebugSession extends DebugSession {
     this._currentVariables = [];// Clear existing variables in _currentVariables array
     // Pop elements from the provided vars array and push them into _currentVariables
     while (vars.length > 0) {
-      this._currentVariables.push({ ...vars.pop(), variablesReference: 0 });
+      const variable = vars.pop();
+      if (variable && variable.name) {
+        this._currentVariables.push({ ...variable, variablesReference: 0 });
+      }
     }
   }
 
   // Handles the 'launch' request from the debugger client
-  protected launchRequest(
+  protected override launchRequest(
     response: DebugProtocol.LaunchResponse,
     args: DebugProtocol.LaunchRequestArguments,
     request?: DebugProtocol.Request
@@ -140,12 +145,12 @@ export class PrologDebugSession extends DebugSession {
     let richArgs = args as LaunchRequestArguments;// Cast arguments to LaunchRequestArguments for access to specific properties
     // Set various parameters from the launch arguments or use defaults
     this._startupQuery = richArgs.startupQuery || "start";
-    this._startFile = path.resolve(richArgs.program);
+    this._startFile = richArgs.program ? path.resolve(richArgs.program) : "";
     this._cwd = richArgs.cwd;
     this._runtimeExecutable = richArgs.runtimeExecutable || "swipl";
     // this._runtimeArgs = args.runtimeArgs || null;
-    this._stopOnEntry = typeof richArgs.stopOnEntry ? richArgs.stopOnEntry : true;
-    this._traceCmds = richArgs.traceCmds;
+    this._stopOnEntry = typeof richArgs.stopOnEntry === 'boolean' ? richArgs.stopOnEntry : true;
+    this._traceCmds = richArgs.traceCmds || {} as ITraceCmds;
     this._prologDebugger = new PrologDebugger(richArgs, this);// Initialize the Prolog debugger
     // Add listeners for breakpoint responses
     this._prologDebugger.addListener(
@@ -165,7 +170,7 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'threads' request from the debugger client
-  protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
+  protected override threadsRequest(response: DebugProtocol.ThreadsResponse): void {
     // Configure the response body with information about the threads
     response.body = {
       threads: [new Thread(PrologDebugSession.THREAD_ID, "thread 1")]
@@ -174,7 +179,7 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'setBreakpoints' request from the debugger client
-  protected setBreakPointsRequest(
+  protected override setBreakPointsRequest(
     response: DebugProtocol.SetBreakpointsResponse,
     args: DebugProtocol.SetBreakpointsArguments
   ) {
@@ -190,7 +195,7 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'setExceptionBreakpoints' request from the debugger client
-  protected setExceptionBreakPointsRequest(
+  protected override setExceptionBreakPointsRequest(
     response: DebugProtocol.SetExceptionBreakpointsResponse,
     args: DebugProtocol.SetExceptionBreakpointsArguments
   ): void {
@@ -199,26 +204,32 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'setFunctionBreakpoints' request from the debugger client
-  protected setFunctionBreakPointsRequest(
+  protected override setFunctionBreakPointsRequest(
     response: DebugProtocol.SetFunctionBreakpointsResponse,
     args: DebugProtocol.SetFunctionBreakpointsArguments
   ): void {
     // Delegate the task of setting function breakpoints to the Prolog debugger
-    this._prologDebugger.setFunctionBreakpoints(args, response);
+    if (this._prologDebugger) {
+      this._prologDebugger.setFunctionBreakpoints(args, response);
+    }
   }
 
   // Handles the 'configurationDone' request from the debugger client
-  protected configurationDoneRequest(
+  protected override configurationDoneRequest(
     response: DebugProtocol.ConfigurationDoneResponse,
     args: DebugProtocol.ConfigurationDoneArguments
   ): void {
     this.sendResponse(response);// Send a response back to the client
-    this._prologDebugger.startup(`${this._startupQuery}`);// Start the Prolog debugger and execute startup commands
-    // If not stopping on entry, continue the execution
-    if (!this._stopOnEntry) {
-      this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`);
+    if (this._prologDebugger) {
+      this._prologDebugger.startup(`${this._startupQuery}`);// Start the Prolog debugger and execute startup commands
+      // If not stopping on entry, continue the execution
+      if (!this._stopOnEntry && this._traceCmds?.continue?.[1]) {
+        this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`);
+      }
+      if (this._traceCmds?.stepinto?.[1]) {
+        this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`);// Issue a step into command to initiate the debugging process
+      }
     }
-    this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`);// Issue a step into command to initiate the debugging process
     this._debugging = true;// Set the debugging flag to true
   }
 
@@ -228,15 +239,15 @@ export class PrologDebugSession extends DebugSession {
     // Iterate through the current variables
     for (let i = 0; i < vars.length; i++) {
       // Check if the variable name matches the provided expression
-      if (vars[i].name === exp) {
-        return vars[i].value;// Return the value of the variable
+      if (vars[i]?.name === exp) {
+        return vars[i]?.value;// Return the value of the variable
       }
     }
     return null;// Return null if the variable is not found
   }
 
   // Handles the 'evaluate' request from the debugger client
-  protected evaluateRequest(
+  protected override evaluateRequest(
     response: DebugProtocol.EvaluateResponse,
     args: DebugProtocol.EvaluateArguments
   ): void {
@@ -260,8 +271,10 @@ export class PrologDebugSession extends DebugSession {
         } else {
           // Replace variable references in the expression with their values
           for (let i = 0; i < vars.length; i++) {
-            let re = new RegExp("\\b" + vars[i].name + "\\b", "g");
-            exp = exp.replace(re, vars[i].value);
+            if (vars[i]?.name && vars[i]?.value) {
+              let re = new RegExp("\\b" + vars[i].name + "\\b", "g");
+              exp = exp.replace(re, vars[i].value || '');
+            }
           }
           this.debugOutput(args.expression);
           this.evaluate(exp);// Evaluate the modified expression
@@ -274,7 +287,7 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'stackTrace' request from the debugger client
-  protected stackTraceRequest(
+  protected override stackTraceRequest(
     response: DebugProtocol.StackTraceResponse,
     args: DebugProtocol.StackTraceArguments
   ): void {
@@ -286,14 +299,17 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'variables' request from the debugger client
-  protected variablesRequest(
+  protected override variablesRequest(
     response: DebugProtocol.VariablesResponse,
     args: DebugProtocol.VariablesArguments
   ): void {
     const variables = new Array<DebugProtocol.Variable>();
     // Copy variables from _currentVariables to the response
     for (let i = 0; i < this._currentVariables.length; i++) {
-      variables.push(this._currentVariables[i]);
+      const variable = this._currentVariables[i];
+      if (variable) {
+        variables.push(variable);
+      }
     }
     // Configure the response body with information about the variables
     response.body = {
@@ -303,7 +319,7 @@ export class PrologDebugSession extends DebugSession {
   }
 
   //Handles the 'scopes' request from the debugger client
-  protected scopesRequest(
+  protected override scopesRequest(
     response: DebugProtocol.ScopesResponse,
     args: DebugProtocol.ScopesArguments
   ): void {
@@ -317,55 +333,67 @@ export class PrologDebugSession extends DebugSession {
   }
 
   // Handles the 'continue' request from the debugger client
-  protected continueRequest(
+  protected override continueRequest(
     response: DebugProtocol.ContinueResponse,
     args: DebugProtocol.ContinueArguments
   ): void {
 
-    this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`);// Send a continue command to the Prolog debugger
+    if (this._prologDebugger && this._traceCmds?.continue?.[1]) {
+      this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`);// Send a continue command to the Prolog debugger
+    }
     this.sendResponse(response);// Send the continue response back to the client
   }
 
   // Handles the 'next' request from the debugger client
-  protected nextRequest(
+  protected override nextRequest(
     response: DebugProtocol.NextResponse,
     args: DebugProtocol.NextArguments
   ): void {
-    this._prologDebugger.query(`cmd:${this._traceCmds.stepover[1]}\n`);// Send a step-over command to the Prolog debugger
+    if (this._prologDebugger && this._traceCmds?.stepover?.[1]) {
+      this._prologDebugger.query(`cmd:${this._traceCmds.stepover[1]}\n`);// Send a step-over command to the Prolog debugger
+    }
     this.sendResponse(response);// Send the next response back to the client
   }
 
   // Handles the 'stepIn' request from the debugger client
-  protected stepInRequest(
+  protected override stepInRequest(
     response: DebugProtocol.StepInResponse,
     args: DebugProtocol.StepInArguments
   ): void {
-    this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`);// Send a step-into command to the Prolog debugger
+    if (this._prologDebugger && this._traceCmds?.stepinto?.[1]) {
+      this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`);// Send a step-into command to the Prolog debugger
+    }
     this.sendResponse(response);// Send the step-in response back to the client
   }
 
   // Handles the 'stepOut' request from the debugger client
-  protected stepOutRequest(
+  protected override stepOutRequest(
     response: DebugProtocol.StepOutResponse,
     args: DebugProtocol.StepOutArguments
   ): void {
-    this._prologDebugger.query(`cmd:${this._traceCmds.stepout[1]}\n`);// Send a step-out command to the Prolog debugger
+    if (this._prologDebugger && this._traceCmds?.stepout?.[1]) {
+      this._prologDebugger.query(`cmd:${this._traceCmds.stepout[1]}\n`);// Send a step-out command to the Prolog debugger
+    }
     this.sendResponse(response);// Send the step-out response back to the client
   }
 
   // Handles the 'disconnect' request from the debugger client
-  protected disconnectRequest(
+  protected override disconnectRequest(
     response: DebugProtocol.DisconnectResponse,
     args: DebugProtocol.DisconnectArguments
   ): void {
     this._debugging = false;// Mark the end of the debugging session
-    this._prologDebugger.dispose();// Dispose of the Prolog debugger
+    if (this._prologDebugger) {
+      if (this._prologDebugger) {
+        this._prologDebugger.dispose();// Dispose of the Prolog debugger
+      }
+    }
     this.shutdown();// Shutdown the debugger
     this.sendResponse(response);// Send the disconnect response back to the client
   }
 
   // Handles the 'restart' request from the debugger client
-  protected restartRequest(
+  protected override restartRequest(
     response: DebugProtocol.RestartResponse,
     args: DebugProtocol.RestartArguments
   ): void {
@@ -375,14 +403,14 @@ export class PrologDebugSession extends DebugSession {
     this.sendResponse(response);// Send the restart response back to the client
   }
   // Sends an error response back to the debugger client
-  protected sendErrorResponse(
+  protected override sendErrorResponse(
     response: DebugProtocol.Response,
     error: Error,
     dest?: ErrorDestination
   ): void;
 
   // Sends an error response back to the debugger client
-  protected sendErrorResponse(
+  protected override sendErrorResponse(
     response: DebugProtocol.Response,
     codeOrMessage: number | DebugProtocol.Message,
     format?: string,
@@ -391,7 +419,7 @@ export class PrologDebugSession extends DebugSession {
   ): void;
 
   // Sends an error response back to the debugger client
-  protected sendErrorResponse(response: DebugProtocol.Response) {
+  protected override sendErrorResponse(response: DebugProtocol.Response) {
     // Check if the second argument is an instance of Error
     if (arguments[1] instanceof Error) {
       // Extract error information from the second and third arguments
@@ -445,21 +473,21 @@ export class PrologDebugSession extends DebugSession {
     // Spawn a new process for Prolog execution
     spawn(exec, args, spawnOptions)
     // If the process has a valid PID, write input to its stdin and end the input stream
-      .on("process", proc => {
+      .on("process", (proc: any) => {
         if (proc.pid) {
           proc.stdin.write(input);
           proc.stdin.end();
         }
       })
-      .on("stdout", data => {
+      .on("stdout", (data: any) => {
         // Handle standard output by sending it as debug output
         this.debugOutput("\n" + data);
       })
-      .on("stderr", err => {
+      .on("stderr", (err: any) => {
         // Handle standard error by sending it as debug output
         this.debugOutput("\n" + err);
       })
-      .catch(err => {
+      .catch((err: any) => {
         // Handle any errors by sending the error message as debug output
         this.debugOutput(err.message);
       });

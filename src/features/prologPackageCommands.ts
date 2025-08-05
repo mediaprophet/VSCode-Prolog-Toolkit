@@ -40,8 +40,9 @@ export class PrologPackageCommands {
         default:
           return this.getHelpMessage();
       }
-    } catch (error) {
-      return `❌ Command failed: ${error}`;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return `❌ Command failed: ${errorMessage}`;
     }
   }
 
@@ -159,7 +160,7 @@ export class PrologPackageCommands {
 
       let results = `🔄 **Updating ${outdatedPacks.length} pack(s):**\n\n`;
       for (const pack of outdatedPacks) {
-        const result = await this.packageManager.updatePack(pack.name);
+        const result = await this.packageManager.updatePack(pack.name || "");
         results += `• ${pack.name}: ${result.success ? '✅' : '❌'} ${result.message}\n`;
       }
       

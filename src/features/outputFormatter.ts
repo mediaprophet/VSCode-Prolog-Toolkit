@@ -150,13 +150,15 @@ export class OutputFormatter {
     // Rows
     for (let i = 0; i < bindings.length; i++) {
       const binding = bindings[i];
-      const row = variables.map(variable => {
-        const value = binding[variable];
-        const formatted = value !== undefined ? this.formatValue(value) : '-';
-        return formatted.substring(0, 12).padEnd(12);
-      }).join(' | ');
-      
-      result += `| ${row} |\n`;
+      if (binding) {
+        const row = variables.map(variable => {
+          const value = binding[variable];
+          const formatted = value !== undefined ? this.formatValue(value) : '-';
+          return formatted.substring(0, 12).padEnd(12);
+        }).join(' | ');
+        
+        result += `| ${row} |\n`;
+      }
     }
 
     if (this.options.useCodeBlocks) {
@@ -174,25 +176,27 @@ export class OutputFormatter {
 
     for (let i = 0; i < bindings.length; i++) {
       const binding = bindings[i];
-      result += `**Solution ${i + 1}:**\n`;
-      
-      if (this.options.useCodeBlocks) {
-        result += '```prolog\n';
-      }
-
-      for (const variable of variables) {
-        const value = binding[variable];
-        if (value !== undefined) {
-          const formattedValue = this.formatValue(value);
-          result += `${variable} = ${formattedValue}\n`;
+      if (binding) {
+        result += `**Solution ${i + 1}:**\n`;
+        
+        if (this.options.useCodeBlocks) {
+          result += '```prolog\n';
         }
-      }
 
-      if (this.options.useCodeBlocks) {
-        result += '```\n';
+        for (const variable of variables) {
+          const value = binding[variable];
+          if (value !== undefined) {
+            const formattedValue = this.formatValue(value);
+            result += `${variable} = ${formattedValue}\n`;
+          }
+        }
+
+        if (this.options.useCodeBlocks) {
+          result += '```\n';
+        }
+        
+        result += '\n';
       }
-      
-      result += '\n';
     }
 
     return result;

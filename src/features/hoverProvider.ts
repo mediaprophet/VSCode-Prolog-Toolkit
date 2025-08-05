@@ -25,20 +25,20 @@ export default class PrologHoverProvider implements HoverProvider {
     doc: TextDocument,
     position: Position,
     token: CancellationToken
-  ): Hover {
-    let wordRange: Range = doc.getWordRangeAtPosition(position);// Get the range of the word at the given position
+  ): Hover | undefined {
+    let wordRange: Range | undefined = doc.getWordRangeAtPosition(position);// Get the range of the word at the given position
     // Return early if no word range is found
     if (!wordRange) {
-      return;
+      return undefined;
     }
     let pred = Utils.getPredicateUnderCursor(doc, position);// Get the predicate under the cursor using utility function
     // Return early if no predicate is found
     if (!pred) {
-      return;
+      return undefined;
     }
     // Return early if the predicate arity is less than or equal to 0
     if (pred.arity <= 0) {
-      return;
+      return undefined;
     }
     let contents= new MarkdownString("",true);// Create a MarkdownString to hold the hover contents
     // Switch based on the Prolog dialect (e.g., "swi" or "ecl")
@@ -46,6 +46,9 @@ export default class PrologHoverProvider implements HoverProvider {
       case "swi":
         // Extract module and predicate information for SWI-Prolog
         let pi = pred.pi.indexOf(":") > -1 ? pred.pi.split(":")[1] : pred.pi;
+        if (!pi) {
+          return undefined;
+        }
         let modules: string[] = Utils.getPredModules(pi);
         // Check if there are no modules associated with the predicate
         if (modules.length === 0) {
@@ -71,21 +74,28 @@ export default class PrologHoverProvider implements HoverProvider {
         break;
       case "ecl":
         // Execute a help command for ECLiPSe Prolog and append result to contents
-        let pro = cp.spawnSync(Utils.RUNTIMEPATH, ["-e", `help(${pred.pi})`]);
-        // Check if the command execution was successful
-        if (pro.status === 0) {
-          contents.appendCodeblock(pro.output
-            .toString()
-            .trim()
-            .replace(/^\W*\n/, "")
-            .replace(/\n{3,}/g, "\n\n")
-            .replace(/  +/g, "  "),"prolog")
+        if (Utils.RUNTIMEPATH) {
+          let pro = cp.spawnSync(Utils.RUNTIMEPATH, ["-e", `help(${pred.pi})`]);
+          // Check if the command execution was successful
+          if (pro.status === 0 && pro.output) {
+            const outputStr = pro.output.toString();
+            if (outputStr) {
+              contents.appendCodeblock(outputStr
+                .trim()
+                .replace(/^\W*\n/, "")
+                .replace(/\n{3,}/g, "\n\n")
+                .replace(/  +/g, "  "),"prolog");
+            }
+          } else {
+            return undefined;
+          }
         } else {
-          return;
+          return undefined;
         }
+        break;
       default:
         // Handle other Prolog dialects if needed
-        break;
+        return undefined;
     }
     // Return a new Hover instance with the contents and word range
     return new Hover(contents, wordRange);

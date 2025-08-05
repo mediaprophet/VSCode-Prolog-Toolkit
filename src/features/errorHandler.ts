@@ -200,7 +200,7 @@ export class ErrorHandler {
   /**
    * Process and format an error for display
    */
-  handleError(error: any, context?: ErrorContext): PrologError {
+  handleError(error: unknown, context?: ErrorContext): PrologError {
     const prologError = this.parseError(error, context);
     this.logError(prologError, context);
     return prologError;
@@ -209,7 +209,7 @@ export class ErrorHandler {
   /**
    * Parse various error formats into standardized PrologError
    */
-  private parseError(error: any, context?: ErrorContext): PrologError {
+  private parseError(error: unknown, context?: ErrorContext): PrologError {
     // Handle string errors
     if (typeof error === 'string') {
       return this.parseStringError(error, context);
@@ -221,18 +221,28 @@ export class ErrorHandler {
     }
 
     // Handle Prolog error terms
-    if (typeof error === 'object' && error.functor) {
-      return this.parsePrologErrorTerm(error, context);
+    if (typeof error === 'object' && error !== null && 'functor' in error) {
+      const errorTerm = error as { functor: string; args?: unknown[] };
+      if (typeof errorTerm.functor === 'string') {
+        return this.parsePrologErrorTerm({
+          functor: errorTerm.functor,
+          args: errorTerm.args || undefined
+        }, context);
+      }
     }
 
     // Handle HTTP errors
-    if (error.response || error.request) {
-      return this.parseHttpError(error, context);
+    if (typeof error === 'object' && error !== null && ('response' in error || 'request' in error)) {
+      const httpError = error as { code?: string; response?: { status: number; statusText?: string }; message?: string };
+      return this.parseHttpError(httpError, context);
     }
 
     // Handle structured errors
-    if (typeof error === 'object' && error.code) {
-      return this.parseStructuredError(error, context);
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      const structuredError = error as { code?: string; message?: string; details?: string; line?: number; column?: number; file?: string };
+      if (typeof structuredError.code === 'string') {
+        return this.parseStructuredError(structuredError, context);
+      }
     }
 
     // Fallback for unknown error types
@@ -305,7 +315,7 @@ export class ErrorHandler {
   /**
    * Parse Prolog error terms
    */
-  private parsePrologErrorTerm(errorTerm: any, context?: ErrorContext): PrologError {
+  private parsePrologErrorTerm(errorTerm: { functor: string; args?: unknown[] }, context?: ErrorContext): PrologError {
     const functor = errorTerm.functor;
     const args = errorTerm.args || [];
 
@@ -313,8 +323,8 @@ export class ErrorHandler {
       case 'error':
         if (args.length >= 1) {
           const formalError = args[0];
-          if (typeof formalError === 'object' && formalError.functor) {
-            return this.parseFormalError(formalError, context);
+          if (typeof formalError === 'object' && formalError !== null && 'functor' in formalError) {
+            return this.parseFormalError(formalError as { functor: string; args?: unknown[] }, context);
           }
         }
         break;
@@ -338,7 +348,7 @@ export class ErrorHandler {
   /**
    * Parse formal Prolog errors
    */
-  private parseFormalError(formalError: any, context?: ErrorContext): PrologError {
+  private parseFormalError(formalError: { functor: string; args?: unknown[] }, context?: ErrorContext): PrologError {
     const functor = formalError.functor;
     const args = formalError.args || [];
 
@@ -361,7 +371,7 @@ export class ErrorHandler {
   /**
    * Parse HTTP errors
    */
-  private parseHttpError(error: any, context?: ErrorContext): PrologError {
+  private parseHttpError(error: { code?: string; response?: { status: number; statusText?: string }; message?: string }, context?: ErrorContext): PrologError {
     if (error.code === 'ECONNREFUSED') {
       return this.createError('CONNECTION_FAILED', 'Connection refused', context);
     }
@@ -382,16 +392,25 @@ export class ErrorHandler {
   /**
    * Parse structured error objects
    */
-  private parseStructuredError(error: any, context?: ErrorContext): PrologError {
+  private parseStructuredError(error: { code?: string; message?: string; details?: string; line?: number; column?: number; file?: string }, context?: ErrorContext): PrologError {
     const code = error.code || 'UNKNOWN_ERROR';
     const message = error.message || 'Unknown error occurred';
     
-    return this.createError(code, message, context, {
-      details: error.details,
-      line: error.line,
-      column: error.column,
-      file: error.file
-    });
+    const additionalInfo: Partial<PrologError> = {};
+    if (error.details !== undefined) {
+      additionalInfo.details = error.details;
+    }
+    if (error.line !== undefined) {
+      additionalInfo.line = error.line;
+    }
+    if (error.column !== undefined) {
+      additionalInfo.column = error.column;
+    }
+    if (error.file !== undefined) {
+      additionalInfo.file = error.file;
+    }
+    
+    return this.createError(code, message, context, additionalInfo);
   }
 
   /**
@@ -405,33 +424,61 @@ export class ErrorHandler {
   ): PrologError {
     const template = this.errorCodes.get(code) || {};
     
-    return {
+    const result: PrologError = {
       code,
       type: template.type || 'runtime',
       message: message || template.message || 'Unknown error',
-      details: additional?.details || template.details,
-      suggestion: template.suggestion,
-      documentation: template.documentation,
-      line: additional?.line,
-      column: additional?.column,
-      file: additional?.file || context?.file,
-      context: context?.command || context?.operation,
       severity: template.severity || 'error'
     };
+
+    // Only add optional properties if they have values
+    const detailsValue = additional?.details || template.details;
+    if (detailsValue) {
+      result.details = detailsValue;
+    }
+    if (template.suggestion) {
+      result.suggestion = template.suggestion;
+    }
+    if (template.documentation) {
+      result.documentation = template.documentation;
+    }
+    if (additional?.line) {
+      result.line = additional.line;
+    }
+    if (additional?.column) {
+      result.column = additional.column;
+    }
+    const fileValue = additional?.file || context?.file;
+    if (fileValue) {
+      result.file = fileValue;
+    }
+    const contextValue = context?.command || context?.operation;
+    if (contextValue) {
+      result.context = contextValue;
+    }
+
+    return result;
   }
 
   /**
    * Create a generic error for unknown error types
    */
-  private createGenericError(error: any, context?: ErrorContext): PrologError {
-    return {
+  private createGenericError(error: unknown, context?: ErrorContext): PrologError {
+    const result: PrologError = {
       code: 'UNKNOWN_ERROR',
       type: 'runtime',
       message: typeof error === 'string' ? error : JSON.stringify(error),
       suggestion: 'This is an unexpected error. Please check the VS Code output panel for more details.',
-      context: context?.command || context?.operation,
       severity: 'error'
     };
+
+    // Only add context if it has a value
+    const contextValue = context?.command || context?.operation;
+    if (contextValue) {
+      result.context = contextValue;
+    }
+
+    return result;
   }
 
   /**
@@ -560,7 +607,7 @@ export class ErrorHandler {
   /**
    * Create user-friendly error message for common mistakes
    */
-  createUserFriendlyError(userInput: string, originalError: any): PrologError {
+  createUserFriendlyError(userInput: string, originalError: unknown): PrologError {
     const input = userInput.toLowerCase().trim();
 
     // Common beginner mistakes

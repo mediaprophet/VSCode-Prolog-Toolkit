@@ -40,7 +40,7 @@ describe('PrologBackend', function() {
         expect(responses[2]).to.have.property('status', 'ok');
         expect(responses[2]).to.have.property('doc');
         done();
-      } catch (err) {
+      } catch (err: unknown) {
         done(err);
       }
     });
@@ -63,16 +63,16 @@ describe('PrologBackend', function() {
           // This query will sleep for 2 seconds, but time_limit is set to 1s
           await backend.sendRequest('query', { goal: 'sleep(2).', timeoutMs: 2000, time_limit: 1 });
           finish(new Error('Expected timeout error, but got success'));
-        } catch (err) {
+        } catch (err: unknown) {
           try {
             expect(err).to.exist;
             // SWI-Prolog throws a time_limit_exceeded error
-            if (typeof err === 'object' && err !== null && (err.message || err.error)) {
-              const msg = err.message || err.error;
+            if (typeof err === 'object' && err !== null && ('message' in err || 'error' in err)) {
+              const msg = (err as { message?: string; error?: string }).message || (err as { message?: string; error?: string }).error;
               expect(msg).to.match(/time[_ ]limit[_ ]exceeded/i);
             }
             finish(undefined);
-          } catch (e) {
+          } catch (e: unknown) {
             finish(e);
           }
         }
@@ -83,7 +83,7 @@ describe('PrologBackend', function() {
   it('[7] should return args and examples for a user-defined predicate', function(done) {
   this.timeout(12000);
   let finished = false;
-  function finish(err, skip) {
+  function finish(err: unknown, skip?: boolean) {
     if (!finished) {
       finished = true;
       backend.stop();
@@ -99,14 +99,14 @@ describe('PrologBackend', function() {
         try {
           consultResp = await backend.sendRequest('query', {goal: `consult('${testFile}')`});
           await backend.sendRequest('query', {goal: 'make.'});
-        } catch (e) {
+        } catch (e: unknown) {
           return finish(e, false);
         }
         await new Promise(res => setTimeout(res, 150));
         let doc;
         try {
           doc = await backend.sendRequest('help', { predicate: 'foo/2' });
-        } catch (err) {
+        } catch (err: unknown) {
           return finish(err, false);
         }
         if (doc.summary && doc.summary.match(/pldoc missing|no documentation found/i)) {
@@ -128,7 +128,7 @@ describe('PrologBackend', function() {
     });
   try {
     backend.start();
-  } catch (e) {
+  } catch (e: unknown) {
     finish(e, false);
   }
   setTimeout(() => {
@@ -170,7 +170,7 @@ describe('PrologBackend', function() {
         console.log('[TEST] [3] Query response:', output);
         expect(output.status).to.equal('ok');
         done();
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error('[TEST] [3] Query error:', err);
         done(err);
       });
@@ -183,7 +183,7 @@ describe('PrologBackend', function() {
     backend.on('started', () => {
       backend.sendRequest('query', {goal: '\u0000badinput'})
         .then(() => done(new Error('Expected error for invalid input, but got success')))
-        .catch((err) => {
+        .catch((err: unknown) => {
           expect(err).to.exist;
           done();
         });
@@ -197,7 +197,7 @@ describe('PrologBackend', function() {
         try {
           expect(backend.isRunning()).to.be.true;
           done();
-        } catch (e) {
+        } catch (e: unknown) {
           done(e);
         }
       });

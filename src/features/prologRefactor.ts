@@ -24,14 +24,14 @@ interface IClauseRefs {
 export class PrologRefactor {
   private _executable: string;
   private _locations: Location[] = [];
-  private _clauseRefs: IClauseRefs = null;
+  private _clauseRefs: IClauseRefs = {};
   private _outputChannel: OutputChannel;
   private _isBuiltin: boolean = false;
   private _defLocFound: boolean = false;
 
   // pick predicate at pos in doc
   constructor() {
-    this._executable = Utils.RUNTIMEPATH;
+    this._executable = Utils.RUNTIMEPATH || "";
     this._outputChannel = window.createOutputChannel("PrologFormatter");
     this._locations = [];
     this._clauseRefs = {};
@@ -40,6 +40,9 @@ export class PrologRefactor {
   // Initiates the refactoring process for the predicate currently under the cursor
   public refactorPredUnderCursor() {
     // Get the current document and cursor position
+    if (!window.activeTextEditor) {
+      return;
+    }
     let doc: TextDocument = window.activeTextEditor.document;
     let pos: Position = window.activeTextEditor.selection.active;
 
@@ -105,9 +108,12 @@ export class PrologRefactor {
     // Replace occurrences of the old predicate with the new name in each reference location
     await Promise.all(
       refLocs.map(async refLoc => {
-        let edit = new WorkspaceEdit();
-        edit.replace(refLoc.uri, refLoc.range, newPredName);
-        return await workspace.applyEdit(edit);
+        if (newPredName) {
+          let edit = new WorkspaceEdit();
+          edit.replace(refLoc.uri, refLoc.range, newPredName);
+          return await workspace.applyEdit(edit);
+        }
+        return Promise.resolve(true);
       })
     );
     // Save all open documents after refactoring
@@ -123,6 +129,9 @@ export class PrologRefactor {
   // Finds all references to the predicate currently under the cursor
   public findAllRefs(): Promise<Location[]> {
     // Get the current document and cursor position
+    if (!window.activeTextEditor) {
+      return Promise.resolve([]);
+    }
     let doc: TextDocument = window.activeTextEditor.document;
     let pos: Position = window.activeTextEditor.selection.active;
 
@@ -153,6 +162,9 @@ export class PrologRefactor {
       })
     );
     // Use fast-glob to locate files containing references to the predicate
+    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+      return this._locations;
+    }
     const root = workspace.workspaceFolders[0].uri.fsPath;
     const patterns = ["**/*.pl", "**/*.ecl"];
     const filePaths = await fg(patterns, { cwd: root, absolute: true });
@@ -199,15 +211,18 @@ export class PrologRefactor {
 
     try {
       // Spawn a child process to execute Prolog queries
+      if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+        return;
+      }
       await spawn(this._executable, args, { cwd: workspace.workspaceFolders[0].uri.fsPath })
-        .on("process", proc => {
+        .on("process", (proc: any) => {
           if (proc.pid) {
             // Write the input to the stdin of the spawned process
             proc.stdin.write(input);
             proc.stdin.end();
           }
         })
-        .on("stdout", output => {
+        .on("stdout", (output: any) => {
           // Parse the output based on the Prolog dialect
           switch (Utils.DIALECT) {
             case "swi":
@@ -219,19 +234,19 @@ export class PrologRefactor {
               break;
           }
         })
-        .on("stderr", err => {
+        .on("stderr", (err: any) => {
           // Handle any errors or display them in the output channel
           this._outputChannel.append(err + "\n");
           this._outputChannel.show(true);
         });
-    } catch (error) {
+    } catch (error: unknown) {
       // Handle specific error cases (e.g., executable not found) and display error messages
-      let message: string = null;
-      if ((<any>error).code === "ENOENT") {
+      let message: string = "";
+      if (error && typeof error === 'object' && 'code' in error && (error as any).code === "ENOENT") {
         message = `Cannot debug the prolog file. The Prolog executable was not found. Correct the 'prolog.executablePath' configure please.`;
       } else {
-        message = error.message
-          ? error.message
+        message = error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
+          ? (error as any).message
           : `Failed to run swipl using path: ${this._executable}. Reason is unknown.`;
       }
     }
@@ -259,23 +274,32 @@ export class PrologRefactor {
     pred_void = pred_void + "\\))|"+pred.functor+"(?=\\/"+pred.arity+")";
     const regexp = new RegExp(pred_void,"gm");
     const array = [...docContent.matchAll(regexp)]; // Extract occurrences of the predicate in the document
-    var locations =array.map((elem)=>new Location(Uri.file(doc.fileName),new Range(doc.positionAt(elem.index),doc.positionAt(elem.index+elem[0].length))));// Create an array to store Location objects
+    var locations =array.map((elem)=>new Location(Uri.file(doc.fileName),new Range(doc.positionAt(elem.index || 0),doc.positionAt((elem.index || 0)+(elem[0]?.length || 0)))));// Create an array to store Location objects
     
     const regexpModule = /^\s*:-\s*use_module\(([a-zA-Z0-9_\/]*|(\"|\')[a-zA-Z0-9_\/\.]*(\"|\'))\s*((,\s*[\/a-zA-Z0-9\[\]]*\s*\)|\))\s*\.)/gm;// Define a regular expression for finding "use_module" declarations in the document
     const arrayModule = [...docContent.matchAll(regexpModule)]// Extract "use_module" declarations from the document
-    const prolog = doc.fileName.split(".")[1]// Extract the Prolog dialect from the file extension
+    const filenameParts = doc.fileName.split(".");
+    const prolog = filenameParts.length > 1 ? filenameParts[1] : "pl";// Extract the Prolog dialect from the file extension
     // Iterate through "use_module" declarations
     for(let i = 0 ; i < arrayModule.length;i++){
+      if (!arrayModule[i] || !arrayModule[i][1]) {
+        continue;
+      }
       var modpath = arrayModule[i][1].replace(new RegExp("\\'","gm"),"")
       modpath = modpath.replace(new RegExp('\\"',"gm"),"")
       var text ="";
       try {
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+          continue;
+        }
         text=fs.readFileSync(workspace.workspaceFolders[0].uri.fsPath+"\/"+modpath+"."+prolog, 'utf8');// Read the content of the referenced module file
-      } catch (error) {
+      } catch (error: unknown) {
          console.error("Error reading file:", error);
       }
       const array = [...text.matchAll(regexp)];// Extract occurrences of the predicate in the referenced module file
-      locations = locations.concat(array.map((elem)=>new Location(Uri.file(workspace.workspaceFolders[0].uri.fsPath+"/"+modpath+"."+prolog),new Range(Utils.findLineColForByte(text,elem.index),Utils.findLineColForByte(text,elem.index+elem[0].length)))));// Append the new occurrences to the locations array
+      if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
+        locations = locations.concat(array.map((elem)=>new Location(Uri.file(workspace.workspaceFolders[0].uri.fsPath+"/"+modpath+"."+prolog),new Range(Utils.findLineColForByte(text,elem.index),Utils.findLineColForByte(text,elem.index+elem[0].length)))));// Append the new occurrences to the locations array
+      }
   }
     
     this._locations = locations;

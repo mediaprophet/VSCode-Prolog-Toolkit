@@ -128,7 +128,7 @@ export function authMiddleware(config: AuthConfig) {
         }
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[AuthMiddleware] Authentication error:', error);
       return res.status(500).json({
         error: 'Internal Server Error',
@@ -168,15 +168,15 @@ async function tryJwtAuth(req: Request, config: AuthConfig): Promise<Authenticat
   const token = authHeader.substring(7);
   
   try {
-    const decoded = jwt.verify(token, config.jwtSecret) as any;
+    const decoded = jwt.verify(token, config.jwtSecret) as Record<string, unknown>;
     
     return {
-      id: decoded.sub || decoded.id || 'jwt_user',
-      role: decoded.role || 'agent',
-      permissions: decoded.permissions || getDefaultPermissions(decoded.role || 'agent'),
+      id: (decoded.sub as string) || (decoded.id as string) || 'jwt_user',
+      role: (decoded.role as string) || 'agent',
+      permissions: (decoded.permissions as string[]) || getDefaultPermissions((decoded.role as string) || 'agent'),
       method: 'jwt_token'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AuthMiddleware] JWT verification failed:', error);
     return null;
   }
@@ -227,7 +227,7 @@ function getDefaultPermissions(role: string): string[] {
     ]
   };
 
-  return rolePermissions[role] || rolePermissions.limited;
+  return rolePermissions[role] || rolePermissions['limited'] || [];
 }
 
 /**
@@ -258,8 +258,12 @@ export function generateJwtToken(payload: any, config: AuthConfig): string {
 /**
  * Verify JWT token
  */
-export function verifyJwtToken(token: string, config: AuthConfig): any {
-  return jwt.verify(token, config.jwtSecret);
+export function verifyJwtToken(token: string, config: AuthConfig): Record<string, unknown> {
+  const decoded = jwt.verify(token, config.jwtSecret);
+  if (typeof decoded === 'string') {
+    throw new Error('Invalid JWT token format');
+  }
+  return decoded as Record<string, unknown>;
 }
 
 /**
@@ -287,16 +291,16 @@ export function hasPermission(user: AuthenticatedUser | undefined, permission: s
 /**
  * Resource quota middleware
  */
-export function resourceQuotaMiddleware(quotas: { [role: string]: any }) {
+export function resourceQuotaMiddleware(quotas: { [role: string]: { requests_per_minute?: number; maxConcurrentSessions?: number } }) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const user = req.user;
     if (!user) return next();
 
-    const userQuota = quotas[user.role] || quotas.default;
+    const userQuota = quotas[user.role] || quotas['default'];
     if (!userQuota) return next();
 
     // Add quota information to request for later use
-    (req as any).quota = userQuota;
+    (req as AuthenticatedRequest & { quota?: typeof userQuota }).quota = userQuota;
     
     // Add quota headers to response
     res.set({

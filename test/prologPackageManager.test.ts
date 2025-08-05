@@ -7,12 +7,17 @@ import { PrologBackend } from '../src/prologBackend';
 describe('PrologPackageManager', () => {
   let packageManager: PrologPackageManager;
   let mockBackend: sinon.SinonStubbedInstance<PrologBackend>;
-  let windowStub: any;
+  let windowStub: {
+    showErrorMessage: sinon.SinonStub;
+    showWarningMessage: sinon.SinonStub;
+    showInformationMessage: sinon.SinonStub;
+    withProgress: sinon.SinonStub;
+  };
 
   beforeEach(() => {
     // Create mock backend
     mockBackend = sinon.createStubInstance(PrologBackend);
-    packageManager = new PrologPackageManager(mockBackend as any);
+    packageManager = new PrologPackageManager(mockBackend as unknown as PrologBackend);
 
     // Mock VS Code window API
     windowStub = {
@@ -112,7 +117,7 @@ describe('PrologPackageManager', () => {
   describe('installPack', () => {
     beforeEach(() => {
       // Mock withProgress to immediately call the callback
-      windowStub.withProgress.callsFake((options: any, callback: any) => {
+      windowStub.withProgress.callsFake((options: unknown, callback: (progress: { report: sinon.SinonStub }, token: { isCancellationRequested: boolean }) => unknown) => {
         const mockProgress = { report: sinon.stub() };
         const mockToken = { isCancellationRequested: false };
         return callback(mockProgress, mockToken);
@@ -197,7 +202,7 @@ describe('PrologPackageManager', () => {
 
   describe('uninstallPack', () => {
     beforeEach(() => {
-      windowStub.withProgress.callsFake((options: any, callback: any) => {
+      windowStub.withProgress.callsFake((options: unknown, callback: (progress: { report: sinon.SinonStub }) => unknown) => {
         const mockProgress = { report: sinon.stub() };
         return callback(mockProgress);
       });
@@ -246,7 +251,7 @@ describe('PrologPackageManager', () => {
 
   describe('updatePack', () => {
     beforeEach(() => {
-      windowStub.withProgress.callsFake((options: any, callback: any) => {
+      windowStub.withProgress.callsFake((options: unknown, callback: (progress: { report: sinon.SinonStub }, token: { isCancellationRequested: boolean }) => unknown) => {
         const mockProgress = { report: sinon.stub() };
         const mockToken = { isCancellationRequested: false };
         return callback(mockProgress, mockToken);
@@ -436,7 +441,7 @@ describe('PrologPackageManager', () => {
       const validNames = ['http', 'clpfd', 'pack_name', 'pack-name', 'pack123'];
       
       for (const name of validNames) {
-        const result = (packageManager as any).validatePackName(name);
+        const result = (packageManager as unknown as { validatePackName: (name: string) => boolean }).validatePackName(name);
         expect(result, `${name} should be valid`).to.be.true;
       }
     });
@@ -445,7 +450,7 @@ describe('PrologPackageManager', () => {
       const invalidNames = ['pack@name', 'pack name', 'pack.name', 'pack/name', ''];
       
       for (const name of invalidNames) {
-        const result = (packageManager as any).validatePackName(name);
+        const result = (packageManager as unknown as { validatePackName: (name: string) => boolean }).validatePackName(name);
         expect(result, `${name} should be invalid`).to.be.false;
       }
     });

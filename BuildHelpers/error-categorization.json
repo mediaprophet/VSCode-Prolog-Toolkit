@@ -1,0 +1,195 @@
+{
+  "errorCategorization": {
+    "totalErrors": 587,
+    "generatedAt": "2025-01-05T08:22:00Z",
+    "categories": {
+      "strictNullChecks": {
+        "count": 198,
+        "description": "Violations of strictNullChecks - null/undefined assignments and access",
+        "errorCodes": ["TS2322", "TS2532", "TS18048", "TS2531", "TS18047"],
+        "examples": [
+          "Type 'null' is not assignable to type 'Location'",
+          "Object is possibly 'undefined'",
+          "'workspace.workspaceFolders' is possibly 'undefined'",
+          "Object is possibly 'null'"
+        ],
+        "affectedFiles": [
+          "src/features/definitionProvider.ts",
+          "src/features/hoverProvider.ts", 
+          "src/features/prologLinter.ts",
+          "src/features/prologRefactor.ts",
+          "src/features/referenceProvider.ts",
+          "src/utils/utils.ts"
+        ]
+      },
+      "exactOptionalPropertyTypes": {
+        "count": 89,
+        "description": "Violations of exactOptionalPropertyTypes - undefined not assignable to optional properties",
+        "errorCodes": ["TS2375", "TS2379", "TS2412"],
+        "examples": [
+          "Type 'string | undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'",
+          "Consider adding 'undefined' to the types of the target's properties"
+        ],
+        "affectedFiles": [
+          "src/features/concurrencyManager.ts",
+          "src/features/errorHandler.ts",
+          "src/features/queryNotificationManager.ts",
+          "src/features/queryScheduler.ts",
+          "src/features/sessionManager.ts",
+          "src/features/streamingHandler.ts",
+          "src/sdk/index.ts"
+        ]
+      },
+      "noUncheckedIndexedAccess": {
+        "count": 45,
+        "description": "Violations of noUncheckedIndexedAccess - unsafe array/object access",
+        "errorCodes": ["TS2538"],
+        "examples": [
+          "Type 'undefined' cannot be used as an index type"
+        ],
+        "affectedFiles": [
+          "src/features/updateSnippets.ts",
+          "src/features/prologLinter.ts",
+          "src/utils/utils.ts"
+        ]
+      },
+      "useUnknownInCatchVariables": {
+        "count": 32,
+        "description": "Violations of useUnknownInCatchVariables - catch variables should be unknown",
+        "errorCodes": ["TS18046"],
+        "examples": [
+          "'error' is of type 'unknown'"
+        ],
+        "affectedFiles": [
+          "src/features/concurrencyManager.ts",
+          "src/features/prologRefactor.ts",
+          "test/advanced-concurrency.test.ts",
+          "test/lsp-integration.test.ts",
+          "test/session-management.test.ts"
+        ]
+      },
+      "noImplicitAny": {
+        "count": 78,
+        "description": "Violations of noImplicitAny - implicit any types",
+        "errorCodes": ["TS7006", "TS7034", "TS7005"],
+        "examples": [
+          "Parameter 'info' implicitly has an 'any' type",
+          "Variable 'already' implicitly has type 'any[]'",
+          "Variable 'already' implicitly has an 'any[]' type"
+        ],
+        "affectedFiles": [
+          "src/features/externalWebSocketManager.ts",
+          "src/features/updateSnippets.ts",
+          "src/features/prologFormatter.ts",
+          "src/features/prologLinter.ts",
+          "test/nodetcpclient.ts"
+        ]
+      },
+      "strictFunctionTypes": {
+        "count": 67,
+        "description": "Violations of strictFunctionTypes and function return types",
+        "errorCodes": ["TS7030", "TS2345", "TS2554", "TS2769"],
+        "examples": [
+          "Not all code paths return a value",
+          "Argument of type 'string | undefined' is not assignable to parameter of type 'string'",
+          "Expected 0 arguments, but got 1",
+          "No overload matches this call"
+        ],
+        "affectedFiles": [
+          "src/features/apiRoutes.ts",
+          "src/features/definitionProvider.ts",
+          "src/features/prologLinter.ts",
+          "src/utils/utils.ts"
+        ]
+      },
+      "noImplicitOverride": {
+        "count": 18,
+        "description": "Missing override modifiers on class methods",
+        "errorCodes": ["TS4114"],
+        "examples": [
+          "This member must have an 'override' modifier because it overrides a member in the base class"
+        ],
+        "affectedFiles": [
+          "src/features/prologDebugSession.ts"
+        ]
+      },
+      "propertyInitialization": {
+        "count": 35,
+        "description": "Class properties without initializers",
+        "errorCodes": ["TS2564"],
+        "examples": [
+          "Property '_bpResponse' has no initializer and is not definitely assigned in the constructor"
+        ],
+        "affectedFiles": [
+          "src/features/prologDebugger.ts",
+          "src/features/prologDebugSession.ts",
+          "src/features/prologFormatter.ts",
+          "src/features/prologLinter.ts"
+        ]
+      },
+      "testFrameworkTypes": {
+        "count": 25,
+        "description": "Test framework type issues (Chai, Sinon, Mocha)",
+        "errorCodes": ["TS2349", "TS2339"],
+        "examples": [
+          "This expression is not callable. Type 'typeof assert' has no call signatures",
+          "Property 'called' does not exist on type 'Assertion'"
+        ],
+        "affectedFiles": [
+          "test/enhanced-reasoning.test.ts",
+          "test/n3-integration.test.ts",
+          "test/prologBackend.unit.test.ts",
+          "test/prologPackageCommands.test.ts"
+        ]
+      }
+    },
+    "priorityOrder": [
+      "strictNullChecks",
+      "exactOptionalPropertyTypes", 
+      "noImplicitAny",
+      "strictFunctionTypes",
+      "noUncheckedIndexedAccess",
+      "propertyInitialization",
+      "useUnknownInCatchVariables",
+      "noImplicitOverride",
+      "testFrameworkTypes"
+    ],
+    "fixingStrategy": {
+      "phase1": {
+        "name": "Core Type Definitions",
+        "categories": ["noImplicitAny", "propertyInitialization"],
+        "description": "Define proper interfaces and initialize class properties"
+      },
+      "phase2": {
+        "name": "Null Safety",
+        "categories": ["strictNullChecks"],
+        "description": "Add null checks and optional chaining"
+      },
+      "phase3": {
+        "name": "Optional Properties",
+        "categories": ["exactOptionalPropertyTypes"],
+        "description": "Fix optional property type assignments"
+      },
+      "phase4": {
+        "name": "Safe Access",
+        "categories": ["noUncheckedIndexedAccess"],
+        "description": "Add bounds checking for array/object access"
+      },
+      "phase5": {
+        "name": "Error Handling",
+        "categories": ["useUnknownInCatchVariables"],
+        "description": "Update catch blocks to use unknown type"
+      },
+      "phase6": {
+        "name": "Function Types",
+        "categories": ["strictFunctionTypes", "noImplicitOverride"],
+        "description": "Fix function signatures and override modifiers"
+      },
+      "phase7": {
+        "name": "Test Framework",
+        "categories": ["testFrameworkTypes"],
+        "description": "Fix test framework type issues"
+      }
+    }
+  }
+}

@@ -93,7 +93,7 @@ export class QueryNotificationManager extends EventEmitter {
           try {
             const message = JSON.parse(data.toString());
             this.handleWebSocketMessage(message, ws);
-          } catch (error) {
+          } catch (error: unknown) {
             console.error('[QueryNotificationManager] Invalid WebSocket message:', error);
           }
         });
@@ -104,7 +104,7 @@ export class QueryNotificationManager extends EventEmitter {
       });
 
       console.log(`[QueryNotificationManager] WebSocket server started on port ${this.options.webSocketPort}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryNotificationManager] Failed to start WebSocket server:', error);
     }
   }
@@ -112,7 +112,7 @@ export class QueryNotificationManager extends EventEmitter {
   /**
    * Handle incoming WebSocket messages
    */
-  private handleWebSocketMessage(message: any, ws: WebSocket): void {
+  private handleWebSocketMessage(message: { type: string; queryId?: string }, ws: WebSocket): void {
     switch (message.type) {
       case 'cancel_query':
         if (message.queryId) {
@@ -143,7 +143,7 @@ export class QueryNotificationManager extends EventEmitter {
   /**
    * Broadcast notification to all WebSocket clients
    */
-  private broadcastNotification(notification: any): void {
+  private broadcastNotification(notification: Record<string, unknown>): void {
     if (this.wsClients.size === 0) return;
 
     const message = JSON.stringify(notification);
@@ -151,7 +151,7 @@ export class QueryNotificationManager extends EventEmitter {
       if (ws.readyState === WebSocket.OPEN) {
         try {
           ws.send(message);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[QueryNotificationManager] Failed to send WebSocket message:', error);
           this.wsClients.delete(ws);
         }
@@ -280,7 +280,7 @@ export class QueryNotificationManager extends EventEmitter {
   /**
    * Mark query as completed
    */
-  completeQuery(queryId: string, results?: any): void {
+  completeQuery(queryId: string, results?: unknown): void {
     this.updateQueryStatus(queryId, {
       status: 'completed',
       results,
@@ -291,7 +291,7 @@ export class QueryNotificationManager extends EventEmitter {
   /**
    * Mark query as failed
    */
-  failQuery(queryId: string, error: any): void {
+  failQuery(queryId: string, error: unknown): void {
     this.updateQueryStatus(queryId, {
       status: 'error',
       error

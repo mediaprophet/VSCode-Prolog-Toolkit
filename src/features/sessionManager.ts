@@ -14,7 +14,7 @@ export interface SessionConfig {
   createdAt: number;
   lastAccessedAt: number;
   isActive: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   resourceQuota?: Partial<ResourceQuota>;
   persistenceEnabled: boolean;
   autoSave: boolean;
@@ -33,7 +33,7 @@ export interface SessionState {
     object: string;
     graph?: string;
   }>;
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   customPredicates: string[];
   timestamp: number;
   checksum?: string;
@@ -45,7 +45,7 @@ export interface SessionSnapshot {
   description?: string;
   state: SessionState;
   createdAt: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SessionManagerOptions {
@@ -140,7 +140,7 @@ export class SessionManager extends EventEmitter {
       this.isInitialized = true;
       this.emit('initialized');
       console.log(`[SessionManager] Initialized with ${this.sessions.size} sessions`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SessionManager] Initialization failed:', error);
       this.emit('error', error);
     }
@@ -169,7 +169,7 @@ export class SessionManager extends EventEmitter {
       resourceQuota?: Partial<ResourceQuota>;
       persistenceEnabled?: boolean;
       autoSave?: boolean;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     } = {}
   ): Promise<string> {
     if (!this.isInitialized) {
@@ -546,8 +546,8 @@ export class SessionManager extends EventEmitter {
   getSessionStatistics(sessionId: string): {
     config: SessionConfig;
     state: SessionState;
-    concurrencyStats?: any;
-    historyStats?: any;
+    concurrencyStats?: unknown;
+    historyStats?: unknown;
     uptime: number;
     idleTime: number;
   } | null {
@@ -566,7 +566,7 @@ export class SessionManager extends EventEmitter {
       config: session,
       state,
       concurrencyStats: concurrencyManager?.getStatus(),
-      historyStats: historyManager ? await historyManager.getStatistics() : undefined,
+      historyStats: historyManager ? (await historyManager.getStatistics()) : undefined,
       uptime: now - session.createdAt,
       idleTime: now - session.lastAccessedAt
     };
@@ -590,13 +590,13 @@ export class SessionManager extends EventEmitter {
         try {
           const state = await this.loadSessionStateFromDisk(sessionId);
           this.sessionStates.set(sessionId, state);
-        } catch (error) {
+        } catch (error: unknown) {
           console.warn(`[SessionManager] Could not load state for session ${sessionId}:`, error);
         }
       }
 
       console.log(`[SessionManager] Loaded ${this.sessions.size} sessions from disk`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SessionManager] Error loading sessions from disk:', error);
     }
   }
@@ -609,7 +609,7 @@ export class SessionManager extends EventEmitter {
       }
 
       fs.writeFileSync(this.sessionsFile, JSON.stringify(sessionsData, null, 2), 'utf8');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[SessionManager] Error saving session ${sessionId} to disk:`, error);
     }
   }
@@ -623,7 +623,7 @@ export class SessionManager extends EventEmitter {
     try {
       const state = await this.loadSessionStateFromDisk(sessionId);
       this.sessionStates.set(sessionId, state);
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn(`[SessionManager] Could not load state for session ${sessionId}:`, error);
     }
   }
@@ -644,7 +644,7 @@ export class SessionManager extends EventEmitter {
     
     try {
       fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf8');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[SessionManager] Error saving state for session ${sessionId}:`, error);
     }
   }
@@ -665,7 +665,7 @@ export class SessionManager extends EventEmitter {
 
       // Update sessions file
       await this.saveSessionToDisk(sessionId);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[SessionManager] Error deleting session ${sessionId} from disk:`, error);
     }
   }
@@ -675,7 +675,7 @@ export class SessionManager extends EventEmitter {
     
     try {
       fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2), 'utf8');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[SessionManager] Error saving snapshot ${snapshotId}:`, error);
     }
   }
@@ -690,7 +690,7 @@ export class SessionManager extends EventEmitter {
     try {
       const data = fs.readFileSync(snapshotFile, 'utf8');
       return JSON.parse(data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[SessionManager] Error loading snapshot ${snapshotId}:`, error);
       return null;
     }
@@ -724,7 +724,7 @@ export class SessionManager extends EventEmitter {
       try {
         await this.deleteSession(sessionId);
         console.log(`[SessionManager] Cleaned up idle session ${sessionId}`);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[SessionManager] Error cleaning up session ${sessionId}:`, error);
       }
     }

@@ -15,29 +15,134 @@ import {
   workspace,
   WorkspaceConfiguration,
   OutputChannel,
-  window
+  window,
+  commands
 }
   from 'vscode';
+import { InstallationGuide } from "./installationGuide";
+import { PlatformUtils } from "../utils/platformUtils";
+import { ExecutableFinder } from "../utils/executableFinder";
 
 export class PrologFormatter implements
   DocumentRangeFormattingEditProvider,
   DocumentFormattingEditProvider {
   private _section: WorkspaceConfiguration;
-  private _tabSize: number;
-  private _insertSpaces: boolean;
-  private _tabDistance: number;
+  private _tabSize!: number;
+  private _insertSpaces!: boolean;
+  private _tabDistance!: number;
   private _executable: string;
   private _args: string[];
   private _outputChannel: OutputChannel;
   private _textEdits: TextEdit[] = [];
-  private _startChars: number;
+  private _startChars!: number;
 
   // Constructor for the PrologFormatter class
   constructor() {
     this._section = workspace.getConfiguration("prolog");
-    this._executable = this._section.get("executablePath", "swipl");
+    let execPath = this._section.get("executablePath", PlatformUtils.getDefaultExecutablePath());
+    this._executable = PlatformUtils.normalizePath(execPath);
     this._args = [];
     this._outputChannel = window.createOutputChannel("PrologFormatter");
+    
+    // Initialize with better executable resolution
+    this.initializeExecutable();
+  }
+
+  /**
+   * Initialize executable with enhanced detection and permission checking
+   */
+  private async initializeExecutable(): Promise<void> {
+    const configuredPath = this._section.get<string>("executablePath", PlatformUtils.getDefaultExecutablePath());
+    
+    // Check if configured path exists and is executable
+    if (await PlatformUtils.pathExists(configuredPath)) {
+      if (await PlatformUtils.isExecutable(configuredPath)) {
+        this._executable = PlatformUtils.normalizePath(configuredPath);
+        return;
+      } else {
+        // Path exists but lacks execute permissions
+        const platform = PlatformUtils.getPlatform();
+        if (platform !== 'windows') {
+          window.showWarningMessage(
+            `SWI-Prolog executable at '${configuredPath}' lacks execute permissions. Try: chmod +x "${configuredPath}"`,
+            'Fix Permissions'
+          ).then((action) => {
+            if (action === 'Fix Permissions') {
+              const terminal = window.createTerminal('Fix Prolog Permissions');
+              terminal.sendText(`chmod +x "${configuredPath}"`);
+              terminal.show();
+            }
+          });
+        }
+      }
+    }
+
+    // Try to find executable using comprehensive detection
+    const executableFinder = new ExecutableFinder();
+    const detectionResult = await executableFinder.findSwiplExecutable();
+    
+    if (detectionResult.found && detectionResult.path) {
+      if (detectionResult.permissions?.executable) {
+        this._executable = detectionResult.path;
+        
+        // Update configuration if we found a different path
+        if (detectionResult.path !== configuredPath) {
+          window.showInformationMessage(
+            `Found SWI-Prolog at '${detectionResult.path}' via ${detectionResult.detectionMethod}. Update configuration?`,
+            'Yes', 'No'
+          ).then((action) => {
+            if (action === 'Yes') {
+              this._section.update('executablePath', detectionResult.path, true);
+            }
+          });
+        }
+      } else {
+        // Found executable but has permission issues
+        const platform = PlatformUtils.getPlatform();
+        if (platform !== 'windows') {
+          window.showWarningMessage(
+            `Found SWI-Prolog at '${detectionResult.path}' but it lacks execute permissions. Try: chmod +x "${detectionResult.path}"`,
+            'Fix Permissions'
+          ).then((action) => {
+            if (action === 'Fix Permissions') {
+              const terminal = window.createTerminal('Fix Prolog Permissions');
+              terminal.sendText(`chmod +x "${detectionResult.path}"`);
+              terminal.show();
+            }
+          });
+        }
+        this._executable = detectionResult.path; // Use it anyway, will fail with better error
+      }
+    }
+  }
+
+  // Enhanced error handling for SWI-Prolog executable issues
+  private async handleExecutableError(error: any): Promise<void> {
+    if (error.code === "ENOENT") {
+      const action = await window.showErrorMessage(
+        'SWI-Prolog executable not found. The formatter requires SWI-Prolog to format your code properly.',
+        'Install SWI-Prolog',
+        'Setup Wizard',
+        'Configure Path',
+        'Dismiss'
+      );
+      
+      const installationGuide = InstallationGuide.getInstance();
+      switch (action) {
+        case 'Install SWI-Prolog':
+          await installationGuide.showInstallationGuideDialog();
+          break;
+        case 'Setup Wizard':
+          await commands.executeCommand('prolog.setupWizard');
+          break;
+        case 'Configure Path':
+          await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+          break;
+      }
+    } else {
+      const message = error.message || `Failed to run SWI-Prolog formatter using path: ${this._executable}`;
+      window.showErrorMessage(`Prolog formatting failed: ${message}`);
+    }
   }
   public provideDocumentRangeFormattingEdits(
     doc: TextDocument,
@@ -61,9 +166,9 @@ export class PrologFormatter implements
     var min = 0;
     var clausesArray = [];
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i].index >= min) {
+      if (arrayStart[i].index !== undefined && arrayStart[i].index >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
-          if (arrayEnd[j].index > arrayStart[i].index) {
+          if (arrayEnd[j].index !== undefined && arrayEnd[j].index > arrayStart[i].index) {
             min = arrayEnd[j].index;
             clausesArray.push([arrayStart[i].index+offset, arrayEnd[j].index+offset]);
             break;
@@ -71,7 +176,7 @@ export class PrologFormatter implements
         }
       }
     }
-    var result = []
+    var result: TextEdit[] = []
     // Iterate over each matched clause and format it
     clausesArray.forEach((clause) => {
       var clauseArray = this.getClauseString(doc, clause);
@@ -100,9 +205,9 @@ export class PrologFormatter implements
     var clausesArray = [];
 
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i].index >= min) {
+      if (arrayStart[i].index !== undefined && arrayStart[i].index >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
-          if (arrayEnd[j].index > arrayStart[i].index) {
+          if (arrayEnd[j].index !== undefined && arrayEnd[j].index > arrayStart[i].index) {
             min = arrayEnd[j].index;
             clausesArray.push([arrayStart[i].index, arrayEnd[j].index]);
             break;
@@ -110,7 +215,7 @@ export class PrologFormatter implements
         }
       }
     }
-    var result = []
+    var result: TextEdit[] = []
     // Iterate over each matched clause and format it
     clausesArray.forEach((clause) => {
       var clauseArray = this.getClauseString(document, clause);
@@ -122,12 +227,12 @@ export class PrologFormatter implements
   }
 
   // Helper method to get the clause string and its range from the document
-  private getClauseString(doc: TextDocument, range): [string, Range] {
+  private getClauseString(doc: TextDocument, range: number[]): [string, Range] {
     let docContent = doc.getText();
     var sub = docContent.substring(range[0], range[1] + 1); // Extract the substring from the starting position to the end of the document
     var regexp = /^\s+/gm; // Define regular expression for matching comments
     var array = [...sub.matchAll(regexp)]; // Match all occurrences of starting spaces in the substring
-    if (array.length != 0) {
+    if (array.length != 0 && array[0]) {
       sub = sub.slice(array[0][0].length);
       return [sub, new Range(doc.positionAt(range[0] + array[0][0].length), doc.positionAt(range[1] + 1))];// Return the clause string and its range
     }

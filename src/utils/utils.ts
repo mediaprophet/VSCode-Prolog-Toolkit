@@ -15,6 +15,7 @@ import {
   window,
   DiagnosticCollection
 } from "vscode";
+import { PlatformUtils, normalizePath, getPlatform, getPlatformDefaults } from "./platformUtils";
 
 export interface ISnippet {
   [predIndicator: string]: {
@@ -36,20 +37,20 @@ export interface IPredicate {
 }
 
 export class Utils {
-  public static snippets: ISnippet = null;
-  public static newsnippets = [];
-  private static predModules: IPredModule = null;
+  public static snippets: ISnippet | null = null;
+  public static newsnippets: any[] = [];
+  private static predModules: IPredModule | null = null;
   public static DIALECT: string | null = null;
   public static RUNTIMEPATH: string | null = null;
   public static CONTEXT: ExtensionContext | null = null;
   public static LINTERTRIGGER: string | null = null;
-  public static FORMATENABLED: boolean;
+  public static FORMATENABLED: boolean = false;
   public static EXPATH: string | null = null;
 
   constructor() { }
   public static getPredDescriptions(pred: string): string {
-    if (Utils.snippets[pred]) {
-      return Utils.snippets![pred].description;
+    if (Utils.snippets && Utils.snippets[pred]) {
+      return Utils.snippets[pred].description;
     }
     return "";
   }
@@ -58,6 +59,108 @@ export class Utils {
     Utils.CONTEXT = context;
     Utils.loadSnippets(context);
     Utils.genPredicateModules(context);
+    Utils.initializePlatformSettings();
+  }
+
+  // Initialize platform-specific settings
+  private static initializePlatformSettings() {
+    const config = workspace.getConfiguration('prolog');
+    const autoDetect = config.get<boolean>('platform.autoDetect', true);
+    
+    if (autoDetect) {
+      const platformDefaults = getPlatformDefaults();
+      
+      // Update executable path if not explicitly set by user
+      const currentExecPath = config.get<string>('executablePath');
+      if (!currentExecPath || currentExecPath === '/usr/bin/swipl') {
+        // Only update if it's the default value, indicating user hasn't customized it
+        const platformExecPath = platformDefaults.defaultExecutablePath;
+        if (platformExecPath !== currentExecPath) {
+          console.log(`[Platform Utils] Auto-detected executable path: ${platformExecPath}`);
+        }
+      }
+      
+      // Update runtime args if not explicitly set
+      const currentRuntimeArgs = config.get<string[]>('terminal.runtimeArgs');
+      if (!currentRuntimeArgs || currentRuntimeArgs.length === 0) {
+        const platformRuntimeArgs = platformDefaults.defaultRuntimeArgs;
+        if (platformRuntimeArgs.length > 0) {
+          console.log(`[Platform Utils] Auto-detected runtime args: ${platformRuntimeArgs.join(' ')}`);
+        }
+      }
+    }
+  }
+
+  // Get platform-aware executable path
+  public static getPlatformExecutablePath(): string {
+    const config = workspace.getConfiguration('prolog');
+    let execPath = config.get<string>('executablePath', '');
+    
+    // If no path specified, use platform default
+    if (!execPath) {
+      execPath = getPlatformDefaults().defaultExecutablePath;
+    }
+    
+    // Normalize and expand the path
+    return PlatformUtils.normalizePath(execPath);
+  }
+
+  // Get platform-aware runtime arguments
+  public static getPlatformRuntimeArgs(): string[] {
+    const config = workspace.getConfiguration('prolog');
+    let runtimeArgs = config.get<string[]>('terminal.runtimeArgs', []);
+    
+    // If no args specified, use platform defaults
+    if (runtimeArgs.length === 0) {
+      runtimeArgs = getPlatformDefaults().defaultRuntimeArgs;
+    }
+    
+    return runtimeArgs;
+  }
+
+  // Expand environment variables in paths
+  public static expandEnvironmentVariables(inputPath: string): string {
+    return PlatformUtils.expandEnvironmentVariables(inputPath);
+  }
+
+  // Get platform-specific environment variables
+  public static getPlatformEnvironmentVariables(): Record<string, string> {
+    const config = workspace.getConfiguration('prolog');
+    const customEnvVars = config.get<Record<string, string>>('platform.environmentVariables', {});
+    const platformEnvVars = PlatformUtils.getEnvironmentVariables();
+    
+    // Merge custom environment variables with platform-specific ones
+    const result: Record<string, string> = {};
+    
+    // Add cross-platform variables
+    platformEnvVars.crossPlatform.forEach(varName => {
+      if (process.env[varName]) {
+        result[varName] = process.env[varName]!;
+      }
+    });
+    
+    // Add platform-specific variables
+    platformEnvVars.platformSpecific.forEach(varName => {
+      if (process.env[varName]) {
+        result[varName] = process.env[varName]!;
+      }
+    });
+    
+    // Override with custom variables
+    Object.assign(result, customEnvVars);
+    
+    return result;
+  }
+
+  // Create platform-aware file paths
+  public static createPlatformPath(...segments: string[]): string {
+    return PlatformUtils.joinPath(...segments);
+  }
+
+  // Resolve paths relative to workspace or extension
+  public static resolvePlatformPath(basePath: string, ...segments: string[]): string {
+    const normalizedBase = PlatformUtils.normalizePath(basePath);
+    return PlatformUtils.resolvePath(normalizedBase, ...segments);
   }
   // load the snippets from file
   private static loadSnippets(context: ExtensionContext) {
@@ -152,7 +255,8 @@ export class Utils {
       params = wholePred.slice(predName.length);
       // find the module if a predicate is picked in :-module or :-use_module
     } else if (re1.test(text)) {
-      arity = parseInt(text.match(re1)[1]);
+      const match = text.match(re1);
+      arity = match ? parseInt(match[1]) : 0;
       params =
         arity === 0 ? "" : "(" + new Array(arity).fill("_").join(",") + ")";
       wholePred = predName + params;
@@ -279,7 +383,7 @@ export class Utils {
       functor: predName,
       arity: arity,
       params: params,
-      module: module
+      module: module || ''
     };
   }
   // get the number of parameters
@@ -288,8 +392,8 @@ export class Utils {
     if (!re.test(pred)) { // if predicate have parameters
       return 0;
     }
-    let args = [],
-      plCode: string;
+    let args: string[] = [];
+    let plCode: string = '';
     // get the Arity from prolog
     switch (Utils.DIALECT) {
       case "swi":
@@ -345,11 +449,11 @@ export class Utils {
           halt.
         `;
         runOptions = {
-          cwd: workspace.workspaceFolders[0].uri.fsPath, // rootpath of the project
+          cwd: workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : process.cwd(), // rootpath of the project
           encoding: "utf8",
           input: input
         };
-        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions); // create a subprocess with prolog (specified runtimepath)
+        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH || '', args, runOptions); // create a subprocess with prolog (specified runtimepath)
         break;
       case "ecl":
         input = `${inputTerm}.`;
@@ -360,26 +464,26 @@ export class Utils {
           }\n\"), read, S),compile(stream(S)),close(S),call(${call}).`
         ]);
         runOptions = {
-          cwd: workspace.workspaceFolders[0].uri.fsPath,// rootpath of the project
+          cwd: workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : process.cwd(),// rootpath of the project
           encoding: "utf8",
           input: input
         };
-        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions);// create a subprocess with prolog (specified runtimepath)
+        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH || '', args, runOptions);// create a subprocess with prolog (specified runtimepath)
         break;
       default:
         break;
     }
     // get the response in output
-    if (prologProcess.status === 0) {
-      let output = prologProcess.stdout.toString(); // get output with stdout
-      let err = prologProcess.stderr.toString();
+    if (prologProcess && prologProcess.status === 0) {
+      let output = prologProcess.stdout ? prologProcess.stdout.toString() : ''; // get output with stdout
+      let err = prologProcess.stderr ? prologProcess.stderr.toString() : '';
       // console.log("out:" + output);
       // console.log("err:" + err);
 
-      let match = output.match(resultReg); // select the wanted result with the regex expression 
+      let match = output.match(resultReg); // select the wanted result with the regex expression
       return match ? match : null;
     } else {
-      console.log("UtilsExecSyncError: " + prologProcess.stderr.toString());
+      console.log("UtilsExecSyncError: " + (prologProcess && prologProcess.stderr ? prologProcess.stderr.toString() : 'Unknown error'));
       return null;
     }
   }
@@ -414,18 +518,19 @@ export class Utils {
     }
   }*/
   // Helper function to find line and column for a byte offset in the document
-  public static findLineColForByte(doc, index) {
-  const lines = doc.split("\n");
-  let totalLength = 0
-  let lineStartPos = 0
-  // Iterate through lines to find the line and column for the byte offset
-  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-    totalLength += lines[lineNo].length + 1 // Because we removed the '\n' during split.
-    if (index < totalLength) {
-      const colNo = index - lineStartPos
-      return new Position(lineNo, colNo)
+  public static findLineColForByte(doc: string, index: number): Position {
+    const lines = doc.split("\n");
+    let totalLength = 0;
+    let lineStartPos = 0;
+    // Iterate through lines to find the line and column for the byte offset
+    for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+      totalLength += lines[lineNo].length + 1; // Because we removed the '\n' during split.
+      if (index < totalLength) {
+        const colNo = index - lineStartPos;
+        return new Position(lineNo, colNo);
+      }
+      lineStartPos = totalLength;
     }
-    lineStartPos = totalLength
-  }
+    return new Position(0, 0); // fallback position
   }
 }

@@ -737,7 +737,7 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
         try {
           const { exec } = require('child_process');
           await new Promise((resolve, reject) => {
-            exec(`which ${command}`, (error) => {
+            exec(`which ${command}`, (error: unknown) => {
               if (!error) {
                 available.push(ide.name);
                 resolve(true);
@@ -747,7 +747,7 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
             });
           });
           break; // Found one command for this IDE
-        } catch (error) {
+        } catch (error: unknown) {
           // Command not found, continue
         }
       }

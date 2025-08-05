@@ -290,7 +290,7 @@ export class StreamingHandler<T> extends EventEmitter {
 /**
  * Utility function to create a streaming handler for Prolog results
  */
-export function createPrologResultStreamer(options?: StreamingOptions): StreamingHandler<any> {
+export function createPrologResultStreamer(options?: StreamingOptions): StreamingHandler<unknown> {
   return new StreamingHandler({
     chunkSize: 50,
     maxTotalResults: 1000,
@@ -400,8 +400,8 @@ export class PaginatedStreamer<T> {
  * Utility for streaming large query results
  */
 export async function streamQueryResults(
-  results: any[],
-  formatter: (chunk: any[], chunkInfo: StreamChunk<any>) => string,
+  results: unknown[],
+  formatter: (chunk: unknown[], chunkInfo: StreamChunk<unknown>) => string,
   options?: StreamingOptions
 ): Promise<string[]> {
   const streamer = createPrologResultStreamer(options);
@@ -421,7 +421,7 @@ export async function streamQueryResults(
 /**
  * Create a streaming handler optimized for chat responses
  */
-export function createChatStreamer(options?: StreamingOptions): StreamingHandler<any> {
+export function createChatStreamer(options?: StreamingOptions): StreamingHandler<unknown> {
   return new StreamingHandler({
     chunkSize: 30,
     maxTotalResults: 2000,
@@ -436,9 +436,9 @@ export function createChatStreamer(options?: StreamingOptions): StreamingHandler
  * Stream large results to chat with progress updates
  */
 export async function streamToChatResponse(
-  results: any[],
-  chatStream: any, // ChatResponseStream type
-  formatter: (chunk: any[], isFirst: boolean, isLast: boolean, totalCount?: number) => void,
+  results: unknown[],
+  chatStream: unknown, // ChatResponseStream type
+  formatter: (chunk: unknown[], isFirst: boolean, isLast: boolean, totalCount?: number) => void,
   options?: StreamingOptions
 ): Promise<void> {
   if (results.length <= (options?.chunkSize || 30)) {

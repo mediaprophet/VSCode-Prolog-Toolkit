@@ -1,0 +1,268 @@
+{
+  "title": "SWI-Prolog Installation Detection and Setup Enhancement",
+  "description": "Add proactive SWI-Prolog installation checking and user-friendly setup guidance to the VSCode Prolog Toolkit extension",
+  "priority": "high",
+  "category": "user_experience",
+  "tasks": [
+    {
+      "id": "1",
+      "title": "Create Installation Checker Module",
+      "description": "Create a new module to detect SWI-Prolog installation and validate executable paths",
+      "priority": "high",
+      "estimated_hours": 4,
+      "files_to_modify": [],
+      "files_to_create": [
+        "src/features/installationChecker.ts"
+      ],
+      "implementation_details": {
+        "functions": [
+          "checkSwiplInstallation(): Promise<InstallationStatus>",
+          "findSwiplExecutable(): Promise<string | null>",
+          "validateSwiplPath(path: string): Promise<boolean>",
+          "getSwiplVersion(path: string): Promise<string | null>",
+          "detectCommonInstallPaths(): string[]"
+        ],
+        "interfaces": [
+          "InstallationStatus { isInstalled: boolean, path?: string, version?: string, issues?: string[] }"
+        ],
+        "platform_specific_paths": {
+          "windows": ["C:\\Program Files\\swipl\\bin\\swipl.exe", "C:\\swipl\\bin\\swipl.exe"],
+          "macos": ["/usr/local/bin/swipl", "/opt/homebrew/bin/swipl", "/Applications/SWI-Prolog.app/Contents/MacOS/swipl"],
+          "linux": ["/usr/bin/swipl", "/usr/local/bin/swipl", "/opt/swipl/bin/swipl"]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "title": "Add Installation Check to Extension Activation",
+      "description": "Integrate installation checking into the extension activation process",
+      "priority": "high",
+      "estimated_hours": 2,
+      "files_to_modify": [
+        "src/extension.ts"
+      ],
+      "implementation_details": {
+        "modifications": [
+          "Import installationChecker module",
+          "Add checkSwiplInstallation() call in activate() function",
+          "Handle installation status and show appropriate messages",
+          "Gracefully degrade functionality if SWI-Prolog not found"
+        ],
+        "activation_flow": [
+          "Check current configuration",
+          "Validate configured path",
+          "If invalid, attempt auto-detection",
+          "Show installation guidance if not found",
+          "Update configuration if auto-detected"
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "title": "Create Installation Guidance Dialog",
+      "description": "Create user-friendly dialogs to guide users through SWI-Prolog installation",
+      "priority": "high",
+      "estimated_hours": 3,
+      "files_to_create": [
+        "src/features/installationGuide.ts"
+      ],
+      "implementation_details": {
+        "dialogs": [
+          "showInstallationNotFoundDialog()",
+          "showInstallationGuideDialog()",
+          "showPathConfigurationDialog()",
+          "showSuccessDialog()"
+        ],
+        "content": {
+          "download_links": {
+            "windows": "https://www.swi-prolog.org/download/stable/bin/swipl-9.2.6-1.x64.exe",
+            "macos": "https://www.swi-prolog.org/download/stable/bin/swipl-9.2.6-1.x86_64.dmg",
+            "linux": "https://www.swi-prolog.org/build/unix.html"
+          },
+          "installation_instructions": {
+            "windows": "Download and run the installer. SWI-Prolog will be added to your PATH automatically.",
+            "macos": "Download the DMG file and drag SWI-Prolog to Applications, or use: brew install swi-prolog",
+            "linux": "Use your package manager: sudo apt install swi-prolog (Ubuntu/Debian) or sudo yum install pl (CentOS/RHEL)"
+          }
+        }
+      }
+    },
+    {
+      "id": "4",
+      "title": "Add Setup Wizard Command",
+      "description": "Create a setup wizard command for manual installation guidance",
+      "priority": "medium",
+      "estimated_hours": 2,
+      "files_to_modify": [
+        "src/extension.ts",
+        "package.json"
+      ],
+      "implementation_details": {
+        "command": {
+          "id": "prolog.setupWizard",
+          "title": "Prolog: Setup Wizard",
+          "category": "Prolog"
+        },
+        "wizard_steps": [
+          "Check current installation status",
+          "Show platform-specific installation instructions",
+          "Test installation after user completes setup",
+          "Configure extension settings"
+        ]
+      }
+    },
+    {
+      "id": "5",
+      "title": "Enhance Error Messages with Installation Links",
+      "description": "Update existing error messages to include helpful installation guidance",
+      "priority": "medium",
+      "estimated_hours": 2,
+      "files_to_modify": [
+        "src/features/prologLinter.ts",
+        "src/features/prologFormatter.ts",
+        "src/features/prologDebugger.ts",
+        "src/features/prologTerminal.ts",
+        "src/prologBackend.ts"
+      ],
+      "implementation_details": {
+        "error_enhancements": [
+          "Replace generic 'executable not found' messages",
+          "Add 'Install SWI-Prolog' button to error dialogs",
+          "Include direct links to download pages",
+          "Offer to run setup wizard"
+        ],
+        "error_types": [
+          "ENOENT (executable not found)",
+          "Backend startup failures",
+          "Linting failures",
+          "Formatting failures",
+          "Debug session failures"
+        ]
+      }
+    },
+    {
+      "id": "6",
+      "title": "Add Installation Status to Settings UI",
+      "description": "Show installation status and provide setup options in the settings webview",
+      "priority": "medium",
+      "estimated_hours": 2,
+      "files_to_modify": [
+        "src/features/settingsWebviewProvider.ts"
+      ],
+      "implementation_details": {
+        "ui_elements": [
+          "Installation status indicator (✅ Installed / ❌ Not Found)",
+          "SWI-Prolog version display",
+          "Auto-detect button",
+          "Manual path configuration",
+          "Test installation button",
+          "Download links section"
+        ],
+        "status_checks": [
+          "Real-time validation of executable path",
+          "Version compatibility checking",
+          "Path accessibility testing"
+        ]
+      }
+    },
+    {
+      "id": "7",
+      "title": "Create Installation Tests",
+      "description": "Add comprehensive tests for installation detection and setup functionality",
+      "priority": "medium",
+      "estimated_hours": 3,
+      "files_to_create": [
+        "test/installationChecker.test.ts",
+        "test/installationGuide.test.ts"
+      ],
+      "implementation_details": {
+        "test_scenarios": [
+          "SWI-Prolog installed in standard location",
+          "SWI-Prolog installed in custom location",
+          "SWI-Prolog not installed",
+          "Invalid executable path",
+          "Permission issues",
+          "Version detection",
+          "Auto-detection on different platforms"
+        ],
+        "mock_scenarios": [
+          "Mock file system for path testing",
+          "Mock spawn for executable testing",
+          "Mock platform detection"
+        ]
+      }
+    },
+    {
+      "id": "8",
+      "title": "Add Configuration Migration",
+      "description": "Handle migration of existing configurations and auto-update paths when possible",
+      "priority": "low",
+      "estimated_hours": 2,
+      "files_to_create": [
+        "src/features/configurationMigration.ts"
+      ],
+      "implementation_details": {
+        "migration_tasks": [
+          "Detect outdated or invalid paths",
+          "Attempt to find new valid paths",
+          "Backup old configuration",
+          "Update configuration with new paths",
+          "Notify user of changes"
+        ],
+        "compatibility": [
+          "Handle different SWI-Prolog versions",
+          "Support legacy installation paths",
+          "Preserve user customizations"
+        ]
+      }
+    },
+    {
+      "id": "9",
+      "title": "Update Documentation",
+      "description": "Update README and documentation to reflect new installation features",
+      "priority": "low",
+      "estimated_hours": 1,
+      "files_to_modify": [
+        "README.md",
+        "docs/troubleshooting.md"
+      ],
+      "implementation_details": {
+        "documentation_updates": [
+          "Add installation requirements section",
+          "Document setup wizard usage",
+          "Add troubleshooting for installation issues",
+          "Include platform-specific installation notes",
+          "Update configuration examples"
+        ]
+      }
+    }
+  ],
+  "implementation_order": [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9"
+  ],
+  "total_estimated_hours": 21,
+  "dependencies": {
+    "external": [
+      "which package for executable detection",
+      "fs-extra for file system operations",
+      "semver for version comparison"
+    ],
+    "internal": [
+      "Utils module for platform detection",
+      "Configuration management",
+      "Error handling system"
+    ]
+  },
+  "testing_strategy": {
+    "unit_tests": "Test individual functions for installation detection",
+    "integration_tests": "Test full activation flow with different installation states",
+    "manual_tests": "Test on clean systems without SWI-Prolog installed",
+    "platform_tests": "Test on Windows, macOS, and Linux"
+  },
+  "rollout_plan": {
+    "phase_1": "Core installation detection (tasks 1-2)",
+    "phase_2": "User guidance and setup wizard (tasks 3-4)",
+    "phase_3": "Enhanced error handling and UI (tasks 5-6)",
+    "phase_4": "Testing and documentation (tasks 7-9)"
+  }
+}

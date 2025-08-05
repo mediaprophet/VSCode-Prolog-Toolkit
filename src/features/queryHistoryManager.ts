@@ -6,13 +6,13 @@ import { QueryStatus } from './queryNotificationManager';
 export interface QueryHistoryEntry {
   id: string;
   cmd: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   status: 'pending' | 'running' | 'completed' | 'error' | 'cancelled' | 'timeout';
   startTime: number;
   endTime?: number;
   duration?: number;
-  results?: any;
-  error?: any;
+  results?: unknown;
+  error?: unknown;
   priority?: string;
   deleted?: boolean;
   resourceUsage?: {
@@ -121,7 +121,7 @@ export class QueryHistoryManager extends EventEmitter {
       this.isInitialized = true;
       this.emit('initialized');
       console.log(`[QueryHistoryManager] Initialized with ${this.memoryCache.size} entries`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryHistoryManager] Initialization failed:', error);
       this.emit('error', error);
     }
@@ -242,7 +242,7 @@ export class QueryHistoryManager extends EventEmitter {
     const sortOrder = filter.sortOrder || 'desc';
     
     entries.sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: unknown, bValue: unknown;
       
       switch (sortBy) {
         case 'startTime':
@@ -411,7 +411,7 @@ export class QueryHistoryManager extends EventEmitter {
       if (fs.existsSync(this.indexFile)) {
         fs.unlinkSync(this.indexFile);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryHistoryManager] Error clearing persistent storage:', error);
     }
 
@@ -437,13 +437,13 @@ export class QueryHistoryManager extends EventEmitter {
           if (!entry.deleted) {
             this.memoryCache.set(entry.id, entry);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.warn('[QueryHistoryManager] Invalid history entry:', line);
         }
       }
 
       console.log(`[QueryHistoryManager] Loaded ${this.memoryCache.size} entries from disk`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryHistoryManager] Error loading history from disk:', error);
     }
   }
@@ -472,7 +472,7 @@ export class QueryHistoryManager extends EventEmitter {
       fs.appendFileSync(this.historyFile, lines, 'utf8');
       
       console.log(`[QueryHistoryManager] Persisted ${batch.length} entries to disk`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryHistoryManager] Error writing to disk:', error);
       // Put entries back in queue for retry
       this.writeQueue.unshift(...batch);
@@ -542,7 +542,7 @@ export class QueryHistoryManager extends EventEmitter {
       
       fs.writeFileSync(this.historyFile, lines + '\n', 'utf8');
       console.log(`[QueryHistoryManager] Rewrote history file with ${entries.length} entries`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QueryHistoryManager] Error rewriting history file:', error);
     }
   }

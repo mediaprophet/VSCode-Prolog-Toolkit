@@ -3,11 +3,15 @@ import { EventEmitter } from 'events';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import { PlatformUtils } from './utils/platformUtils';
+import { ExecutableFinder } from './utils/executableFinder';
 import { QueryNotificationManager, QueryCallback, QueryNotificationOptions } from './features/queryNotificationManager';
 import { ConcurrencyManager, ResourceQuota, QueryPriority } from './features/concurrencyManager';
 import { QueryHistoryManager, QueryHistoryOptions } from './features/queryHistoryManager';
 import { QueryScheduler, ScheduledQuery } from './features/queryScheduler';
 import { SessionManager, SessionManagerOptions } from './features/sessionManager';
+import { InstallationGuide } from './features/installationGuide';
+import * as vscode from 'vscode';
 
 export interface PrologBackendOptions {
   swiplPath?: string;
@@ -77,7 +81,7 @@ export class PrologBackend extends EventEmitter {
 
     // Initialize history manager
     this.historyManager = new QueryHistoryManager({
-      storageDir: path.join(process.cwd(), '.prolog-history'),
+      storageDir: PlatformUtils.joinPath(process.cwd(), '.prolog-history'),
       ...options.historyOptions
     });
 
@@ -90,7 +94,7 @@ export class PrologBackend extends EventEmitter {
 
     // Initialize session manager
     this.sessionManager = new SessionManager({
-      storageDir: path.join(process.cwd(), '.prolog-sessions'),
+      storageDir: PlatformUtils.joinPath(process.cwd(), '.prolog-sessions'),
       ...options.sessionOptions
     });
 
@@ -1038,18 +1042,70 @@ export class PrologBackend extends EventEmitter {
     this.intentionalStop = false;
   }
 
-  start() {
+  async start() {
     this.log('[DEBUG] start() called. this.process=' + !!this.process);
     if (this.process) {
       this.log('Prolog backend already running.');
       return;
     }
-    const swiplPath = this.options.swiplPath || 'swipl';
-    const serverPath = path.resolve(__dirname, 'prolog_json_server.pl');
-    // Use proper escaping for Windows paths in Prolog
+    
+    // Enhanced executable resolution with permission checking
+    let swiplPath = this.options.swiplPath || PlatformUtils.getDefaultExecutablePath();
+    
+    // Validate the configured path first
+    if (swiplPath && swiplPath !== PlatformUtils.getDefaultExecutablePath()) {
+      const normalizedPath = PlatformUtils.normalizePath(swiplPath);
+      if (await PlatformUtils.pathExists(normalizedPath)) {
+        if (await PlatformUtils.isExecutable(normalizedPath)) {
+          swiplPath = normalizedPath;
+        } else {
+          this.log(`[WARNING] Configured SWI-Prolog path '${normalizedPath}' exists but lacks execute permissions`);
+          // Try to find alternative
+          const executableFinder = new ExecutableFinder();
+          const detectionResult = await executableFinder.findSwiplExecutable();
+          if (detectionResult.found && detectionResult.path) {
+            swiplPath = detectionResult.path;
+            this.log(`[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`);
+          }
+        }
+      } else {
+        this.log(`[WARNING] Configured SWI-Prolog path '${normalizedPath}' does not exist`);
+        // Try to find alternative
+        const executableFinder = new ExecutableFinder();
+        const detectionResult = await executableFinder.findSwiplExecutable();
+        if (detectionResult.found && detectionResult.path) {
+          swiplPath = detectionResult.path;
+          this.log(`[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`);
+        }
+      }
+    } else {
+      // No specific path configured, use comprehensive detection
+      const executableFinder = new ExecutableFinder();
+      const detectionResult = await executableFinder.findSwiplExecutable();
+      if (detectionResult.found && detectionResult.path) {
+        swiplPath = detectionResult.path;
+        this.log(`[INFO] Found SWI-Prolog at '${swiplPath}' via ${detectionResult.detectionMethod}`);
+        
+        // Check permissions
+        if (!detectionResult.permissions?.executable) {
+          this.log(`[WARNING] Found SWI-Prolog at '${swiplPath}' but it lacks execute permissions`);
+          const platform = PlatformUtils.getPlatform();
+          if (platform !== 'windows') {
+            this.log(`[SUGGESTION] Try fixing permissions with: chmod +x "${swiplPath}"`);
+          }
+        }
+      } else {
+        // Fallback to default
+        swiplPath = PlatformUtils.normalizePath(swiplPath);
+        this.log(`[WARNING] Could not find SWI-Prolog executable, using fallback: ${swiplPath}`);
+      }
+    }
+    
+    const serverPath = PlatformUtils.resolvePath(__dirname, 'prolog_json_server.pl');
+    // Use proper escaping for cross-platform paths in Prolog
     const prologPath = serverPath.replace(/\\/g, '/').replace(/'/g, "''");
     const args = this.options.args || ['-q', '-f', 'none', '-g', `consult('${prologPath}'), main(${this.port})`];
-    const cwd = this.options.cwd || process.cwd();
+    const cwd = PlatformUtils.normalizePath(this.options.cwd || process.cwd());
 
     this.log('Spawning Prolog with:');
     this.log('  swiplPath: ' + swiplPath);
@@ -1084,8 +1140,33 @@ export class PrologBackend extends EventEmitter {
             this.emit('ready');
             this.emit('started');
             this.log('Prolog backend started. Version: ' + output.version);
-          }).catch((err) => {
+          }).catch(async (err) => {
             this.log('Prolog handshake/version check failed: ' + err.message);
+            
+            // Show enhanced error message for backend startup failures
+            if (err.code === 'ENOENT' || err.message?.includes('not found')) {
+              const action = await vscode.window.showErrorMessage(
+                'SWI-Prolog backend failed to start. The Prolog backend requires SWI-Prolog to provide language features.',
+                'Install SWI-Prolog',
+                'Setup Wizard',
+                'Configure Path',
+                'Dismiss'
+              );
+              
+              const installationGuide = InstallationGuide.getInstance();
+              switch (action) {
+                case 'Install SWI-Prolog':
+                  await installationGuide.showInstallationGuideDialog();
+                  break;
+                case 'Setup Wizard':
+                  await vscode.commands.executeCommand('prolog.setupWizard');
+                  break;
+                case 'Configure Path':
+                  await vscode.commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+                  break;
+              }
+            }
+            
             this.stop();
           });
         }, 2000); // Give more time for HTTP server to start

@@ -7,7 +7,12 @@ import { PrologPackageManager, PrologPack } from '../src/features/prologPackageM
 describe('PrologPackageCommands', () => {
   let packageCommands: PrologPackageCommands;
   let mockPackageManager: sinon.SinonStubbedInstance<PrologPackageManager>;
-  let windowStub: any;
+  let windowStub: {
+    showErrorMessage: sinon.SinonStub;
+    showWarningMessage: sinon.SinonStub;
+    showInformationMessage: sinon.SinonStub;
+    showQuickPick: sinon.SinonStub;
+  };
 
   const mockPacks: PrologPack[] = [
     {

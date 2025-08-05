@@ -238,7 +238,7 @@ export class ApiServer {
           resolve();
         });
 
-        this.server.on('error', (error: Error) => {
+        this.server.on('error', (error: unknown) => {
           console.error('[ApiServer] Server error:', error);
           reject(error);
         });
@@ -246,7 +246,7 @@ export class ApiServer {
         // Handle connection limits
         this.server.maxConnections = this.config.maxConnections;
 
-      } catch (error) {
+      } catch (error: unknown) {
         reject(error);
       }
     });
@@ -288,7 +288,7 @@ export class ApiServer {
       running: this.isRunning,
       port: this.config.port,
       host: this.config.host,
-      connections: this.server?.connections || 0
+      connections: (this.server as any)?.connections || 0
     };
   }
 

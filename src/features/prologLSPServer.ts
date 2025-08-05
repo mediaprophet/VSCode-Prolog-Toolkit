@@ -283,7 +283,7 @@ async function initializePrologBackend() {
     });
 
     prologBackend.start();
-  } catch (error) {
+  } catch (error: unknown) {
     connection.console.error(`Failed to initialize Prolog backend: ${error}`);
   }
 }
@@ -365,7 +365,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
     try {
       const backendDiagnostics = await validateWithBackend(textDocument);
       diagnostics.push(...backendDiagnostics);
-    } catch (error) {
+    } catch (error: unknown) {
       connection.console.error(`Backend validation error: ${error}`);
     }
   }
@@ -464,7 +464,7 @@ async function validateWithBackend(document: TextDocument): Promise<Diagnostic[]
     });
 
     if (response.status === 'error' && response.errors) {
-      return response.errors.map((error: any) => ({
+      return response.errors.map((error: { line?: number; column?: number; length?: number; message?: string }) => ({
         severity: DiagnosticSeverity.Error,
         range: {
           start: { line: error.line || 0, character: error.column || 0 },
@@ -474,7 +474,7 @@ async function validateWithBackend(document: TextDocument): Promise<Diagnostic[]
         source: 'prolog-backend'
       }));
     }
-  } catch (error) {
+  } catch (error: unknown) {
     // Backend validation failed, return empty array
   }
 
@@ -550,7 +550,7 @@ connection.onCompletion(
       try {
         const dynamicCompletions = await getDynamicCompletions(document, position);
         completions.push(...dynamicCompletions);
-      } catch (error) {
+      } catch (error: unknown) {
         // Ignore errors in dynamic completion
       }
     }
@@ -619,7 +619,7 @@ async function getDynamicCompletions(document: TextDocument, position: Position)
     });
 
     if (response.status === 'ok' && response.completions) {
-      return response.completions.map((comp: any) => ({
+      return response.completions.map((comp: { label: string; kind?: string; detail?: string; documentation?: string; insertText?: string }) => ({
         label: comp.label,
         kind: getCompletionItemKind(comp.kind),
         detail: comp.detail,
@@ -627,7 +627,7 @@ async function getDynamicCompletions(document: TextDocument, position: Position)
         insertText: comp.insertText || comp.label
       }));
     }
-  } catch (error) {
+  } catch (error: unknown) {
     // Ignore errors
   }
 
@@ -730,7 +730,7 @@ function getWordAtPosition(text: string, position: Position): string | null {
   return start < end ? line.substring(start, end) : null;
 }
 
-function formatHelpAsMarkdown(doc: any): string {
+function formatHelpAsMarkdown(doc: { name: string; arity: number; summary?: string; args?: Array<{ name: string; description: string }>; examples?: string[] }): string {
   let markdown = `# ${doc.name}/${doc.arity}\n\n`;
   
   if (doc.summary) {
@@ -868,7 +868,7 @@ connection.onExecuteCommand(
                 : `Query failed: ${response.error}`
             );
             return response;
-          } catch (error) {
+          } catch (error: unknown) {
             connection.window.showErrorMessage(`Query error: ${error}`);
           }
         }
@@ -887,7 +887,7 @@ connection.onExecuteCommand(
                 : `Consult failed: ${response.error}`
             );
             return response;
-          } catch (error) {
+          } catch (error: unknown) {
             connection.window.showErrorMessage(`Consult error: ${error}`);
           }
         }
@@ -905,7 +905,7 @@ connection.onExecuteCommand(
               connection.window.showInformationMessage(`Help for ${args[0]}: ${response.doc.summary || 'No description'}`);
             }
             return response;
-          } catch (error) {
+          } catch (error: unknown) {
             connection.window.showErrorMessage(`Help error: ${error}`);
           }
         }
@@ -973,7 +973,7 @@ connection.onDefinition(
         });
 
         if (response.status === 'ok' && response.locations) {
-          return response.locations.map((loc: any) => ({
+          return response.locations.map((loc: { uri: string; line: number; character: number }) => ({
             uri: loc.uri,
             range: {
               start: { line: loc.line, character: loc.character },
@@ -981,7 +981,7 @@ connection.onDefinition(
             }
           }));
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Fall back to local search
       }
     }

@@ -114,38 +114,38 @@ describe('OutputFormatter', () => {
   describe('formatValue', () => {
     it('should format atoms correctly', () => {
       const formatter = new OutputFormatter();
-      expect((formatter as any).formatValue('hello')).to.equal('hello');
-      expect((formatter as any).formatValue('Hello World')).to.equal("'Hello World'");
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue('hello')).to.equal('hello');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue('Hello World')).to.equal("'Hello World'");
     });
 
     it('should format numbers correctly', () => {
       const formatter = new OutputFormatter();
-      expect((formatter as any).formatValue(42)).to.equal('42');
-      expect((formatter as any).formatValue(3.14)).to.equal('3.14');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(42)).to.equal('42');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(3.14)).to.equal('3.14');
     });
 
     it('should format booleans correctly', () => {
       const formatter = new OutputFormatter();
-      expect((formatter as any).formatValue(true)).to.equal('true');
-      expect((formatter as any).formatValue(false)).to.equal('false');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(true)).to.equal('true');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(false)).to.equal('false');
     });
 
     it('should format arrays correctly', () => {
       const formatter = new OutputFormatter();
-      expect((formatter as any).formatValue([1, 2, 3])).to.equal('[1, 2, 3]');
-      expect((formatter as any).formatValue(['a', 'b'])).to.equal('[a, b]');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue([1, 2, 3])).to.equal('[1, 2, 3]');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(['a', 'b'])).to.equal('[a, b]');
     });
 
     it('should format compound terms correctly', () => {
       const formatter = new OutputFormatter();
       const compound = { functor: 'person', args: ['john', 25] };
-      expect((formatter as any).formatValue(compound)).to.equal('person(john, 25)');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(compound)).to.equal('person(john, 25)');
     });
 
     it('should handle null and undefined', () => {
       const formatter = new OutputFormatter();
-      expect((formatter as any).formatValue(null)).to.equal('_');
-      expect((formatter as any).formatValue(undefined)).to.equal('_');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(null)).to.equal('_');
+      expect((formatter as unknown as { formatValue: (value: unknown) => string }).formatValue(undefined)).to.equal('_');
     });
   });
 
@@ -321,7 +321,7 @@ describe('OutputFormatter', () => {
     });
 
     it('should handle circular references safely', () => {
-      const circular: any = { functor: 'circular', args: [] };
+      const circular: { functor: string; args: unknown[] } = { functor: 'circular', args: [] };
       circular.args.push(circular);
       
       const bindings = [{ Circular: circular }];

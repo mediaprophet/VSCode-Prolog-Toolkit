@@ -1,29 +1,121 @@
 
 # VSCode Prolog Toolkit
 
-A robust, production-grade VS Code extension for SWI-Prolog, building on [AmauryRabouan/new-vsc-prolog](https://github.com/AmauryRabouan/new-vsc-prolog) and [Arthur Wang's VSC-Prolog](https://marketplace.visualstudio.com/items?itemName=arthurwang.vsc-prolog).
+A comprehensive, production-grade VS Code extension for SWI-Prolog with **full multi-platform support** across Windows, macOS, and Linux. Building on [AmauryRabouan/new-vsc-prolog](https://github.com/AmauryRabouan/new-vsc-prolog) and [Arthur Wang's VSC-Prolog](https://marketplace.visualstudio.com/items?itemName=arthurwang.vsc-prolog).
 
-**Repository:** https://github.com/mediaprophet/VSCode-Prolog-Toolkit  
-**Author:** Timothy Holborn  
+**Repository:** https://github.com/mediaprophet/VSCode-Prolog-Toolkit
+**Author:** Timothy Holborn
 **Credits:** Major features and inspiration from [Amaury Rabouan](https://github.com/AmauryRabouan/new-vsc-prolog) and contributors.
 
 ---
 
-___________________
-  [Features](#features) | [Configurations](#configurations) | [Debugger Settings](#debugger-settings) | [Commands & Keybindings](#commands-keybindings) | [Bug Reporting](https://github.com/AmauryRabouan/new-vsc-prolog/issues) 
+## 🚀 Multi-Platform Excellence
 
+**Comprehensive Platform Support:**
+- **Windows**: Windows 10/11, PowerShell, Command Prompt, WSL
+- **macOS**: Intel & Apple Silicon, Homebrew, MacPorts, native apps
+- **Linux**: Ubuntu, Debian, Fedora, Arch, openSUSE, and more
+
+**Intelligent Platform Features:**
+- 🔍 **Smart Detection**: Automatic SWI-Prolog installation discovery
+- 📦 **Package Manager Integration**: 15+ package managers supported
+- 🛠️ **Setup Wizard**: Guided platform-specific configuration
+- 🔧 **Path Handling**: Environment variables, UNC paths, symbolic links
+- 🖥️ **Terminal Integration**: Shell detection and command escaping
+- 🔒 **Permission Management**: Unix permissions and Windows ACL support
+
+___________________
+  [Quick Start](#quick-start) | [Platform Support](#platform-support) | [Features](#features) | [Installation](#installation) | [Documentation](#documentation) | [Bug Reporting](https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues)
+
+## Quick Start
+
+### 1. Install Extension
+```bash
+# From VS Code Marketplace
+# Search "VSCode Prolog Toolkit" in Extensions view
+
+# Or via command line
+code --install-extension mediaprophet.vscode-prolog-toolkit
+```
+
+### 2. Automatic Setup
+The extension automatically detects your platform and SWI-Prolog installation:
+- **Found**: Ready to use immediately
+- **Not Found**: Shows platform-specific installation guidance
+
+### 3. Setup Wizard
+Run `Ctrl+Shift+P` → `Prolog: Setup Wizard` for guided configuration.
+
+## Platform Support
+
+### 🪟 Windows Support
+- **Package Managers**: Chocolatey, Winget, Scoop
+- **Shells**: PowerShell 5.1/7.x, Command Prompt, WSL
+- **Paths**: UNC paths, environment variables, mixed separators
+- **Security**: Code signing, Windows Defender integration
+
+```powershell
+# Quick install with Chocolatey
+choco install swi-prolog
+
+# Or with Winget
+winget install SWI-Prolog.SWI-Prolog
+```
+
+### 🍎 macOS Support
+- **Package Managers**: Homebrew, MacPorts
+- **Architectures**: Intel x64, Apple Silicon (M1/M2/M3)
+- **Shells**: zsh, bash, fish
+- **Security**: Gatekeeper, notarization, quarantine handling
+
+```bash
+# Quick install with Homebrew
+brew install swi-prolog
+
+# Apple Silicon path: /opt/homebrew/bin/swipl
+# Intel path: /usr/local/bin/swipl
+```
+
+### 🐧 Linux Support
+- **Distributions**: Ubuntu, Debian, Fedora, CentOS, Arch, openSUSE
+- **Package Managers**: APT, DNF, YUM, Pacman, Zypper, Snap, Flatpak
+- **Shells**: bash, zsh, fish, dash
+- **Security**: SELinux, AppArmor, file permissions
+
+```bash
+# Ubuntu/Debian
+sudo apt install swi-prolog
+
+# Fedora
+sudo dnf install pl
+
+# Arch Linux
+sudo pacman -S swi-prolog
+
+# Universal Snap
+sudo snap install swi-prolog
+```
 
 ## About This Fork
 
 This toolkit is a comprehensive refactor and extension of [new-vsc-prolog](https://github.com/AmauryRabouan/new-vsc-prolog), with:
-- A robust Node.js backend using HTTP/JSON for all Prolog communication
-- Advanced chat-based Prolog and N3 logic interaction (see below)
-- Full test coverage, CI, and production-grade error handling
-- Enhanced diagnostics, output formatting, and extensibility
+- **Multi-Platform Architecture**: Full Windows, macOS, and Linux support
+- **Intelligent Platform Detection**: Automatic configuration and setup
+- **Package Manager Integration**: 15+ package managers across platforms
+- **Robust Node.js Backend**: HTTP/JSON communication with SWI-Prolog
+- **Advanced Chat Assistant**: Prolog and N3 logic interaction
+- **Comprehensive Testing**: Platform-specific test suites and CI/CD
+- **Production-Grade Quality**: Error handling, logging, and extensibility
 
-Tested on Windows, macOS, and Linux with SWI-Prolog 9.0.4+ and VS Code 1.86+.
+Tested extensively across all platforms with SWI-Prolog 8.0+ and VS Code 1.102+.
 
 ## Features
+  * [Intelligent Installation Detection](#intelligent-installation-detection)
+    * Automatic SWI-Prolog installation detection and setup assistance
+    * Interactive Setup Wizard with guided configuration
+    * Platform-specific installation guidance (Windows, macOS, Linux)
+    * Configuration migration and backup system
+    * Real-time path validation and error recovery
   * [Syntax highlighting](#syntax-highlighting)
   * [Snippets](#predicate-snippets)
   * [Information Hovers](#information-hovers)
@@ -56,6 +148,52 @@ Tested on Windows, macOS, and Linux with SWI-Prolog 9.0.4+ and VS Code 1.86+.
     * Evaluation
 
 ## Feature descriptions and usages
+
+### Intelligent Installation Detection
+
+The extension includes a comprehensive **intelligent installation detection and setup assistance system** that makes getting started with SWI-Prolog effortless.
+
+#### Key Features
+
+- **Automatic Detection**: Scans common installation paths across Windows, macOS, and Linux
+- **Setup Wizard**: Interactive guided setup with step-by-step configuration
+- **Installation Guide**: Rich webview with platform-specific installation instructions
+- **Configuration Migration**: Automatically updates outdated or invalid SWI-Prolog paths
+- **Real-time Validation**: Instant feedback on executable paths and installation status
+- **Error Recovery**: User-friendly error messages with actionable solutions
+
+#### How It Works
+
+1. **On First Launch**: The extension automatically detects existing SWI-Prolog installations
+2. **If Not Found**: Shows installation guidance dialog with platform-specific instructions
+3. **Setup Wizard**: Use `Prolog: Setup Wizard` command for guided configuration
+4. **Settings Integration**: View installation status and test configuration in settings panel
+5. **Automatic Migration**: Detects and migrates outdated configuration paths
+
+#### Platform Support
+
+**Windows:**
+- Detects installations in Program Files, local app data, and custom locations
+- Supports both 32-bit and 64-bit installations
+- Handles Chocolatey, Scoop, and manual installations
+
+**macOS:**
+- Supports Homebrew (Intel and Apple Silicon), MacPorts, and app bundle installations
+- Detects both `/usr/local/bin` and `/opt/homebrew/bin` paths
+- Handles manual installations and development builds
+
+**Linux:**
+- Supports package manager installations (apt, yum, dnf, pacman, zypper)
+- Detects system, local, and snap package installations
+- Handles custom compilation and installation paths
+
+#### Commands
+
+- **`Prolog: Setup Wizard`**: Launch interactive setup wizard
+- **Settings Panel**: View installation status and test configuration
+- **Auto-detection**: Runs automatically on extension activation
+
+For troubleshooting installation issues, see the [Installation Troubleshooting Guide](docs/troubleshooting.md#installation-issues).
 
 ### Syntax highlighting
   * Based on sublimeprolog
@@ -388,37 +526,88 @@ For troubleshooting and error resolution, see the [Troubleshooting Guide](docs/t
 
     ![input](images/input.gif)
 
-## Requirements
+## Installation
 
-- **VS Code:** Version 1.86 or later
-- **SWI-Prolog:** Version 9.0.4 or later (recommended)
-- **Node.js:** Version 18.x or later (for development)
-- **Operating System:** Windows 10+, macOS 10.15+, or Ubuntu 18.04+
+### Quick Installation
 
-### Installation Instructions
+1. **Install Extension**: Search "VSCode Prolog Toolkit" in VS Code Extensions
+2. **Auto-Detection**: Extension automatically finds SWI-Prolog installations
+3. **Setup Wizard**: Run `Prolog: Setup Wizard` if needed
 
-1. **Install SWI-Prolog:**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install swi-prolog
-   
-   # macOS (using Homebrew)
-   brew install swi-prolog
-   
-   # Windows (using Chocolatey)
-   choco install swi-prolog
-   ```
+### Platform-Specific Installation
 
-2. **Install the Extension:**
-   - Open VS Code
-   - Go to Extensions (Ctrl+Shift+X)
-   - Search for "New-VSC-Prolog"
-   - Click Install
+#### Windows
+```powershell
+# Chocolatey (Recommended)
+choco install swi-prolog
 
-3. **Configure SWI-Prolog Path (if needed):**
-   - Open VS Code Settings (Ctrl+,)
-   - Search for "prolog.executablePath"
-   - Set the path to your SWI-Prolog installation
+# Winget
+winget install SWI-Prolog.SWI-Prolog
+
+# Scoop
+scoop bucket add extras && scoop install swi-prolog
+```
+
+#### macOS
+```bash
+# Homebrew (Recommended)
+brew install swi-prolog
+
+# MacPorts
+sudo port install swi-prolog
+```
+
+#### Linux
+```bash
+# Ubuntu/Debian
+sudo apt install swi-prolog
+
+# Fedora
+sudo dnf install pl
+
+# Arch Linux
+sudo pacman -S swi-prolog
+
+# Universal
+sudo snap install swi-prolog
+```
+
+### Requirements
+
+- **VS Code**: 1.102.0+
+- **SWI-Prolog**: 8.0.0+ (9.0.0+ recommended)
+- **Node.js**: 18.x+ (for development)
+- **Platforms**: Windows 10+, macOS 10.15+, Linux (kernel 3.10+)
+
+### Installation Features
+
+- 🔍 **Smart Detection**: Finds SWI-Prolog in 20+ common locations
+- 📦 **Package Manager Integration**: Supports 15+ package managers
+- 🛠️ **Setup Wizard**: Guided configuration with validation
+- 🔧 **Auto-Configuration**: Platform-specific defaults
+- 🚨 **Error Recovery**: Helpful diagnostics and solutions
+
+## Documentation
+
+### Platform Guides
+- 📖 [**Installation Guide**](docs/installation-guide.md) - Comprehensive setup instructions
+- 🪟 [**Windows Platform Guide**](docs/platform/windows.md) - Windows-specific features and troubleshooting
+- 🍎 [**macOS Platform Guide**](docs/platform/macos.md) - macOS setup with Homebrew, Apple Silicon support
+- 🐧 [**Linux Platform Guide**](docs/platform/linux.md) - Multi-distribution support and package managers
+
+### Feature Documentation
+- 🤖 [**N3 Reasoning Guide**](docs/n3-reasoning-guide.md) - Semantic web and N3 logic
+- 🧠 [**Enhanced Reasoning Guide**](docs/enhanced-reasoning-guide.md) - CLP, probabilistic logic
+- 🔧 [**Troubleshooting Guide**](docs/troubleshooting.md) - Common issues and solutions
+- 📋 [**API Documentation**](docs/api/) - Extension API reference
+
+### Quick Links
+- 🚀 [**Quick Start**](#quick-start) - Get up and running in minutes
+- 🎯 [**Platform Support**](#platform-support) - See what's supported on your OS
+- ⚙️ [**Configuration**](#configurations) - Customize the extension
+- 🐛 [**Bug Reports**](https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues) - Report issues
+
+
 
 ## Configurations
 

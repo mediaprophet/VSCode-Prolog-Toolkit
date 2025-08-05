@@ -35,9 +35,9 @@ export class SnippetUpdater {
       // Update only if the document is a prolog file
       if (doc.languageId === "prolog") { 
         // Retrieve predicates from the document and check against existing snippets
-        var predicats = this._getPredicat(doc); 
-        var already = [];
-        var description = [];
+        var predicats = this._getPredicat(doc);
+        var already: string[] = [];
+        var description: boolean[] = [];
         // Extract existing snippets' names for comparison
         Object.keys(Utils.snippets).forEach((elem)=>{
           if(elem.includes(":")){

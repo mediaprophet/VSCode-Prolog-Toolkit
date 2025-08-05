@@ -18,18 +18,18 @@ export class PrologDefinitionProvider implements DefinitionProvider {
     doc: TextDocument,
     position: Position,
     token: CancellationToken
-  ): Location | Thenable<Location> {
-    let location: Location = null;
+  ): Location | undefined | Thenable<Location | undefined> {
+    let location: Location | undefined = undefined;
     let pred = Utils.getPredicateUnderCursor(doc, position);// Get the predicate under the cursor using utility function
     // Return early if no predicate is found
     if (!pred) {
-      return null;
+      return undefined;
     }
     // Initialize variables for Prolog execution
     let exec = Utils.RUNTIMEPATH;
     let args: string[] = [],
       prologCode: string,
-      result: string[],
+      result: string[] = [],
       predToFind: string,
       runOptions: cp.SpawnSyncOptions;
     const fileLineRe = /File:(.+);Line:(\d+)/;
@@ -77,27 +77,42 @@ export class PrologDefinitionProvider implements DefinitionProvider {
       case "ecl":
         args = [];
         let lc = path.resolve(`${__dirname}/locate_clause`);
-        predToFind = pred.pi.split(":")[1];
+        const piParts = pred.pi.split(":");
+        predToFind = piParts.length > 1 ? piParts[1]! : pred.pi;
+        if (!predToFind) {
+          return undefined;
+        }
+        
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+          return undefined;
+        }
+        
         prologCode = `ensure_loaded(['${lc}']),
           source_location('${jsesc(doc.fileName)}', ${predToFind}).
           `;
         runOptions = {
-          cwd: workspace.workspaceFolders[0].uri.fsPath,
+          cwd: workspace.workspaceFolders[0]!.uri.fsPath,
           encoding: "utf8",
           input: prologCode
         };
         // Check if the document is dirty (unsaved) and save it if needed
+        if (!Utils.RUNTIMEPATH) {
+          return undefined;
+        }
+        
         if (doc.isDirty) {
           doc.save().then(_ => {
-            let syncPro = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions);
+            let syncPro = cp.spawnSync(Utils.RUNTIMEPATH!, args, runOptions);
             if (syncPro.status === 0) {
-              result = syncPro.stdout.toString().match(fileLineRe);
+              const matchResult = syncPro.stdout.toString().match(fileLineRe);
+              result = matchResult ? Array.from(matchResult) : [];
             }
           });
         } else {
           let syncPro = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions);
           if (syncPro.status === 0) {
-            result = syncPro.stdout.toString().match(fileLineRe);
+            const matchResult = syncPro.stdout.toString().match(fileLineRe);
+            result = matchResult ? Array.from(matchResult) : [];
           }
         }
         break;
@@ -107,7 +122,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
         break;
     }
     // If result is obtained, create a Location object with file and line information
-    if (result) {
+    if (result && result.length >= 3 && result[1] && result[2]) {
       let fileName: string = result[1];
       let lineNum: number = parseInt(result[2]);
       location = new Location(Uri.file(fileName), new Position(lineNum - 1, 0));

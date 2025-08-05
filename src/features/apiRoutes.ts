@@ -17,23 +17,25 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   const router = Router();
 
   // Query execution endpoint
-  router.post('/query', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/query', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { query, session_id, options = {} } = req.body;
 
       if (!query) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Query parameter is required'
         });
+        return;
       }
 
       // Check permissions
       if (!hasPermission(req.user, 'query:execute')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions for query execution'
         });
+        return;
       }
 
       const queryId = uuidv4();
@@ -74,7 +76,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         streaming_info: result.streaming_info
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Query execution error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -84,31 +86,33 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // Batch query execution endpoint
-  router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/batch', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { queries, session_id, batch_options = {} } = req.body;
 
       if (!Array.isArray(queries) || queries.length === 0) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Queries array is required and must not be empty'
         });
+        return;
       }
 
       // Check permissions
       if (!hasPermission(req.user, 'batch:execute')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions for batch execution'
         });
+        return;
       }
 
       const batchId = uuidv4();
-      const batchRequests = queries.map((query: any) => ({
+      const batchRequests = queries.map((query: { query?: string; timeout?: number } | string) => ({
         cmd: 'query',
         params: {
-          goal: query.query || query,
-          timeoutMs: query.timeout || batch_options.timeout || 30000,
+          goal: typeof query === 'string' ? query : (query.query || query),
+          timeoutMs: typeof query === 'string' ? (batch_options.timeout || 30000) : (query.timeout || batch_options.timeout || 30000),
           session_id: session_id || 'default'
         }
       }));
@@ -117,17 +121,17 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
 
       res.json({
         batch_id: batchId,
-        results: results.map((result: any, index: number) => ({
+        results: results.map((result: { status: string; results?: unknown[]; error?: string }, index: number) => ({
           query_index: index,
           success: result.status === 'ok',
           results: result.results || [],
           error: result.error || null
         })),
         total_queries: queries.length,
-        successful_queries: results.filter((r: any) => r.status === 'ok').length
+        successful_queries: results.filter((r: { status: string }) => r.status === 'ok').length
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Batch execution error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -137,19 +141,25 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // Session management endpoints
-  router.get('/sessions', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/sessions', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!hasPermission(req.user, 'session:read')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to list sessions'
         });
+        return;
       }
 
-      const sessions = prologBackend.listSessions({
-        userId: req.user?.id,
+      const listOptions: { userId?: string; agentId?: string; isActive?: boolean; includeInactive?: boolean } = {
         includeInactive: req.query.include_inactive === 'true'
-      });
+      };
+      
+      if (req.user?.id) {
+        listOptions.userId = req.user.id;
+      }
+
+      const sessions = prologBackend.listSessions(listOptions);
 
       res.json({
         sessions: sessions.map(session => ({
@@ -163,7 +173,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         total: sessions.length
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session list error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -172,30 +182,43 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.post('/sessions', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/sessions', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { name, description, config = {} } = req.body;
 
       if (!name) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Session name is required'
         });
+        return;
       }
 
       if (!hasPermission(req.user, 'session:create')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to create sessions'
         });
+        return;
       }
 
-      const sessionId = await prologBackend.createSession(name, {
-        description,
-        userId: req.user?.id,
-        agentId: req.headers['user-agent'],
+      const sessionOptions: Record<string, unknown> = {
         ...config
-      });
+      };
+      
+      if (description) {
+        sessionOptions.description = description;
+      }
+      
+      if (req.user?.id) {
+        sessionOptions.userId = req.user.id;
+      }
+      
+      if (req.headers['user-agent']) {
+        sessionOptions.agentId = req.headers['user-agent'];
+      }
+
+      const sessionId = await prologBackend.createSession(name, sessionOptions);
 
       res.status(201).json({
         session_id: sessionId,
@@ -205,7 +228,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         message: 'Session created successfully'
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session creation error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -214,23 +237,33 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.get('/sessions/:session_id', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/sessions/:session_id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { session_id } = req.params;
 
       if (!hasPermission(req.user, 'session:read')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to read session details'
         });
+        return;
+      }
+
+      if (!session_id) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Session ID is required'
+        });
+        return;
       }
 
       const session = prologBackend.getSession(session_id);
       if (!session) {
-        return res.status(404).json({
+        res.status(404).json({
           error: 'Not Found',
           message: 'Session not found'
         });
+        return;
       }
 
       res.json({
@@ -240,7 +273,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         statistics: await prologBackend.getSessionStatistics(session_id)
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session details error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -249,23 +282,33 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.delete('/sessions/:session_id', async (req: AuthenticatedRequest, res: Response) => {
+  router.delete('/sessions/:session_id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { session_id } = req.params;
 
       if (!hasPermission(req.user, 'session:delete')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to delete sessions'
         });
+        return;
+      }
+
+      if (!session_id) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Session ID is required'
+        });
+        return;
       }
 
       const deleted = await prologBackend.deleteSession(session_id);
       if (!deleted) {
-        return res.status(404).json({
+        res.status(404).json({
           error: 'Not Found',
           message: 'Session not found'
         });
+        return;
       }
 
       res.json({
@@ -273,7 +316,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         message: 'Session deleted successfully'
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session deletion error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -283,23 +326,33 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // Session state management
-  router.get('/sessions/:session_id/state', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/sessions/:session_id/state', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { session_id } = req.params;
 
+      if (!session_id) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Session ID is required'
+        });
+        return;
+      }
+
       if (!hasPermission(req.user, 'session:read')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to read session state'
         });
+        return;
       }
 
       const session = prologBackend.getSession(session_id);
       if (!session) {
-        return res.status(404).json({
+        res.status(404).json({
           error: 'Not Found',
           message: 'Session not found'
         });
+        return;
       }
 
       res.json({
@@ -308,7 +361,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         exported_at: new Date().toISOString()
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session state export error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -317,16 +370,25 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.post('/sessions/:session_id/state', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/sessions/:session_id/state', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { session_id } = req.params;
       const { state } = req.body;
 
+      if (!session_id) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Session ID is required'
+        });
+        return;
+      }
+
       if (!hasPermission(req.user, 'session:write')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to modify session state'
         });
+        return;
       }
 
       await prologBackend.saveSessionState(session_id, state);
@@ -337,7 +399,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         imported_at: new Date().toISOString()
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Session state import error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -347,22 +409,24 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // Advanced reasoning endpoints
-  router.post('/reasoning/clp', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/reasoning/clp', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { constraints, domain = 'fd', variables } = req.body;
 
       if (!constraints || !variables) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Constraints and variables are required'
         });
+        return;
       }
 
       if (!hasPermission(req.user, 'reasoning:clp')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions for CLP reasoning'
         });
+        return;
       }
 
       const result = await prologBackend.sendRequest('clp_solve', {
@@ -378,7 +442,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         error: result.error || null
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] CLP reasoning error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -387,22 +451,24 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.post('/reasoning/probabilistic', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/reasoning/probabilistic', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { facts, query, samples = 1000 } = req.body;
 
       if (!query) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Query is required for probabilistic inference'
         });
+        return;
       }
 
       if (!hasPermission(req.user, 'reasoning:probabilistic')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions for probabilistic reasoning'
         });
+        return;
       }
 
       // Add probabilistic facts if provided
@@ -430,7 +496,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         error: result.error || null
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Probabilistic reasoning error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -439,22 +505,24 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
     }
   });
 
-  router.post('/reasoning/n3', async (req: AuthenticatedRequest, res: Response) => {
+  router.post('/reasoning/n3', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { rules, data, query } = req.body;
 
       if (!query) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Query is required for N3 reasoning'
         });
+        return;
       }
 
       if (!hasPermission(req.user, 'reasoning:n3')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions for N3 reasoning'
         });
+        return;
       }
 
       // Load N3 data if provided
@@ -477,7 +545,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         error: result.error || null
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] N3 reasoning error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -487,13 +555,14 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // Query history endpoint
-  router.get('/history', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!hasPermission(req.user, 'history:read')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to read query history'
         });
+        return;
       }
 
       const {
@@ -503,9 +572,9 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         status
       } = req.query;
 
-      const filter: any = {
-        limit: parseInt(limit as string),
-        offset: parseInt(offset as string)
+      const filter: Record<string, unknown> = {
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10)
       };
 
       if (session_id) filter.session_id = session_id;
@@ -519,10 +588,10 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         total: history.total || 0,
         limit: filter.limit,
         offset: filter.offset,
-        has_more: (history.total || 0) > (filter.offset + filter.limit)
+        has_more: (history.total || 0) > ((filter.offset as number) + (filter.limit as number))
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Query history error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -532,13 +601,14 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
   });
 
   // System status endpoint
-  router.get('/status', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/status', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!hasPermission(req.user, 'status:read')) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'Forbidden',
           message: 'Insufficient permissions to read system status'
         });
+        return;
       }
 
       const backendStatus = prologBackend.getConcurrencyStatus();
@@ -557,7 +627,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
         timestamp: new Date().toISOString()
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ApiRoutes] Status endpoint error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
@@ -572,12 +642,12 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
 /**
  * Check if user has required permission
  */
-function hasPermission(user: any, permission: string): boolean {
+function hasPermission(user: { role?: string; permissions?: string[] } | undefined, permission: string): boolean {
   if (!user) return false;
   
   // Admin role has all permissions
   if (user.role === 'admin') return true;
   
   // Check specific permissions
-  return user.permissions && user.permissions.includes(permission);
+  return user.permissions?.includes(permission) ?? false;
 }

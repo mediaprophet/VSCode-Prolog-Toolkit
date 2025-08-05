@@ -1,0 +1,392 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.1)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18.x, 20.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install SWI-Prolog (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo apt-add-repository ppa:swi-prolog/stable
+        sudo apt-get update
+        sudo apt-get install -y swi-prolog
+        
+    - name: Install SWI-Prolog (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install swi-prolog
+        
+    - name: Install SWI-Prolog (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install swi-prolog
+        
+    - name: Verify SWI-Prolog installation
+      run: swipl --version
+      
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup test environment
+      run: npm run setup-test-env
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Run formatting check
+      run: npm run format:check
+      
+    - name: Run all tests
+      run: npm run test:ci
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      package-name: ${{ steps.package.outputs.name }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Extract version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Version: ${VERSION}"
+        
+    - name: Update package.json version
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        # Remove 'v' prefix if present
+        VERSION_NUMBER="${VERSION#v}"
+        npm version ${VERSION_NUMBER} --no-git-tag-version
+        
+    - name: Build extension
+      run: npm run build
+      
+    - name: Package extension
+      id: package
+      run: |
+        npm run package
+        PACKAGE_NAME=$(ls *.vsix | head -n 1)
+        echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "Package: ${PACKAGE_NAME}"
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-package
+        path: '*.vsix'
+        retention-days: 30
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-package
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        VERSION="${{ needs.build.outputs.version }}"
+        echo "## Release ${VERSION}" > RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "### Multi-Platform Enhancements" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "This release includes comprehensive multi-platform compatibility improvements:" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "#### 🚀 New Features" >> RELEASE_NOTES.md
+        echo "- **Cross-Platform Executable Detection**: Intelligent SWI-Prolog installation detection across Windows, macOS, and Linux" >> RELEASE_NOTES.md
+        echo "- **Package Manager Integration**: Support for 15+ package managers (Chocolatey, Winget, Scoop, Homebrew, APT, DNF, etc.)" >> RELEASE_NOTES.md
+        echo "- **Enhanced Terminal Integration**: Platform-specific shell detection and command escaping" >> RELEASE_NOTES.md
+        echo "- **Comprehensive Permission Handling**: Unix file permissions and Windows access control support" >> RELEASE_NOTES.md
+        echo "- **Platform-Specific Path Handling**: UNC paths, environment variable expansion, home directory support" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "#### 🔧 Improvements" >> RELEASE_NOTES.md
+        echo "- Robust error handling and user-friendly recovery options" >> RELEASE_NOTES.md
+        echo "- Extensive test coverage with platform-specific test suites" >> RELEASE_NOTES.md
+        echo "- Enhanced installation guidance with automated package manager detection" >> RELEASE_NOTES.md
+        echo "- Improved configuration management with platform-aware defaults" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "#### 🐛 Bug Fixes" >> RELEASE_NOTES.md
+        echo "- Fixed path resolution issues on Windows with mixed separators" >> RELEASE_NOTES.md
+        echo "- Resolved executable detection problems on macOS with Homebrew installations" >> RELEASE_NOTES.md
+        echo "- Corrected permission checking on Linux with various filesystem types" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "#### 📚 Documentation" >> RELEASE_NOTES.md
+        echo "- Comprehensive platform-specific installation guides" >> RELEASE_NOTES.md
+        echo "- Updated README with multi-platform setup instructions" >> RELEASE_NOTES.md
+        echo "- Detailed API documentation for new platform utilities" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "#### 🧪 Testing" >> RELEASE_NOTES.md
+        echo "- Platform-specific test suites for Windows, macOS, and Linux" >> RELEASE_NOTES.md
+        echo "- Comprehensive integration tests with real SWI-Prolog installations" >> RELEASE_NOTES.md
+        echo "- Performance and scalability testing across platforms" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "### Installation" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "1. Install from VS Code Marketplace or download the VSIX file" >> RELEASE_NOTES.md
+        echo "2. The extension will automatically detect your platform and SWI-Prolog installation" >> RELEASE_NOTES.md
+        echo "3. If SWI-Prolog is not found, use the integrated package manager suggestions" >> RELEASE_NOTES.md
+        echo "4. Run the setup wizard: \`Ctrl+Shift+P\` → \`Prolog: Setup Wizard\`" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "### Compatibility" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "- **Windows**: Windows 10/11, PowerShell, Command Prompt, WSL" >> RELEASE_NOTES.md
+        echo "- **macOS**: macOS 10.15+, zsh, bash, Homebrew, MacPorts" >> RELEASE_NOTES.md
+        echo "- **Linux**: Ubuntu, Debian, Fedora, CentOS, Arch, openSUSE, and more" >> RELEASE_NOTES.md
+        echo "- **Node.js**: 18.x, 20.x" >> RELEASE_NOTES.md
+        echo "- **VS Code**: 1.102.0+" >> RELEASE_NOTES.md
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.build.outputs.version }}
+        name: Release ${{ needs.build.outputs.version }}
+        body_path: RELEASE_NOTES.md
+        files: ${{ needs.build.outputs.package-name }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        discussion_category_name: Releases
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-marketplace:
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
+    outputs:
+      vsce-published: ${{ steps.publish-vsce.outputs.published || steps.skip-vsce.outputs.published || 'false' }}
+      ovsx-published: ${{ steps.publish-ovsx.outputs.published || steps.skip-ovsx.outputs.published || 'false' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-package
+        
+    - name: Install publishing tools
+      run: |
+        npm install -g @vscode/vsce ovsx
+        
+    - name: Verify package file exists
+      run: |
+        PACKAGE_FILE="${{ needs.build.outputs.package-name }}"
+        if [ ! -f "${PACKAGE_FILE}" ]; then
+          echo "Error: Package file ${PACKAGE_FILE} not found"
+          echo "Available files:"
+          ls -la *.vsix 2>/dev/null || echo "No .vsix files found"
+          exit 1
+        fi
+        echo "Package file verified: ${PACKAGE_FILE}"
+        echo "File size: $(stat -c%s "${PACKAGE_FILE}" 2>/dev/null || stat -f%z "${PACKAGE_FILE}" 2>/dev/null || echo "unknown") bytes"
+        
+    - name: Validate secrets
+      id: validate-secrets
+      run: |
+        VSCE_AVAILABLE="false"
+        OVSX_AVAILABLE="false"
+        
+        if [ -n "${{ secrets.VSCE_PAT }}" ]; then
+          VSCE_AVAILABLE="true"
+          echo "✅ VSCE_PAT secret is configured"
+        else
+          echo "⚠️ VSCE_PAT secret not configured - VS Code Marketplace publishing will be skipped"
+        fi
+        
+        if [ -n "${{ secrets.OVSX_PAT }}" ]; then
+          OVSX_AVAILABLE="true"
+          echo "✅ OVSX_PAT secret is configured"
+        else
+          echo "⚠️ OVSX_PAT secret not configured - Open VSX Registry publishing will be skipped"
+        fi
+        
+        echo "vsce-available=${VSCE_AVAILABLE}" >> $GITHUB_OUTPUT
+        echo "ovsx-available=${OVSX_AVAILABLE}" >> $GITHUB_OUTPUT
+        
+    - name: Publish to VS Code Marketplace
+      id: publish-vsce
+      if: steps.validate-secrets.outputs.vsce-available == 'true'
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      run: |
+        echo "Publishing to VS Code Marketplace..."
+        PACKAGE_FILE="${{ needs.build.outputs.package-name }}"
+        
+        # Verify package file exists before publishing
+        if [ ! -f "${PACKAGE_FILE}" ]; then
+          echo "❌ Package file ${PACKAGE_FILE} not found"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+        # Attempt to publish with better error handling and token validation
+        if [ -z "${VSCE_PAT}" ]; then
+          echo "❌ VSCE_PAT environment variable is empty"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+        if vsce publish --packagePath "${PACKAGE_FILE}" --pat "${VSCE_PAT}" 2>&1; then
+          echo "✅ Successfully published to VS Code Marketplace"
+          echo "published=true" >> $GITHUB_OUTPUT
+        else
+          PUBLISH_EXIT_CODE=$?
+          echo "❌ Failed to publish to VS Code Marketplace (exit code: ${PUBLISH_EXIT_CODE})"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+    - name: Skip VS Code Marketplace
+      id: skip-vsce
+      if: steps.validate-secrets.outputs.vsce-available == 'false'
+      run: |
+        echo "⚠️ Skipping VS Code Marketplace publishing - VSCE_PAT secret not configured"
+        echo "To enable marketplace publishing, add VSCE_PAT to repository secrets"
+        echo "published=false" >> $GITHUB_OUTPUT
+        
+    - name: Publish to Open VSX Registry
+      id: publish-ovsx
+      if: steps.validate-secrets.outputs.ovsx-available == 'true'
+      env:
+        OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      run: |
+        echo "Publishing to Open VSX Registry..."
+        PACKAGE_FILE="${{ needs.build.outputs.package-name }}"
+        
+        # Verify package file exists before publishing
+        if [ ! -f "${PACKAGE_FILE}" ]; then
+          echo "❌ Package file ${PACKAGE_FILE} not found"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+        # Attempt to publish with better error handling and token validation
+        if [ -z "${OVSX_PAT}" ]; then
+          echo "❌ OVSX_PAT environment variable is empty"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+        if ovsx publish "${PACKAGE_FILE}" --pat "${OVSX_PAT}" 2>&1; then
+          echo "✅ Successfully published to Open VSX Registry"
+          echo "published=true" >> $GITHUB_OUTPUT
+        else
+          PUBLISH_EXIT_CODE=$?
+          echo "❌ Failed to publish to Open VSX Registry (exit code: ${PUBLISH_EXIT_CODE})"
+          echo "published=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+    - name: Skip Open VSX Registry
+      id: skip-ovsx
+      if: steps.validate-secrets.outputs.ovsx-available == 'false'
+      run: |
+        echo "⚠️ Skipping Open VSX Registry publishing - OVSX_PAT secret not configured"
+        echo "To enable Open VSX publishing, add OVSX_PAT to repository secrets"
+        echo "published=false" >> $GITHUB_OUTPUT
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build, release, publish-marketplace]
+    if: always()
+    steps:
+    - name: Notify success
+      if: needs.release.result == 'success'
+      run: |
+        echo "✅ Release ${{ needs.build.outputs.version }} completed successfully!"
+        echo "📦 Package: ${{ needs.build.outputs.package-name }}"
+        echo "🔗 Release URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.build.outputs.version }}"
+        
+        # Publishing status
+        if [ "${{ needs.publish-marketplace.outputs.vsce-published }}" = "true" ]; then
+          echo "✅ Published to VS Code Marketplace"
+        else
+          echo "⚠️ VS Code Marketplace publishing was skipped"
+        fi
+        
+        if [ "${{ needs.publish-marketplace.outputs.ovsx-published }}" = "true" ]; then
+          echo "✅ Published to Open VSX Registry"
+        else
+          echo "⚠️ Open VSX Registry publishing was skipped"
+        fi
+        
+    - name: Notify failure
+      if: needs.release.result == 'failure' || needs.publish-marketplace.result == 'failure'
+      run: |
+        echo "❌ Release ${{ needs.build.outputs.version }} failed!"
+        echo "Please check the workflow logs for details."
+        
+        # Show which step failed
+        if [ "${{ needs.release.result }}" = "failure" ]; then
+          echo "❌ GitHub Release creation failed"
+        fi
+        
+        if [ "${{ needs.publish-marketplace.result }}" = "failure" ]; then
+          echo "❌ Marketplace publishing failed"
+        fi
+        
+        exit 1

@@ -30,6 +30,9 @@ import fg from "fast-glob";
 import * as fs from "fs";
 import * as path from "path";
 import * as which from 'which';
+import { InstallationGuide } from "./installationGuide";
+import { PlatformUtils } from "../utils/platformUtils";
+import { ExecutableFinder } from "../utils/executableFinder";
 
 // Enum for different triggers that can run the linter
 export enum RunTrigger {
@@ -43,27 +46,27 @@ export default class PrologLinter implements CodeActionProvider {
   private commandAddDynamicId: string;
   private commandAddUseModule: Disposable;
   private commandAddUseModuleId: string;
-  private commandExportPredicate: Disposable;
-  private commandExportPredicateId: string;
+  private commandExportPredicate!: Disposable;
+  private commandExportPredicateId!: string;
 
-  private diagnosticCollection: DiagnosticCollection;
+  private diagnosticCollection!: DiagnosticCollection;
   private diagnostics: { [docName: string]: Diagnostic[] } = {};
   private filePathIds: { [id: string]: string } = {};
   private sortedDiagIndex: { [docName: string]: number[] } = {};
   // Regular expression to parse SWI-Prolog errors and warnings
   private swiRegex = /([^:]+?):\s*(.+?):(\d+):((\d+):)?((\d+):)?\s*([\s\S]*)/;
   // Configuration parameters
-  private executable: string;
-  private trigger: RunTrigger;
-  private timer: ReturnType<typeof setTimeout> = null;
-  private delay: number;
-  private documentListener: Disposable;
-  private openDocumentListener: Disposable;
-  private outputChannel: OutputChannel = null;
+  private executable!: string;
+  private trigger!: RunTrigger;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private delay!: number;
+  private documentListener!: Disposable;
+  private openDocumentListener!: Disposable;
+  private outputChannel: OutputChannel | null = null;
   private enableOutput: boolean = false;
 
   constructor(private context: ExtensionContext) {
-    this.executable = null;
+    this.executable = "";
     // dynamically declare a predicate as dynamic in Prolog code. Dynamic predicates are those whose clauses can be modified at runtime.
     this.commandAddDynamicId = "prolog.addDynamicDirective";
     this.commandAddDynamic = commands.registerCommand(
@@ -88,7 +91,7 @@ export default class PrologLinter implements CodeActionProvider {
     );*/
     // Get configuration settings from VS Code
     this.enableOutput = workspace.getConfiguration("prolog")
-      .get<boolean>("linter.enableMsgInOutput");
+      .get<boolean>("linter.enableMsgInOutput") ?? false;
   }
   // Method to get lines where a directive should be added based on predicate and range
   private getDirectiveLines(
@@ -101,7 +104,7 @@ export default class PrologLinter implements CodeActionProvider {
     let lines: number[] = [];
     let line = 0;
     while (line < textlines.length) {// Iterate through each line in the document
-      if (re.test(textlines[line])) {
+      if (re.test(textlines[line] || '')) {
         lines = lines.concat(line);
       }
       line++;
@@ -120,7 +123,7 @@ export default class PrologLinter implements CodeActionProvider {
       }
     });
     // Continue iterating to find the end of the directive or the end of the document
-    while (line >= 0 && !/.+\.(\s*%.*)*/.test(textlines[line])) {
+    while (line >= 0 && line < textlines.length && !/.+\.(\s*%.*)*/.test(textlines[line] || '')) {
       line++;
     }
     // If the line is before the specified range, return an array with the next line
@@ -132,8 +135,8 @@ export default class PrologLinter implements CodeActionProvider {
     // Check for the presence of a comment block at the beginning of the document
     let inComment = /\s*\/\*/.test(textlines[0]);
     // Continue iterating until the end of the comment block is found
-    while (inComment) {
-      if (/\*\//.test(textlines[line])) {
+    while (inComment && line < textlines.length) {
+      if (/\*\//.test(textlines[line] || '')) {
         inComment = false;
         line++;
         break;
@@ -154,17 +157,17 @@ export default class PrologLinter implements CodeActionProvider {
     let edit = new WorkspaceEdit();// Initialize a WorkspaceEdit for making changes to the document
     let line = this.getDirectiveLines(doc, "dynamic", range)[0];// Get the line number where the 'dynamic' directive should be added
 
-    let text = doc.lineAt(line).text; // Extract the current line text
+    let text = doc.lineAt(line || 0).text; // Extract the current line text
     let pos: Position;// Position to insert the 'dynamic' declaration
     // Check if an existing 'dynamic' declaration is present
     if (/:-\s+\(?dynamic/.test(text)) {
       // If present, find the start character of the list and position the cursor after it
       let startChar = text.indexOf("dynamic") + 7;
-      pos = new Position(line, startChar);
+      pos = new Position(line || 0, startChar);
       edit.insert(uri, pos, " " + predicate + ",");// Insert the predicate into the existing 'dynamic' declaration list
     } else {
       // If not present, insert a new 'dynamic' declaration with the specified predicate
-      pos = new Position(line, 0);
+      pos = new Position(line || 0, 0);
       edit.insert(uri, pos, ":- dynamic " + predicate + ".\n");
     }
     // Apply the WorkspaceEdit to the document
@@ -187,7 +190,7 @@ export default class PrologLinter implements CodeActionProvider {
   ): Thenable<boolean> {
     let edit = new WorkspaceEdit();// Initialize a WorkspaceEdit for making changes to the document
     let lines = this.getDirectiveLines(doc, "use_module", range); // Get the lines where the 'use_module' directive is defined
-    let pred: string = predicate.match(/(.+)\/\d+/)[1];// Extract the base predicate without arity
+    let pred: string = predicate.match(/(.+)\/\d+/)?.[1] || predicate;// Extract the base predicate without arity
     let re = new RegExp("^:-\\s+use_module\\s*\\(\\s*.+\\b" + module + "\\b");// Regular expression to match an existing 'use_module' directive with the specified module
     let directiveLine: number = -1;
     let pos: Position;
@@ -215,7 +218,7 @@ export default class PrologLinter implements CodeActionProvider {
       );
     }
     // Apply the WorkspaceEdit to the document
-    let result: Thenable<boolean> = null;
+    let result: Thenable<boolean>;
     try {
       result = workspace.applyEdit(edit);
     } catch (e) {
@@ -343,7 +346,7 @@ export default class PrologLinter implements CodeActionProvider {
     let lineErr: string = "";
     let docTxt = textDocument.getText();
     let docTxtEsced = jsesc(docTxt, { quotes: "double" });
-    let fname = jsesc(path.resolve(textDocument.fileName));
+    let fname = jsesc(PlatformUtils.toAbsolute(textDocument.fileName));
   
     // Determine Prolog dialect and set arguments accordingly
     switch (Utils.DIALECT) {
@@ -531,12 +534,34 @@ export default class PrologLinter implements CodeActionProvider {
           }
         }
       })
-      .catch(error => {
+      .catch(async error => {
         // Handle error event
         let message: string = null;
         if ((<any>error).code === "ENOENT") {
           message =
             "Cannot lint the prolog file. The Prolog executable was not found. Use the 'prolog.executablePath' setting to configure";
+          
+          // Show enhanced error message with installation guidance
+          const action = await window.showErrorMessage(
+            'SWI-Prolog executable not found. The linter requires SWI-Prolog to check your code for errors and warnings.',
+            'Install SWI-Prolog',
+            'Setup Wizard',
+            'Configure Path',
+            'Dismiss'
+          );
+          
+          const installationGuide = InstallationGuide.getInstance();
+          switch (action) {
+            case 'Install SWI-Prolog':
+              await installationGuide.showInstallationGuideDialog();
+              break;
+            case 'Setup Wizard':
+              await commands.executeCommand('prolog.setupWizard');
+              break;
+            case 'Configure Path':
+              await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+              break;
+          }
         } else {
           message = error.message
             ? error.message
@@ -549,19 +574,12 @@ export default class PrologLinter implements CodeActionProvider {
   }
 
   // Method to load configuration settings
-  private loadConfiguration(): void {
+  private async loadConfiguration(): Promise<void> {
      // Get the configuration section for the Prolog extension
     let section = workspace.getConfiguration("prolog");
     // Check if the configuration section is available
     if (section) {
-      this.executable = (() => {
-        let swipl = section.get<string>("executablePath", "swipl");
-        try {
-          return which.sync(swipl);
-        } catch (e) {
-          return path.resolve(swipl);
-        }
-      })();// Resolve the path to the Prolog executable
+      this.executable = await this.resolveExecutablePath(section);
       // Determine the trigger type for the linter (onSave, onType, never)
       if (Utils.LINTERTRIGGER === "onSave") {
         this.trigger = RunTrigger.onSave;
@@ -602,6 +620,90 @@ export default class PrologLinter implements CodeActionProvider {
     workspace.textDocuments.forEach(this.triggerLinter, this);
   }
 
+  /**
+   * Resolve the executable path with enhanced validation and permission checking
+   */
+  private async resolveExecutablePath(section: any): Promise<string> {
+    const configuredPath = section.get<string>("executablePath", PlatformUtils.getDefaultExecutablePath());
+    
+    // First try the configured path
+    if (configuredPath && configuredPath !== PlatformUtils.getDefaultExecutablePath()) {
+      const normalizedPath = PlatformUtils.normalizePath(configuredPath);
+      
+      // Check if the configured path exists and has proper permissions
+      if (await PlatformUtils.pathExists(normalizedPath)) {
+        if (await PlatformUtils.isExecutable(normalizedPath)) {
+          return normalizedPath;
+        } else {
+          // Path exists but is not executable - show permission error
+          const platform = PlatformUtils.getPlatform();
+          let permissionFix = '';
+          if (platform !== 'windows') {
+            permissionFix = `\n\nTry fixing permissions with: chmod +x "${normalizedPath}"`;
+          }
+          
+          window.showWarningMessage(
+            `SWI-Prolog executable at '${normalizedPath}' exists but lacks execute permissions.${permissionFix}`,
+            'Fix Permissions',
+            'Choose Different Path'
+          ).then(async (action) => {
+            if (action === 'Fix Permissions' && platform !== 'windows') {
+              // On Unix systems, suggest the chmod command
+              const terminal = window.createTerminal('Fix Prolog Permissions');
+              terminal.sendText(`chmod +x "${normalizedPath}"`);
+              terminal.show();
+            } else if (action === 'Choose Different Path') {
+              await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+            }
+          });
+        }
+      }
+    }
+
+    // Try to find executable using comprehensive detection
+    const executableFinder = new ExecutableFinder();
+    const detectionResult = await executableFinder.findSwiplExecutable();
+    
+    if (detectionResult.found && detectionResult.path) {
+      // Check permissions on the found executable
+      if (detectionResult.permissions?.executable) {
+        return detectionResult.path;
+      } else {
+        // Found executable but has permission issues
+        const platform = PlatformUtils.getPlatform();
+        let permissionFix = '';
+        if (platform !== 'windows') {
+          permissionFix = `\n\nTry fixing permissions with: chmod +x "${detectionResult.path}"`;
+        }
+        
+        window.showWarningMessage(
+          `Found SWI-Prolog at '${detectionResult.path}' but it lacks execute permissions.${permissionFix}`,
+          'Fix Permissions',
+          'Install SWI-Prolog'
+        ).then(async (action) => {
+          if (action === 'Fix Permissions' && platform !== 'windows') {
+            const terminal = window.createTerminal('Fix Prolog Permissions');
+            terminal.sendText(`chmod +x "${detectionResult.path}"`);
+            terminal.show();
+          } else if (action === 'Install SWI-Prolog') {
+            const installationGuide = InstallationGuide.getInstance();
+            await installationGuide.showInstallationGuideDialog();
+          }
+        });
+        
+        return detectionResult.path; // Return the path anyway, the spawn will fail with a better error
+      }
+    }
+
+    // Fallback to the configured path or default, even if it might not work
+    try {
+      const fallbackPath = which.sync(configuredPath);
+      return fallbackPath;
+    } catch (e) {
+      return PlatformUtils.normalizePath(configuredPath);
+    }
+  }
+
   // Method to trigger linting based on various events
   private triggerLinter(textDocument: TextDocument) {
     // Check if the document is a Prolog source file
@@ -628,7 +730,7 @@ export default class PrologLinter implements CodeActionProvider {
     this.diagnosticCollection = languages.createDiagnosticCollection(); // Create a diagnostic collection for handling linting results
     // Register a listener for configuration changes
     workspace.onDidChangeConfiguration(
-      this.loadConfiguration,
+      () => this.loadConfiguration(),
       this,
       subscriptions
     );

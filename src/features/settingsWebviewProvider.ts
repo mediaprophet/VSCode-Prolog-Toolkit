@@ -1,11 +1,19 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { InstallationChecker, InstallationStatus } from './installationChecker';
+import { InstallationGuide } from './installationGuide';
+import { PlatformUtils } from '../utils/platformUtils';
 
 export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'prologSettings';
     private _view?: vscode.WebviewView;
+    private installationChecker: InstallationChecker;
+    private installationGuide: InstallationGuide;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {}
+    constructor(private readonly _extensionUri: vscode.Uri) {
+        this.installationChecker = InstallationChecker.getInstance();
+        this.installationGuide = InstallationGuide.getInstance();
+    }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -42,6 +50,21 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
                         break;
                     case 'getSettings':
                         this._sendCurrentSettings();
+                        break;
+                    case 'checkInstallation':
+                        this._checkInstallation();
+                        break;
+                    case 'autoDetectPath':
+                        this._autoDetectPath();
+                        break;
+                    case 'testInstallation':
+                        this._testInstallation();
+                        break;
+                    case 'runSetupWizard':
+                        await this.installationGuide.runSetupWizard();
+                        break;
+                    case 'showInstallationGuide':
+                        await this.installationGuide.showInstallationGuideDialog();
                         break;
                 }
             },
@@ -144,8 +167,9 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
 
         if (uri) {
             const fs = require('fs');
-            fs.writeFileSync(uri.fsPath, JSON.stringify(settings, null, 2));
-            vscode.window.showInformationMessage(`Settings exported to ${uri.fsPath}`);
+            const normalizedPath = PlatformUtils.normalizePath(uri.fsPath);
+            fs.writeFileSync(normalizedPath, JSON.stringify(settings, null, 2));
+            vscode.window.showInformationMessage(`Settings exported to ${normalizedPath}`);
         }
     }
 
@@ -162,7 +186,8 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
         if (uri && uri[0]) {
             try {
                 const fs = require('fs');
-                const settingsJson = fs.readFileSync(uri[0].fsPath, 'utf8');
+                const normalizedPath = PlatformUtils.normalizePath(uri[0].fsPath);
+                const settingsJson = fs.readFileSync(normalizedPath, 'utf8');
                 const settings = JSON.parse(settingsJson);
                 
                 const config = vscode.workspace.getConfiguration('prolog');
@@ -279,12 +304,16 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
         return isValid;
     }
 
-    private _sendCurrentSettings() {
+    private async _sendCurrentSettings() {
         if (!this._view) {
             return;
         }
 
         const config = vscode.workspace.getConfiguration('prolog');
+        
+        // Check installation status
+        const installationStatus = await this.installationChecker.checkSwiplInstallation();
+        
         const settings = {
             executablePath: config.get('executablePath', '/usr/bin/swipl'),
             dialect: config.get('dialect', 'swi'),
@@ -326,13 +355,108 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
                 port: config.get('webSocketServer.port', 8081),
                 maxConnections: config.get('webSocketServer.maxConnections', 50),
                 heartbeatInterval: config.get('webSocketServer.heartbeatInterval', 30)
-            }
+            },
+            installation: installationStatus
         };
 
         this._view.webview.postMessage({
             type: 'settingsData',
             settings: settings
         });
+    }
+
+    private async _checkInstallation() {
+        if (!this._view) {
+            return;
+        }
+
+        try {
+            const installationStatus = await this.installationChecker.checkSwiplInstallation();
+            this._view.webview.postMessage({
+                type: 'installationStatus',
+                status: installationStatus
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'installationStatus',
+                status: {
+                    isInstalled: false,
+                    issues: [`Error checking installation: ${error}`]
+                }
+            });
+        }
+    }
+
+    private async _autoDetectPath() {
+        if (!this._view) {
+            return;
+        }
+
+        try {
+            const foundPath = await this.installationChecker.findSwiplExecutable();
+            if (foundPath) {
+                const version = await this.installationChecker.getSwiplVersion(foundPath);
+                
+                // Update configuration
+                const config = vscode.workspace.getConfiguration('prolog');
+                await config.update('executablePath', foundPath, vscode.ConfigurationTarget.Global);
+                
+                this._view.webview.postMessage({
+                    type: 'autoDetectResult',
+                    success: true,
+                    path: foundPath,
+                    version: version
+                });
+                
+                // Refresh settings
+                await this._sendCurrentSettings();
+            } else {
+                this._view.webview.postMessage({
+                    type: 'autoDetectResult',
+                    success: false,
+                    message: 'SWI-Prolog not found in common locations'
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'autoDetectResult',
+                success: false,
+                message: `Auto-detection failed: ${error}`
+            });
+        }
+    }
+
+    private async _testInstallation() {
+        if (!this._view) {
+            return;
+        }
+
+        try {
+            const config = vscode.workspace.getConfiguration('prolog');
+            const executablePath = config.get<string>('executablePath', 'swipl');
+            
+            const isValid = await this.installationChecker.validateSwiplPath(executablePath);
+            if (isValid) {
+                const version = await this.installationChecker.getSwiplVersion(executablePath);
+                this._view.webview.postMessage({
+                    type: 'testResult',
+                    success: true,
+                    message: `SWI-Prolog is working correctly (version ${version})`
+                });
+            } else {
+                this._view.webview.postMessage({
+                    type: 'testResult',
+                    success: false,
+                    message: 'SWI-Prolog executable is not valid or not accessible'
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'testResult',
+                success: false,
+                message: `Test failed: ${error}`
+            });
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -365,6 +489,41 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
                 </div>
 
                 <div class="settings-content">
+                    <!-- Installation Status -->
+                    <div class="settings-section" data-category="installation">
+                        <h2 class="section-title">
+                            <span class="section-icon">🔧</span>
+                            SWI-Prolog Installation
+                            <button class="section-toggle">−</button>
+                        </h2>
+                        <div class="section-content">
+                            <div class="installation-status" id="installationStatus">
+                                <div class="status-indicator" id="statusIndicator">
+                                    <span class="status-icon">🔄</span>
+                                    <span class="status-text">Checking installation...</span>
+                                </div>
+                                <div class="installation-details" id="installationDetails" style="display: none;">
+                                    <div class="detail-item">
+                                        <strong>Path:</strong> <span id="installationPath">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <strong>Version:</strong> <span id="installationVersion">-</span>
+                                    </div>
+                                    <div class="detail-item" id="installationIssues" style="display: none;">
+                                        <strong>Issues:</strong>
+                                        <ul id="issuesList"></ul>
+                                    </div>
+                                </div>
+                                <div class="installation-actions">
+                                    <button class="action-btn" id="autoDetectBtn" title="Auto-detect SWI-Prolog">🔍 Auto-Detect</button>
+                                    <button class="action-btn" id="testInstallationBtn" title="Test Installation">🧪 Test</button>
+                                    <button class="action-btn" id="setupWizardBtn" title="Setup Wizard">🧙‍♂️ Setup Wizard</button>
+                                    <button class="action-btn" id="installationGuideBtn" title="Installation Guide">📖 Install Guide</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Core Settings -->
                     <div class="settings-section" data-category="core">
                         <h2 class="section-title">

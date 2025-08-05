@@ -5,7 +5,7 @@ import { QueryHistoryManager } from './queryHistoryManager';
 export interface ScheduledQuery {
   id: string;
   cmd: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   scheduleType: 'immediate' | 'delayed' | 'recurring' | 'conditional';
   scheduleConfig: {
     executeAt?: number; // timestamp for delayed execution
@@ -92,7 +92,7 @@ export class QueryScheduler extends EventEmitter {
   async scheduleQuery(
     id: string,
     cmd: string,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     scheduleType: ScheduledQuery['scheduleType'] = 'immediate',
     scheduleConfig: ScheduledQuery['scheduleConfig'] = {},
     priority: Partial<QueryPriority> = {},
@@ -329,7 +329,7 @@ export class QueryScheduler extends EventEmitter {
     try {
       const evaluator = new Function('return ' + condition) as () => boolean;
       this.conditionEvaluator.set(queryId, evaluator);
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error(`Invalid condition expression: ${condition}`);
     }
   }
@@ -359,7 +359,7 @@ export class QueryScheduler extends EventEmitter {
         if (await this.shouldExecuteQuery(query, now)) {
           await this.tryExecuteQuery(query);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[QueryScheduler] Error processing query ${query.id}:`, error);
         query.status = 'failed';
         this.emit('queryScheduleError', { queryId: query.id, error });
@@ -408,7 +408,7 @@ export class QueryScheduler extends EventEmitter {
         
         try {
           return evaluator();
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`[QueryScheduler] Condition evaluation error for ${query.id}:`, error);
           return false;
         }
@@ -442,7 +442,7 @@ export class QueryScheduler extends EventEmitter {
         query.priority
       );
 
-    } catch (error) {
+    } catch (error: unknown) {
       query.status = 'failed';
       this.emit('queryScheduleExecutionFailed', { query, error });
       console.error(`[QueryScheduler] Failed to execute query ${query.id}:`, error);

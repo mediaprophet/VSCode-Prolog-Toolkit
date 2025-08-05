@@ -7,7 +7,7 @@ export default class PrologDocumentHighlightProvider implements DocumentHighligh
     let wordRange = doc.getWordRangeAtPosition(position);// Get the word range at the given position
     // Return early if no word range is found
     if (!wordRange) {
-      return;
+      return [];
     }
 
     let symbol = doc.getText(wordRange);// Extract the symbol from the document using the word range

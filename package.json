@@ -2,11 +2,14 @@
   "name": "vscode-prolog-toolkit",
   "displayName": "VSCode Prolog Toolkit",
   "description": "Advanced Prolog language support, debugging, and tooling for Visual Studio Code.",
-  "version": "1.2.00",
+  "version": "1.3.0",
   "publisher": "mediaprophet",
   "icon": "images/vsplogo.png",
   "license": "MIT",
-  "engines": {},
+  "engines": {
+    "vscode": "^1.102.0",
+    "node": ">=18.0.0"
+  },
   "categories": [
     "Programming Languages",
     "Formatters",
@@ -16,12 +19,23 @@
   ],
   "keywords": [
     "prolog",
+    "swi-prolog",
     "debug",
     "linter",
     "snippet",
     "format",
     "syntax",
-    "color"
+    "color",
+    "multi-platform",
+    "windows",
+    "macos",
+    "linux",
+    "cross-platform",
+    "package-manager",
+    "terminal",
+    "n3",
+    "semantic-web",
+    "reasoning"
   ],
   "author": "Timothy Holborn",
   "contributors": [
@@ -68,6 +82,20 @@
           ".prolog",
           ".plt",
           ".ecl"
+        ],
+        "filenames": [
+          "*.pl",
+          "*.pro",
+          "*.prolog",
+          "*.plt",
+          "*.ecl"
+        ],
+        "filenamePatterns": [
+          "**/*.pl",
+          "**/*.pro",
+          "**/*.prolog",
+          "**/*.plt",
+          "**/*.ecl"
         ]
       }
     ],
@@ -123,6 +151,11 @@
       {
         "command": "prolog.openSettings",
         "title": "Prolog: Open Settings",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.setupWizard",
+        "title": "Prolog: Setup Wizard",
         "category": "Prolog"
       }
     ],
@@ -192,6 +225,10 @@
         },
         {
           "command": "prolog.openSettings",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.setupWizard",
           "when": "resourceLangId == prolog"
         }
       ],
@@ -372,7 +409,19 @@
         "prolog.executablePath": {
           "type": "string",
           "default": "/usr/bin/swipl",
-          "description": "Points to the Prolog executable."
+          "description": "Points to the Prolog executable.",
+          "scope": "machine-overridable",
+          "overrides": {
+            "windows": {
+              "default": "swipl"
+            },
+            "macos": {
+              "default": "/usr/local/bin/swipl"
+            },
+            "linux": {
+              "default": "/usr/bin/swipl"
+            }
+          }
         },
         "prolog.dialect": {
           "type": "string",
@@ -411,7 +460,19 @@
         "prolog.terminal.runtimeArgs": {
           "type": "array",
           "description": "Arguments of Prolog executable run in terminal.",
-          "default": []
+          "default": [],
+          "scope": "machine-overridable",
+          "overrides": {
+            "windows": {
+              "default": []
+            },
+            "macos": {
+              "default": ["--quiet"]
+            },
+            "linux": {
+              "default": ["--quiet"]
+            }
+          }
         },
         "prolog.telemetry.enabled": {
           "type": "boolean",
@@ -549,6 +610,24 @@
           "minimum": 10,
           "maximum": 300,
           "description": "WebSocket heartbeat interval in seconds."
+        },
+        "prolog.platform.autoDetect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect platform-specific settings and configurations."
+        },
+        "prolog.platform.environmentVariables": {
+          "type": "object",
+          "default": {},
+          "description": "Platform-specific environment variables to use when running Prolog.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "prolog.platform.pathExpansion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic expansion of environment variables and home directory (~) in paths."
         }
       }
     },
@@ -600,6 +679,8 @@
     "test:performance": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/performance-scalability.test.ts --timeout 20000",
     "test:performance:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/performance-scalability.test.ts --timeout 20000 --watch",
     "test:coverage": "nyc npm run test:all",
+    "test:platform": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register \"test/platform/**/*.test.ts\" \"test/utils/**/*.test.ts\"",
+    "test:platform:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register \"test/platform/**/*.test.ts\" \"test/utils/**/*.test.ts\" --watch",
     "test:unit": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.unit.test.ts",
     "test:integration": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/chat-commands-integration.test.ts",
     "test:callback-notification": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/callback-notification.test.ts --timeout 30000",

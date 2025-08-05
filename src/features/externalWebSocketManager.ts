@@ -20,6 +20,7 @@ export interface WebSocketClient {
     id: string;
     role: string;
     permissions: string[];
+    method: string;
   };
   subscriptions: Set<string>;
   lastHeartbeat: number;
@@ -64,10 +65,10 @@ export class ExternalWebSocketManager extends EventEmitter {
           port: this.config.port,
           perMessageDeflate: false,
           maxPayload: 1024 * 1024, // 1MB max message size
-          verifyClient: (info) => this.verifyClient(info)
+          verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => this.verifyClient(info)
         });
 
-        this.server.on('connection', (ws, request) => {
+        this.server.on('connection', (ws: WebSocket, request: IncomingMessage) => {
           this.handleConnection(ws, request);
         });
 
@@ -83,7 +84,7 @@ export class ExternalWebSocketManager extends EventEmitter {
           resolve();
         });
 
-      } catch (error) {
+      } catch (error: unknown) {
         reject(error);
       }
     });
@@ -164,7 +165,7 @@ export class ExternalWebSocketManager extends EventEmitter {
     try {
       const user = await this.authenticateClient(request);
       client.user = user;
-    } catch (error) {
+    } catch (error: unknown) {
       console.log(`[ExternalWebSocketManager] Authentication failed for client ${clientId}:`, error);
       ws.close(1008, 'Authentication failed');
       return;
@@ -216,41 +217,43 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Authenticate WebSocket client
    */
-  private async authenticateClient(request: IncomingMessage): Promise<{ id: string; role: string; permissions: string[] }> {
+  private async authenticateClient(request: IncomingMessage): Promise<{ id: string; role: string; permissions: string[]; method: string }> {
     const url = new URL(request.url || '', `ws://localhost:${this.config.port}`);
     
     // Try different authentication methods
     
     // 1. JWT token from query parameter
     const token = url.searchParams.get('token');
-    if (token && this.config.auth.methods.includes('jwt_token')) {
+    if (token && this.config.auth.method === 'jwt_token') {
       try {
         const decoded = verifyJwtToken(token, this.config.auth);
         return {
-          id: decoded.sub || decoded.id || 'jwt_user',
-          role: decoded.role || 'agent',
-          permissions: decoded.permissions || this.getDefaultPermissions(decoded.role || 'agent')
+          id: (decoded.sub as string) || (decoded.id as string) || 'jwt_user',
+          role: (decoded.role as string) || 'agent',
+          permissions: (decoded.permissions as string[]) || this.getDefaultPermissions((decoded.role as string) || 'agent'),
+          method: 'jwt_token'
         };
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[ExternalWebSocketManager] JWT verification failed:', error);
       }
     }
 
     // 2. API key from query parameter
     const apiKey = url.searchParams.get('api_key');
-    if (apiKey && this.config.auth.methods.includes('api_key')) {
-      const keyConfig = this.config.auth.apiKeys[apiKey];
-      if (keyConfig) {
+    if (apiKey && this.config.auth.method === 'api_key') {
+      const isValidKey = this.config.auth.apiKeys.includes(apiKey);
+      if (isValidKey) {
         return {
           id: `api_key_${apiKey.substring(0, 8)}`,
-          role: keyConfig.role,
-          permissions: keyConfig.permissions
+          role: 'agent',
+          permissions: this.getDefaultPermissions('agent'),
+          method: 'api_key'
         };
       }
     }
 
     // 3. Local-only mode
-    if (this.config.auth.localOnly || this.config.auth.methods.includes('local_only')) {
+    if (this.config.auth.localOnly || this.config.auth.method === 'local_only') {
       const clientIP = request.socket.remoteAddress || '';
       const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(clientIP) ||
                          clientIP.startsWith('127.') ||
@@ -260,7 +263,8 @@ export class ExternalWebSocketManager extends EventEmitter {
         return {
           id: 'localhost',
           role: 'admin',
-          permissions: ['*']
+          permissions: ['*'],
+          method: 'local_only'
         };
       }
     }
@@ -304,7 +308,7 @@ export class ExternalWebSocketManager extends EventEmitter {
             message: `Unknown message type: ${message.type}`
           });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[ExternalWebSocketManager] Error parsing message from ${clientId}:`, error);
       this.sendToClient(clientId, {
         type: 'error',
@@ -316,14 +320,14 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Handle subscription request
    */
-  private handleSubscribe(clientId: string, message: any): void {
+  private handleSubscribe(clientId: string, message: { query_id?: string; session_id?: string; event_types?: string[] }): void {
     const client = this.clients.get(clientId);
     if (!client) return;
 
     const { query_id, session_id, event_types = ['progress', 'complete', 'error', 'cancel'] } = message;
 
     // Check permissions
-    if (!hasPermission(client.user, 'notifications:subscribe')) {
+    if (!hasPermission(client.user ?? undefined, 'notifications:subscribe')) {
       this.sendToClient(clientId, {
         type: 'error',
         message: 'Insufficient permissions to subscribe to notifications'
@@ -355,7 +359,7 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Handle unsubscribe request
    */
-  private handleUnsubscribe(clientId: string, message: any): void {
+  private handleUnsubscribe(clientId: string, message: { query_id?: string; session_id?: string; event_types?: string[] }): void {
     const client = this.clients.get(clientId);
     if (!client) return;
 
@@ -385,9 +389,9 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Handle query cancellation request
    */
-  private handleCancelQuery(clientId: string, message: any): void {
+  private handleCancelQuery(clientId: string, message: { query_id?: string }): void {
     const client = this.clients.get(clientId);
-    if (!client || !hasPermission(client.user, 'query:cancel')) {
+    if (!client || !hasPermission(client.user ?? undefined, 'query:cancel')) {
       this.sendToClient(clientId, {
         type: 'error',
         message: 'Insufficient permissions to cancel queries'
@@ -418,9 +422,9 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Handle query status request
    */
-  private handleGetQueryStatus(clientId: string, message: any): void {
+  private handleGetQueryStatus(clientId: string, message: { query_id?: string }): void {
     const client = this.clients.get(clientId);
-    if (!client || !hasPermission(client.user, 'query:status')) {
+    if (!client || !hasPermission(client.user ?? undefined, 'query:status')) {
       this.sendToClient(clientId, {
         type: 'error',
         message: 'Insufficient permissions to get query status'
@@ -429,7 +433,7 @@ export class ExternalWebSocketManager extends EventEmitter {
     }
 
     const { query_id } = message;
-    const status = this.queryNotificationManager.getQueryStatus(query_id);
+    const status = this.queryNotificationManager.getQueryStatus(query_id || '');
 
     this.sendToClient(clientId, {
       type: 'query_status_response',
@@ -442,9 +446,9 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Handle system status request
    */
-  private handleGetSystemStatus(clientId: string, message: any): void {
+  private handleGetSystemStatus(clientId: string, message: Record<string, unknown>): void {
     const client = this.clients.get(clientId);
-    if (!client || !hasPermission(client.user, 'status:read')) {
+    if (!client || !hasPermission(client.user ?? undefined, 'status:read')) {
       this.sendToClient(clientId, {
         type: 'error',
         message: 'Insufficient permissions to get system status'
@@ -467,13 +471,13 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Send message to specific client
    */
-  private sendToClient(clientId: string, message: any): void {
+  private sendToClient(clientId: string, message: Record<string, unknown>): void {
     const client = this.clients.get(clientId);
     if (!client || client.ws.readyState !== WebSocket.OPEN) return;
 
     try {
       client.ws.send(JSON.stringify(message));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[ExternalWebSocketManager] Error sending message to ${clientId}:`, error);
       this.clients.delete(clientId);
     }
@@ -482,7 +486,7 @@ export class ExternalWebSocketManager extends EventEmitter {
   /**
    * Broadcast message to all subscribed clients
    */
-  private broadcast(message: any, subscription?: string): void {
+  private broadcast(message: Record<string, unknown>, subscription?: string): void {
     this.clients.forEach((client, clientId) => {
       if (subscription && !client.subscriptions.has(subscription)) return;
       this.sendToClient(clientId, message);
@@ -574,7 +578,7 @@ export class ExternalWebSocketManager extends EventEmitter {
       ]
     };
 
-    return rolePermissions[role] || rolePermissions.limited;
+    return rolePermissions[role] || rolePermissions['limited'] || [];
   }
 
   /**

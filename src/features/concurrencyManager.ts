@@ -18,7 +18,7 @@ export interface QueryPriority {
 export interface QueuedQuery {
   id: string;
   cmd: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   priority: QueryPriority;
   queuedAt: number;
   estimatedDuration?: number;
@@ -26,8 +26,8 @@ export interface QueuedQuery {
     memoryMB?: number;
     cpuPercent?: number;
   };
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
 }
 
 export interface ResourceUsage {
@@ -79,10 +79,10 @@ export class ConcurrencyManager extends EventEmitter {
   async queueQuery(
     id: string,
     cmd: string,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     priority: Partial<QueryPriority> = {},
     resourceRequirements?: { memoryMB?: number; cpuPercent?: number }
-  ): Promise<any> {
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       // Check queue size limit
       if (this.queryQueue.length >= this.resourceQuota.maxQueueSize) {
@@ -103,7 +103,7 @@ export class ConcurrencyManager extends EventEmitter {
         params,
         priority: queryPriority,
         queuedAt: Date.now(),
-        resourceRequirements,
+        ...(resourceRequirements && { resourceRequirements }),
         resolve,
         reject
       };
@@ -131,10 +131,12 @@ export class ConcurrencyManager extends EventEmitter {
     const queueIndex = this.queryQueue.findIndex(q => q.id === queryId);
     if (queueIndex !== -1) {
       const query = this.queryQueue.splice(queueIndex, 1)[0];
-      query.reject(new Error('Query cancelled'));
-      this.updateResourceUsage();
-      this.emit('queryCancelled', { queryId, location: 'queue' });
-      return true;
+      if (query) {
+        query.reject(new Error('Query cancelled'));
+        this.updateResourceUsage();
+        this.emit('queryCancelled', { queryId, location: 'queue' });
+        return true;
+      }
     }
 
     // Check if query is active
@@ -218,13 +220,13 @@ export class ConcurrencyManager extends EventEmitter {
       const existingQuery = this.queryQueue[i];
       
       // Higher priority goes first
-      if (query.priority.weight > existingQuery.priority.weight) {
+      if (existingQuery && query.priority.weight > existingQuery.priority.weight) {
         insertIndex = i;
         break;
       }
       
       // Same priority, maintain FIFO order (already at end)
-      if (query.priority.weight === existingQuery.priority.weight) {
+      if (existingQuery && query.priority.weight === existingQuery.priority.weight) {
         continue;
       }
     }
@@ -280,6 +282,9 @@ export class ConcurrencyManager extends EventEmitter {
     // Process queries in priority order
     for (let i = 0; i < this.queryQueue.length; i++) {
       const query = this.queryQueue[i];
+      if (!query) {
+        continue;
+      }
       
       // Check if query has timed out in queue
       const waitTime = Date.now() - query.queuedAt;
@@ -349,17 +354,18 @@ export class ConcurrencyManager extends EventEmitter {
         success: true
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       // Query failed or timed out
       this.activeQueries.delete(query.id);
       query.reject(error);
       
       const duration = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.emit('queryCompleted', {
         queryId: query.id,
         duration,
         success: false,
-        error: error.message
+        error: errorMessage
       });
     }
 

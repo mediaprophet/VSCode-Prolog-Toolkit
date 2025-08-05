@@ -29,6 +29,7 @@ import * as path from "path";
 import PrologTerminal from "./features/prologTerminal";
 import { loadEditHelpers } from "./features/editHelpers";
 import { Utils } from "./utils/utils";
+import { PlatformUtils, getPlatform, getPlatformDefaults } from "./utils/platformUtils";
 import PrologHoverProvider from "./features/hoverProvider";
 import PrologDocumentHighlightProvider from "./features/documentHighlightProvider";
 import { SnippetUpdater, SnippetUpdaterController, PrologCompletionProvider } from "./features/updateSnippets";
@@ -48,6 +49,9 @@ import { ApiServer, ApiServerConfig } from "./features/apiServer";
 import { ExternalWebSocketManager, ExternalWebSocketConfig } from "./features/externalWebSocketManager";
 import { AuthConfig } from "./features/apiMiddleware";
 import { SettingsWebviewProvider } from "./features/settingsWebviewProvider";
+import { InstallationChecker } from "./features/installationChecker";
+import { InstallationGuide } from "./features/installationGuide";
+import { ConfigurationMigration } from "./features/configurationMigration";
 
 // Global backend instance
 let prologBackend: PrologBackend | null = null;
@@ -848,49 +852,70 @@ async function initForDialect(context: ExtensionContext) {
   // get the user preferences for the extention
   const section = workspace.getConfiguration("prolog");
   const dialect = section.get<string>("dialect");
-  const exec = section.get<string>("executablePath", "swipl");
+  
+  // Use platform-aware executable path resolution
+  let exec = section.get<string>("executablePath", "");
+  if (!exec) {
+    exec = getPlatformDefaults().defaultExecutablePath;
+  }
+  exec = PlatformUtils.normalizePath(exec);
+  
   Utils.LINTERTRIGGER = section.get<string>("linter.run") || "never";
   Utils.FORMATENABLED = section.get<boolean>("format.enabled") || false;
   Utils.DIALECT = dialect || "swi";
   Utils.RUNTIMEPATH = jsesc(exec);
-  const exPath = jsesc(context.extensionPath);
+  
+  // Use platform-aware path construction
+  const exPath = PlatformUtils.normalizePath(context.extensionPath);
   Utils.EXPATH = exPath;
+  
   // check if the dialect links have already been done
-  const diaFile = path.resolve(`${exPath}/.vscode`) + "/dialect.json";
-  const lastDialect = JSON.parse(fs.readFileSync(diaFile).toString()).dialect;
+  const diaFile = PlatformUtils.joinPath(exPath, ".vscode", "dialect.json");
+  
+  let lastDialect = '';
+  try {
+    if (await PlatformUtils.pathExists(diaFile)) {
+      const dialectContent = fs.readFileSync(diaFile, 'utf8');
+      lastDialect = JSON.parse(dialectContent).dialect;
+    }
+  } catch (err) {
+    // File doesn't exist or is invalid, continue with setup
+    console.log('[Platform] Dialect file not found or invalid, proceeding with setup');
+  }
+  
   if (lastDialect === dialect) {
     return;
   }
 
-  // creating links for the right dialect 
+  // creating links for the right dialect using platform-aware paths
   const symLinks = [
     {
-      path: path.resolve(`${exPath}/syntaxes`),
+      path: PlatformUtils.joinPath(exPath, "syntaxes"),
       srcFile: `prolog.${dialect}.tmLanguage.json`,
       targetFile: "prolog.tmLanguage.json"
     },
     {
-      path: path.resolve(`${exPath}/snippets`),
+      path: PlatformUtils.joinPath(exPath, "snippets"),
       srcFile: `prolog.${dialect}.json`,
       targetFile: "prolog.json"
     }
   ];
+  
   await Promise.all(
     symLinks.map(async link => {
-      const srcPath = path.resolve(`${link.path}/${link.srcFile}`);
-      const targetPath = path.resolve(`${link.path}/${link.targetFile}`);
+      const srcPath = PlatformUtils.joinPath(link.path, link.srcFile);
+      const targetPath = PlatformUtils.joinPath(link.path, link.targetFile);
       
       // remove old link
       try {
-        if (fs.existsSync(targetPath)) {
+        if (await PlatformUtils.pathExists(targetPath)) {
           fs.unlinkSync(targetPath);
         }
       } catch (err) {
         // Ignore errors when removing non-existent files
       }
       
-      
-// make link
+      // make link
       try {
         // Try to create symlink, fallback to copy if symlink fails
         try {
@@ -900,11 +925,22 @@ async function initForDialect(context: ExtensionContext) {
           fs.copyFileSync(srcPath, targetPath);
         }
       } catch (err) {
-        window.showErrorMessage("VSC-Prolog failed in initialization. Try to run vscode in administrator role.");
+        const platform = getPlatform();
+        const errorMsg = platform === 'windows'
+          ? "VSC-Prolog failed in initialization. Try running VS Code as administrator or enable Developer Mode in Windows Settings."
+          : "VSC-Prolog failed in initialization. Check file permissions.";
+        window.showErrorMessage(errorMsg);
         throw (err);
       }
     })
   );
+  
+  // Ensure .vscode directory exists
+  const vscodeDirPath = PlatformUtils.joinPath(exPath, ".vscode");
+  if (!await PlatformUtils.pathExists(vscodeDirPath)) {
+    fs.mkdirSync(vscodeDirPath, { recursive: true });
+  }
+  
   // write the dialect to the json for later initialisation
   fs.writeFileSync(diaFile, JSON.stringify({ dialect: dialect }));
 }
@@ -913,6 +949,9 @@ async function initForDialect(context: ExtensionContext) {
 // your extension is activated the very first time the command is executed
 export async function activate(context: ExtensionContext) {
   console.log('Congratulations, your extension "vsc-prolog" is now active! :)');
+
+  // Check SWI-Prolog installation before proceeding
+  await checkAndHandleInstallation(context);
 
   // initialisation of workspace
   await initForDialect(context);
@@ -948,6 +987,13 @@ export async function activate(context: ExtensionContext) {
       command: "prolog.openSettings",
       callback: () => {
         // This will be handled by the webview view registration
+      }
+    },
+    {
+      command: "prolog.setupWizard",
+      callback: async () => {
+        const installationGuide = InstallationGuide.getInstance();
+        await installationGuide.runSetupWizard();
       }
     }
   ];
@@ -1221,6 +1267,77 @@ export async function activate(context: ExtensionContext) {
     console.error('[Extension] Failed to start Prolog backend:', error);
     // Don't show error immediately - let user trigger it via chat if needed
   }
+}
+
+// Installation checking and handling
+async function checkAndHandleInstallation(context: ExtensionContext): Promise<void> {
+  try {
+    const installationChecker = InstallationChecker.getInstance();
+    const configurationMigration = ConfigurationMigration.getInstance();
+    
+    // Set extension context for configuration migration
+    configurationMigration.setExtensionContext(context);
+    
+    // Check for configuration migration needs first
+    await configurationMigration.performComprehensiveMigration();
+    
+    const installationStatus = await installationChecker.checkSwiplInstallation();
+    
+    if (!installationStatus.isInstalled) {
+      // SWI-Prolog not found - show user-friendly guidance
+      const action = await window.showWarningMessage(
+        'SWI-Prolog is not installed or not found in the configured path. The Prolog extension requires SWI-Prolog to function properly.',
+        'Install SWI-Prolog',
+        'Setup Wizard',
+        'Configure Path',
+        'Continue Anyway'
+      );
+      
+      switch (action) {
+        case 'Install SWI-Prolog':
+          await showInstallationInstructions();
+          break;
+        case 'Setup Wizard':
+          await commands.executeCommand('prolog.setupWizard');
+          break;
+        case 'Configure Path':
+          await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+          break;
+        case 'Continue Anyway':
+          window.showInformationMessage('Some Prolog features may not work without SWI-Prolog installed.');
+          break;
+      }
+    } else if (installationStatus.issues && installationStatus.issues.length > 0) {
+      // Installation found but has issues
+      const issueMessage = installationStatus.issues.join('; ');
+      const action = await window.showInformationMessage(
+        `SWI-Prolog found at ${installationStatus.path} (version ${installationStatus.version}), but there are configuration issues: ${issueMessage}`,
+        'Fix Configuration',
+        'Ignore'
+      );
+      
+      if (action === 'Fix Configuration') {
+        const updateResult = await installationChecker.validateAndUpdateConfiguration();
+        if (updateResult.updated) {
+          window.showInformationMessage(
+            `Configuration updated: SWI-Prolog path changed from '${updateResult.oldPath}' to '${updateResult.newPath}'`
+          );
+        }
+      }
+    } else {
+      // Installation is good - show success message only in development mode
+      console.log(`SWI-Prolog found: ${installationStatus.path} (version ${installationStatus.version})`);
+    }
+  } catch (error) {
+    console.error('Error checking SWI-Prolog installation:', error);
+    window.showErrorMessage('Failed to check SWI-Prolog installation. Some features may not work properly.');
+  }
+}
+
+// Show platform-specific installation instructions using InstallationGuide
+async function showInstallationInstructions(): Promise<void> {
+  const installationGuide = InstallationGuide.getInstance();
+  await installationGuide.showInstallationGuideDialog();
 }
 
 // Helper function to create auth configuration from VSCode settings

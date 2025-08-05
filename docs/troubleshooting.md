@@ -15,38 +15,150 @@ This guide helps you diagnose and resolve common issues with the New-VSC-Prolog 
 
 ## Installation Issues
 
+The extension now includes **intelligent installation detection and setup assistance** to help resolve installation issues automatically.
+
 ### SWI-Prolog Not Found
 
 **Symptoms:**
 - Extension fails to start
 - Error: "SWI-Prolog executable not found"
 - Chat commands return "Backend not available"
+- Installation warning dialog appears on extension activation
 
-**Solutions:**
+**Automatic Solutions:**
+
+1. **Use the Setup Wizard (Recommended):**
+   - Press `Ctrl+Shift+P` and run `Prolog: Setup Wizard`
+   - The wizard will automatically detect existing SWI-Prolog installations
+   - Follow the guided setup process for your platform
+   - Automatic path validation ensures proper configuration
+
+2. **Automatic Installation Detection:**
+   - The extension automatically scans common installation paths
+   - Supports Windows, macOS, and Linux detection
+   - Provides platform-specific installation guidance if SWI-Prolog is not found
+
+3. **Interactive Installation Guide:**
+   - Click "Install SWI-Prolog" when prompted
+   - View platform-specific installation instructions in an interactive webview
+   - Step-by-step guidance with download links and commands
+
+**Manual Solutions:**
 
 1. **Install SWI-Prolog:**
    ```bash
    # Ubuntu/Debian
    sudo apt-get install swi-prolog
    
-   # macOS
+   # macOS (Homebrew)
    brew install swi-prolog
    
-   # Windows
+   # macOS (MacPorts)
+   sudo port install swi-prolog
+   
+   # Windows (Chocolatey)
    choco install swi-prolog
+   
+   # Windows (Scoop)
+   scoop install swi-prolog
    ```
 
 2. **Configure executable path:**
    - Open VS Code Settings (Ctrl+,)
    - Search for "prolog.executablePath"
    - Set the correct path to your SWI-Prolog installation:
-     - Windows: `C:\Program Files\swipl\bin\swipl.exe`
-     - macOS: `/usr/local/bin/swipl`
-     - Linux: `/usr/bin/swipl`
+     - **Windows:** `C:\Program Files\swipl\bin\swipl.exe` or `C:\swipl\bin\swipl.exe`
+     - **macOS:** `/usr/local/bin/swipl`, `/opt/homebrew/bin/swipl`, or `/opt/local/bin/swipl`
+     - **Linux:** `/usr/bin/swipl`, `/usr/local/bin/swipl`, or `/snap/bin/swipl`
 
 3. **Verify installation:**
    ```bash
    swipl --version
+   ```
+
+### Configuration Migration Issues
+
+**Symptoms:**
+- Extension detects outdated SWI-Prolog paths
+- Warning about invalid configuration
+- Migration dialog appears on startup
+
+**Automatic Solutions:**
+
+1. **Automatic Migration:**
+   - The extension automatically detects outdated or invalid paths
+   - Offers to migrate to valid SWI-Prolog installations
+   - Creates configuration backups before making changes
+
+2. **Configuration Backup and Restore:**
+   - All configuration changes are automatically backed up
+   - Use "Undo Migration" option if automatic changes cause issues
+   - Manual restore available through extension settings
+
+**Manual Solutions:**
+
+1. **Check Installation Status:**
+   - Open the Prolog settings panel in VS Code
+   - View current installation status and detected issues
+   - Use "Test Installation" button to validate configuration
+
+2. **Manual Path Update:**
+   - Update `prolog.executablePath` in VS Code settings
+   - The extension will validate the new path automatically
+   - Error messages provide specific guidance for path issues
+
+### Installation Path Detection
+
+**Common Installation Paths:**
+
+**Windows:**
+- `C:\Program Files\swipl\bin\swipl.exe`
+- `C:\swipl\bin\swipl.exe`
+- `C:\Program Files (x86)\swipl\bin\swipl.exe`
+- `%LOCALAPPDATA%\Programs\swipl\bin\swipl.exe`
+
+**macOS:**
+- `/usr/local/bin/swipl` (Homebrew Intel)
+- `/opt/homebrew/bin/swipl` (Homebrew Apple Silicon)
+- `/opt/local/bin/swipl` (MacPorts)
+- `/Applications/SWI-Prolog.app/Contents/MacOS/swipl`
+
+**Linux:**
+- `/usr/bin/swipl` (System package)
+- `/usr/local/bin/swipl` (Manual installation)
+- `/snap/bin/swipl` (Snap package)
+- `/opt/swipl/bin/swipl` (Custom installation)
+
+### Installation Validation
+
+**Automatic Validation:**
+- The extension automatically validates SWI-Prolog installations
+- Checks executable permissions and version compatibility
+- Provides detailed diagnostic information for troubleshooting
+
+**Manual Validation:**
+1. **Test executable directly:**
+   ```bash
+   # Test if SWI-Prolog is accessible
+   swipl --version
+   
+   # Test basic functionality
+   echo "halt." | swipl -q
+   ```
+
+2. **Check PATH environment:**
+   ```bash
+   # Windows
+   where swipl
+   
+   # macOS/Linux
+   which swipl
+   ```
+
+3. **Verify permissions:**
+   ```bash
+   # Check if executable has proper permissions
+   ls -la $(which swipl)
    ```
 
 ### Extension Won't Activate
@@ -70,6 +182,78 @@ This guide helps you diagnose and resolve common issues with the New-VSC-Prolog 
    - Open Output panel (View → Output)
    - Select "New-VSC-Prolog" from dropdown
    - Look for error messages
+
+### Setup Wizard Issues
+
+**Symptoms:**
+- Setup wizard fails to detect SWI-Prolog
+- Wizard shows "No installations found"
+- Auto-detection not working properly
+
+**Solutions:**
+
+1. **Manual path specification:**
+   - In the setup wizard, choose "Manual Configuration"
+   - Browse to your SWI-Prolog installation directory
+   - The wizard will validate the selected path
+
+2. **Refresh detection:**
+   - Click "Refresh" in the setup wizard
+   - The wizard will re-scan common installation paths
+   - Try after installing SWI-Prolog if not already installed
+
+3. **Platform-specific issues:**
+   - **Windows:** Ensure SWI-Prolog is installed in standard locations
+   - **macOS:** Check both Intel and Apple Silicon Homebrew paths
+   - **Linux:** Verify package manager installation completed successfully
+
+### Installation Guide Dialog Issues
+
+**Symptoms:**
+- Installation guide doesn't open
+- Webview shows blank content
+- Download links not working
+
+**Solutions:**
+
+1. **Enable webview content:**
+   - Check VS Code security settings
+   - Ensure webviews are enabled
+   - Try disabling extensions that might interfere with webviews
+
+2. **Network connectivity:**
+   - Ensure internet connection for download links
+   - Check firewall settings for VS Code
+   - Try accessing SWI-Prolog website directly
+
+3. **Webview refresh:**
+   - Close and reopen the installation guide
+   - Use "Developer: Reload Window" if needed
+   - Check browser console for JavaScript errors
+
+### Configuration Migration Problems
+
+**Symptoms:**
+- Migration fails with permission errors
+- Backup creation unsuccessful
+- Settings not updating after migration
+
+**Solutions:**
+
+1. **Permission issues:**
+   - Ensure VS Code has write permissions to settings
+   - Run VS Code as administrator if necessary (Windows)
+   - Check file permissions in VS Code settings directory
+
+2. **Backup failures:**
+   - Check available disk space
+   - Verify VS Code extension storage permissions
+   - Manual backup: copy current settings before migration
+
+3. **Settings sync conflicts:**
+   - Disable VS Code settings sync temporarily during migration
+   - Manually resolve conflicts if settings sync is enabled
+   - Re-enable sync after successful migration
 
 ## Backend Connection Problems
 
@@ -297,6 +481,17 @@ This guide helps you diagnose and resolve common issues with the New-VSC-Prolog 
 
 ## Error Codes Reference
 
+### Installation Errors
+
+| Code | Description | Severity | Action |
+|------|-------------|----------|---------|
+| `INSTALLATION_NOT_FOUND` | SWI-Prolog installation not detected | Critical | Run Setup Wizard or install SWI-Prolog |
+| `INSTALLATION_INVALID` | SWI-Prolog installation is invalid or corrupted | Error | Reinstall SWI-Prolog or update path |
+| `PATH_VALIDATION_FAILED` | Configured executable path is invalid | Error | Update prolog.executablePath setting |
+| `VERSION_INCOMPATIBLE` | SWI-Prolog version is not supported | Warning | Update to SWI-Prolog 9.0.4+ |
+| `MIGRATION_FAILED` | Configuration migration unsuccessful | Warning | Manual configuration required |
+| `BACKUP_CREATION_FAILED` | Failed to create configuration backup | Warning | Check disk space and permissions |
+
 ### Backend Errors
 
 | Code | Description | Severity | Action |
@@ -446,3 +641,59 @@ For enterprise users requiring professional support, contact the maintainers thr
 ### Q: How do I backup my Prolog workspace?
 
 **A:** Include `.pl`, `.n3`, and `.ttl` files in your version control. Configuration is stored in VS Code settings.
+
+### Q: The Setup Wizard can't find my SWI-Prolog installation. What should I do?
+
+**A:** Try these steps:
+1. Ensure SWI-Prolog is properly installed and accessible from the command line (`swipl --version`)
+2. Use "Manual Configuration" in the Setup Wizard to browse to your installation
+3. Check common installation paths for your platform (see Installation Path Detection section)
+4. Verify file permissions and that the executable is not corrupted
+
+### Q: Why does the extension keep asking me to install SWI-Prolog when it's already installed?
+
+**A:** This usually indicates a path configuration issue:
+1. Check that `prolog.executablePath` points to the correct SWI-Prolog executable
+2. Verify the executable has proper permissions and is not corrupted
+3. Run the Setup Wizard to automatically detect and configure the correct path
+4. Check the installation status in the Prolog settings panel for detailed diagnostics
+
+### Q: Can I disable the automatic installation checking?
+
+**A:** The installation checking is essential for the extension to function properly, but you can:
+1. Set a valid `prolog.executablePath` to avoid repeated checks
+2. Use "Continue Anyway" when prompted if you want to use the extension without SWI-Prolog
+3. The extension will remember your choice and won't repeatedly prompt you
+
+### Q: What happens to my settings when the extension migrates my configuration?
+
+**A:** The extension automatically:
+1. Creates a backup of your current configuration before making changes
+2. Preserves all non-path related settings (linter, formatter, etc.)
+3. Only updates the `prolog.executablePath` to point to a valid installation
+4. Provides an "Undo Migration" option if you want to revert changes
+5. You can view and restore previous configurations through the extension settings
+
+### Q: How do I manually test if my SWI-Prolog installation is working?
+
+**A:** Use these commands:
+```bash
+# Test basic installation
+swipl --version
+
+# Test basic functionality
+echo "halt." | swipl -q
+
+# Test if accessible from PATH
+which swipl    # macOS/Linux
+where swipl    # Windows
+```
+
+### Q: The installation guide webview is not loading. How do I fix this?
+
+**A:** Try these solutions:
+1. Check VS Code webview security settings
+2. Ensure you have an internet connection for external resources
+3. Disable other extensions that might interfere with webviews
+4. Use "Developer: Reload Window" to refresh the webview
+5. Check the browser console in the webview for JavaScript errors
