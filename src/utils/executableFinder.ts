@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { spawn } from 'child_process';
-import * as which from 'which';
+import which from 'which';
 import { PlatformUtils, PlatformType } from './platformUtils';
 
 /**

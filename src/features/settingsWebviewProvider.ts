@@ -31,7 +31,7 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
 
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(
-            message => {
+            async message => {
                 switch (message.type) {
                     case 'updateSetting':
                         this._updateSetting(message.key, message.value);

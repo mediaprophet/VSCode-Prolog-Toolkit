@@ -543,14 +543,14 @@ export class SessionManager extends EventEmitter {
   /**
    * Get session statistics
    */
-  getSessionStatistics(sessionId: string): {
+  async getSessionStatistics(sessionId: string): Promise<{
     config: SessionConfig;
     state: SessionState;
     concurrencyStats?: unknown;
     historyStats?: unknown;
     uptime: number;
     idleTime: number;
-  } | null {
+  } | null> {
     const session = this.sessions.get(sessionId);
     const state = this.sessionStates.get(sessionId);
 
