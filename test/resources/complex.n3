@@ -1,0 +1,31 @@
+@prefix : <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+# Basic facts
+:socrates a :Person .
+:plato a :Person .
+:aristotle a :Person .
+
+# Class hierarchy
+:Person rdfs:subClassOf :Mortal .
+:Philosopher rdfs:subClassOf :Person .
+
+# Individual classifications
+:socrates a :Philosopher .
+:plato a :Philosopher .
+
+# Relationships
+:socrates :teacherOf :plato .
+:plato :teacherOf :aristotle .
+
+# N3 Rules
+{ ?x a :Person } => { ?x a :Mortal } .
+{ ?x a :Philosopher } => { ?x :hasWisdom true } .
+{ ?teacher :teacherOf ?student . ?teacher :hasWisdom true } => { ?student :learnedFrom ?teacher } .
+
+# Properties
+:hasWisdom a rdf:Property .
+:teacherOf a rdf:Property .
+:learnedFrom a rdf:Property .

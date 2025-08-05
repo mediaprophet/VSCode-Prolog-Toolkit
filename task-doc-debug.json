@@ -1,0 +1,646 @@
+{
+  "taskDocument": {
+    "title": "TypeScript Strict Mode Compilation Errors - Systematic Fix Plan",
+    "version": "1.0.0",
+    "created": "2025-01-05",
+    "description": "Comprehensive plan to fix 587 TypeScript compilation errors related to strict type checking, optional properties, and null checks",
+    "severity": "high",
+    "impact": "production_deployment_blocker",
+    "estimatedEffort": "medium_to_high",
+    "prerequisites": [
+      "Backup current codebase",
+      "Ensure test suite is functional",
+      "Review TypeScript configuration files"
+    ]
+  },
+  "errorAnalysis": {
+    "totalErrors": 587,
+    "primaryCauses": [
+      "strictNullChecks violations",
+      "exactOptionalPropertyTypes violations", 
+      "noUncheckedIndexedAccess violations",
+      "useUnknownInCatchVariables violations",
+      "noImplicitAny violations",
+      "strictFunctionTypes violations"
+    ],
+    "affectedAreas": [
+      "src/extension.ts",
+      "src/prologBackend.ts", 
+      "src/features/*.ts",
+      "src/utils/*.ts",
+      "src/sdk/*.ts",
+      "test/*.ts"
+    ],
+    "runtimeImpact": "none - functionality preserved"
+  },
+  "configurationContext": {
+    "strictModeSettings": {
+      "strict": true,
+      "noImplicitAny": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "noImplicitReturns": true,
+      "noFallthroughCasesInSwitch": true,
+      "noUncheckedIndexedAccess": true,
+      "exactOptionalPropertyTypes": true,
+      "noImplicitOverride": true,
+      "useUnknownInCatchVariables": true
+    },
+    "buildConfiguration": "tsconfig.build.json has relaxed settings for current builds",
+    "productionConfiguration": "tsconfig.production.json has partially relaxed settings"
+  },
+  "tasks": [
+    {
+      "taskId": "T001",
+      "phase": "preparation",
+      "title": "Environment Setup and Analysis",
+      "priority": "critical",
+      "estimatedHours": 2,
+      "description": "Prepare development environment and perform detailed error analysis",
+      "subtasks": [
+        {
+          "id": "T001.1",
+          "title": "Create development branch",
+          "description": "Create feature branch 'fix/typescript-strict-mode' for all changes",
+          "commands": ["git checkout -b fix/typescript-strict-mode"]
+        },
+        {
+          "id": "T001.2", 
+          "title": "Generate detailed error report",
+          "description": "Compile with strict mode and capture all errors to file",
+          "commands": ["npm run compile:strict 2> typescript-errors.log"]
+        },
+        {
+          "id": "T001.3",
+          "title": "Categorize errors by type",
+          "description": "Parse error log and group by error type for systematic fixing",
+          "deliverable": "error-categorization.json"
+        },
+        {
+          "id": "T001.4",
+          "title": "Backup current working state",
+          "description": "Ensure we can rollback if needed",
+          "commands": ["git add .", "git commit -m 'Backup before TypeScript strict mode fixes'"]
+        }
+      ],
+      "acceptanceCriteria": [
+        "Development branch created",
+        "Complete error log generated", 
+        "Errors categorized by type",
+        "Backup commit created"
+      ]
+    },
+    {
+      "taskId": "T002",
+      "phase": "core_interfaces",
+      "title": "Fix Core Type Definitions and Interfaces",
+      "priority": "critical",
+      "estimatedHours": 4,
+      "description": "Define proper TypeScript interfaces and types for core functionality",
+      "subtasks": [
+        {
+          "id": "T002.1",
+          "title": "Create comprehensive type definitions",
+          "description": "Define interfaces for PrologBackend, API responses, configuration objects",
+          "files": ["src/types/index.ts", "src/types/backend.ts", "src/types/api.ts"],
+          "focus": [
+            "PrologBackendOptions interface",
+            "API response types",
+            "Configuration object types",
+            "Event handler types"
+          ]
+        },
+        {
+          "id": "T002.2",
+          "title": "Fix VSCode API type usage",
+          "description": "Properly type VSCode extension API interactions",
+          "files": ["src/extension.ts"],
+          "focus": [
+            "ChatContext type (currently 'any')",
+            "Configuration object types",
+            "Event handler parameter types"
+          ]
+        },
+        {
+          "id": "T002.3",
+          "title": "Define utility and helper types",
+          "description": "Create reusable type definitions for common patterns",
+          "files": ["src/types/utils.ts"],
+          "focus": [
+            "Generic result types",
+            "Error handling types", 
+            "Optional property helpers",
+            "Union types for enums"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "All core interfaces defined",
+        "No 'any' types in public APIs",
+        "Proper generic type usage",
+        "Export/import structure established"
+      ]
+    },
+    {
+      "taskId": "T003", 
+      "phase": "null_safety",
+      "title": "Fix Null Safety and Optional Property Issues",
+      "priority": "high",
+      "estimatedHours": 6,
+      "description": "Address strictNullChecks and exactOptionalPropertyTypes violations",
+      "subtasks": [
+        {
+          "id": "T003.1",
+          "title": "Fix null/undefined checks in extension.ts",
+          "description": "Add proper null checks and optional chaining",
+          "files": ["src/extension.ts"],
+          "patterns": [
+            "prologBackend?.method() patterns",
+            "config.get() with proper defaults",
+            "Optional parameter handling",
+            "Event handler null checks"
+          ]
+        },
+        {
+          "id": "T003.2",
+          "title": "Fix null safety in prologBackend.ts", 
+          "description": "Address process, socket, and response null checks",
+          "files": ["src/prologBackend.ts"],
+          "patterns": [
+            "this.process null checks",
+            "Response object property access",
+            "Socket connection null safety",
+            "Event emitter null checks"
+          ]
+        },
+        {
+          "id": "T003.3",
+          "title": "Fix optional properties in configuration objects",
+          "description": "Handle exactOptionalPropertyTypes violations",
+          "files": ["src/extension.ts", "src/features/*.ts"],
+          "patterns": [
+            "workspace.getConfiguration() usage",
+            "Optional config properties",
+            "Default value assignments",
+            "Conditional property access"
+          ]
+        },
+        {
+          "id": "T003.4",
+          "title": "Add null guards for DOM and external APIs",
+          "description": "Protect against null returns from external APIs",
+          "files": ["src/features/*.ts"],
+          "patterns": [
+            "window.activeTextEditor checks",
+            "document.getText() null safety",
+            "File system operation null checks"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "No strictNullChecks violations",
+        "All optional properties properly handled",
+        "Null guards in place for external APIs",
+        "Optional chaining used appropriately"
+      ]
+    },
+    {
+      "taskId": "T004",
+      "phase": "array_object_access",
+      "title": "Fix Unchecked Index Access Issues", 
+      "priority": "high",
+      "estimatedHours": 4,
+      "description": "Address noUncheckedIndexedAccess violations",
+      "subtasks": [
+        {
+          "id": "T004.1",
+          "title": "Fix array index access patterns",
+          "description": "Add bounds checking for array access",
+          "files": ["src/extension.ts", "src/prologBackend.ts"],
+          "patterns": [
+            "parts[0] -> parts[0] with length check",
+            "results[index] -> safe access patterns",
+            "Array destructuring with defaults",
+            "Loop index access safety"
+          ]
+        },
+        {
+          "id": "T004.2",
+          "title": "Fix object property access",
+          "description": "Add property existence checks",
+          "files": ["src/features/*.ts"],
+          "patterns": [
+            "obj[key] -> 'key' in obj checks",
+            "Dynamic property access safety",
+            "Configuration object access",
+            "Response object property access"
+          ]
+        },
+        {
+          "id": "T004.3",
+          "title": "Implement safe accessor utilities",
+          "description": "Create helper functions for safe access",
+          "files": ["src/utils/safeAccess.ts"],
+          "utilities": [
+            "safeArrayAccess<T>(arr: T[], index: number): T | undefined",
+            "safeObjectAccess<T>(obj: Record<string, T>, key: string): T | undefined",
+            "getConfigValue<T>(config: any, key: string, defaultValue: T): T"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "No unchecked array access",
+        "All object property access is safe",
+        "Helper utilities implemented and used",
+        "Bounds checking in place"
+      ]
+    },
+    {
+      "taskId": "T005",
+      "phase": "error_handling",
+      "title": "Fix Error Handling and Exception Types",
+      "priority": "medium",
+      "estimatedHours": 3,
+      "description": "Address useUnknownInCatchVariables and error type issues",
+      "subtasks": [
+        {
+          "id": "T005.1",
+          "title": "Update catch blocks to use unknown",
+          "description": "Change catch(error: any) to catch(error: unknown)",
+          "files": ["src/extension.ts", "src/prologBackend.ts", "src/features/*.ts"],
+          "patterns": [
+            "catch (error: any) -> catch (error: unknown)",
+            "Add error type guards",
+            "Implement error instanceof checks",
+            "Create error utility functions"
+          ]
+        },
+        {
+          "id": "T005.2",
+          "title": "Create error type guards and utilities",
+          "description": "Implement proper error handling utilities",
+          "files": ["src/utils/errorHandling.ts"],
+          "utilities": [
+            "isError(error: unknown): error is Error",
+            "getErrorMessage(error: unknown): string", 
+            "formatError(error: unknown): string",
+            "logError(error: unknown, context: string): void"
+          ]
+        },
+        {
+          "id": "T005.3",
+          "title": "Update error handling throughout codebase",
+          "description": "Apply consistent error handling patterns",
+          "files": ["src/**/*.ts"],
+          "patterns": [
+            "Replace String(error) with getErrorMessage(error)",
+            "Use error type guards before property access",
+            "Consistent error logging",
+            "Proper error propagation"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "All catch blocks use unknown type",
+        "Error type guards implemented",
+        "Consistent error handling patterns",
+        "No unsafe error property access"
+      ]
+    },
+    {
+      "taskId": "T006",
+      "phase": "function_signatures",
+      "title": "Fix Function Type and Parameter Issues",
+      "priority": "medium", 
+      "estimatedHours": 4,
+      "description": "Address strictFunctionTypes and parameter type issues",
+      "subtasks": [
+        {
+          "id": "T006.1",
+          "title": "Fix callback and event handler types",
+          "description": "Properly type function parameters and callbacks",
+          "files": ["src/extension.ts", "src/prologBackend.ts"],
+          "patterns": [
+            "Event handler parameter types",
+            "Callback function signatures",
+            "Promise resolver/rejector types",
+            "Array.map/forEach callback types"
+          ]
+        },
+        {
+          "id": "T006.2",
+          "title": "Fix method parameter types",
+          "description": "Ensure all method parameters are properly typed",
+          "files": ["src/features/*.ts"],
+          "patterns": [
+            "Optional parameters with defaults",
+            "Rest parameter types",
+            "Generic function parameters",
+            "Method overload signatures"
+          ]
+        },
+        {
+          "id": "T006.3",
+          "title": "Fix return type annotations",
+          "description": "Add explicit return types where needed",
+          "files": ["src/**/*.ts"],
+          "patterns": [
+            "Async function return types",
+            "Generic return types",
+            "Union return types",
+            "Void vs undefined returns"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "All function signatures properly typed",
+        "No implicit any parameters",
+        "Consistent return type annotations",
+        "Proper generic usage"
+      ]
+    },
+    {
+      "taskId": "T007",
+      "phase": "features_modules",
+      "title": "Fix Feature Module Type Issues",
+      "priority": "medium",
+      "estimatedHours": 5,
+      "description": "Address type issues in feature modules and providers",
+      "subtasks": [
+        {
+          "id": "T007.1",
+          "title": "Fix language service provider types",
+          "description": "Update hover, definition, and reference providers",
+          "files": [
+            "src/features/hoverProvider.ts",
+            "src/features/definitionProvider.ts", 
+            "src/features/referenceProvider.ts"
+          ],
+          "focus": [
+            "VSCode provider interface compliance",
+            "Position and Range type usage",
+            "Document and TextDocument types",
+            "Provider result types"
+          ]
+        },
+        {
+          "id": "T007.2",
+          "title": "Fix debugger and LSP types",
+          "description": "Update debugging and language server types",
+          "files": [
+            "src/features/prologDebugger.ts",
+            "src/features/prologLSPClient.ts",
+            "src/features/prologLSPServer.ts"
+          ],
+          "focus": [
+            "Debug adapter types",
+            "LSP message types",
+            "Protocol compliance",
+            "Event handler types"
+          ]
+        },
+        {
+          "id": "T007.3",
+          "title": "Fix API and WebSocket types",
+          "description": "Update server and networking types",
+          "files": [
+            "src/features/apiServer.ts",
+            "src/features/externalWebSocketManager.ts",
+            "src/features/apiMiddleware.ts"
+          ],
+          "focus": [
+            "Express.js types",
+            "WebSocket types",
+            "HTTP request/response types",
+            "Authentication types"
+          ]
+        },
+        {
+          "id": "T007.4",
+          "title": "Fix utility and helper types",
+          "description": "Update utility modules and helpers",
+          "files": [
+            "src/utils/utils.ts",
+            "src/features/editHelpers.ts",
+            "src/features/outputFormatter.ts"
+          ],
+          "focus": [
+            "File system operation types",
+            "String manipulation types",
+            "Configuration types",
+            "Formatting function types"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "All provider interfaces properly implemented",
+        "LSP and debug types correct",
+        "Server and networking types fixed",
+        "Utility functions properly typed"
+      ]
+    },
+    {
+      "taskId": "T008",
+      "phase": "test_files",
+      "title": "Fix Test File Type Issues",
+      "priority": "low",
+      "estimatedHours": 3,
+      "description": "Address type issues in test files",
+      "subtasks": [
+        {
+          "id": "T008.1",
+          "title": "Fix test framework types",
+          "description": "Update Mocha and Chai type usage",
+          "files": ["test/**/*.test.ts"],
+          "patterns": [
+            "Test function signatures",
+            "Assertion types",
+            "Mock and stub types",
+            "Test data types"
+          ]
+        },
+        {
+          "id": "T008.2",
+          "title": "Fix test utility types",
+          "description": "Update test helper and utility types",
+          "files": ["test/setup-test-env.js", "test/index.ts"],
+          "patterns": [
+            "Test configuration types",
+            "Environment setup types",
+            "Test runner types"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "All test files compile without errors",
+        "Test framework types properly used",
+        "Test utilities properly typed"
+      ]
+    },
+    {
+      "taskId": "T009",
+      "phase": "validation",
+      "title": "Validation and Quality Assurance",
+      "priority": "critical",
+      "estimatedHours": 3,
+      "description": "Validate fixes and ensure code quality",
+      "subtasks": [
+        {
+          "id": "T009.1",
+          "title": "Compile with strict mode",
+          "description": "Ensure all TypeScript errors are resolved",
+          "commands": ["npm run compile:strict"],
+          "successCriteria": "Zero compilation errors"
+        },
+        {
+          "id": "T009.2",
+          "title": "Run test suite",
+          "description": "Ensure functionality is preserved",
+          "commands": ["npm run test:all"],
+          "successCriteria": "All tests pass"
+        },
+        {
+          "id": "T009.3",
+          "title": "Run linting and formatting",
+          "description": "Ensure code quality standards",
+          "commands": ["npm run lint", "npm run format:check"],
+          "successCriteria": "No linting errors, proper formatting"
+        },
+        {
+          "id": "T009.4",
+          "title": "Build production bundle",
+          "description": "Ensure production build works",
+          "commands": ["npm run build", "npm run package"],
+          "successCriteria": "Successful build and package creation"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Zero TypeScript compilation errors",
+        "All tests passing",
+        "No linting violations",
+        "Successful production build"
+      ]
+    },
+    {
+      "taskId": "T010",
+      "phase": "documentation",
+      "title": "Documentation and Cleanup",
+      "priority": "low",
+      "estimatedHours": 2,
+      "description": "Document changes and clean up",
+      "subtasks": [
+        {
+          "id": "T010.1",
+          "title": "Update type documentation",
+          "description": "Document new types and interfaces",
+          "files": ["docs/typescript-migration.md"],
+          "content": [
+            "New type definitions",
+            "Breaking changes (if any)",
+            "Migration guide",
+            "Best practices"
+          ]
+        },
+        {
+          "id": "T010.2",
+          "title": "Update CHANGELOG",
+          "description": "Document the TypeScript strict mode migration",
+          "files": ["CHANGELOG.md"],
+          "content": [
+            "Version bump",
+            "TypeScript strict mode compliance",
+            "Type safety improvements",
+            "Developer experience enhancements"
+          ]
+        },
+        {
+          "id": "T010.3",
+          "title": "Clean up temporary files",
+          "description": "Remove debugging and temporary files",
+          "commands": [
+            "rm typescript-errors.log",
+            "rm error-categorization.json"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        "Documentation updated",
+        "CHANGELOG reflects changes",
+        "Temporary files cleaned up"
+      ]
+    }
+  ],
+  "riskMitigation": {
+    "risks": [
+      {
+        "risk": "Breaking changes to public APIs",
+        "probability": "low",
+        "impact": "high",
+        "mitigation": "Maintain backward compatibility, use type assertions where needed"
+      },
+      {
+        "risk": "Performance impact from additional type checks",
+        "probability": "low", 
+        "impact": "low",
+        "mitigation": "Type checks are compile-time only, no runtime impact"
+      },
+      {
+        "risk": "Incomplete error fixing leading to remaining issues",
+        "probability": "medium",
+        "impact": "medium",
+        "mitigation": "Systematic approach, comprehensive testing, error categorization"
+      }
+    ],
+    "rollbackPlan": {
+      "steps": [
+        "git checkout main",
+        "git branch -D fix/typescript-strict-mode",
+        "Revert to tsconfig.build.json for builds"
+      ],
+      "dataLoss": "none",
+      "timeToRollback": "5 minutes"
+    }
+  },
+  "successMetrics": {
+    "primary": [
+      "Zero TypeScript compilation errors with strict mode",
+      "All existing tests pass",
+      "Successful production build"
+    ],
+    "secondary": [
+      "Improved type safety and developer experience",
+      "Better IDE support and autocomplete",
+      "Reduced runtime errors through compile-time checks"
+    ]
+  },
+  "timeline": {
+    "totalEstimatedHours": 36,
+    "phases": [
+      {"phase": "preparation", "hours": 2, "days": 0.25},
+      {"phase": "core_interfaces", "hours": 4, "days": 0.5},
+      {"phase": "null_safety", "hours": 6, "days": 0.75},
+      {"phase": "array_object_access", "hours": 4, "days": 0.5},
+      {"phase": "error_handling", "hours": 3, "days": 0.375},
+      {"phase": "function_signatures", "hours": 4, "days": 0.5},
+      {"phase": "features_modules", "hours": 5, "days": 0.625},
+      {"phase": "test_files", "hours": 3, "days": 0.375},
+      {"phase": "validation", "hours": 3, "days": 0.375},
+      {"phase": "documentation", "hours": 2, "days": 0.25}
+    ],
+    "totalDays": 4.5,
+    "recommendedApproach": "2-3 tasks per day, with validation after each phase"
+  },
+  "tools": {
+    "required": [
+      "TypeScript compiler (tsc)",
+      "ESLint for code quality",
+      "Prettier for formatting",
+      "VS Code with TypeScript extension"
+    ],
+    "helpful": [
+      "TypeScript error parser tools",
+      "Git for version control",
+      "Automated testing tools"
+    ]
+  }
+}

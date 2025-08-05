@@ -1,0 +1,935 @@
+openapi: 3.0.3
+info:
+  title: VSCode Prolog Toolkit API
+  description: |
+    RESTful API for Prolog operations and AI agent integration.
+    
+    This API provides comprehensive access to Prolog reasoning capabilities including:
+    - Standard Prolog query execution
+    - Advanced reasoning (CLP, probabilistic logic, N3/RDF)
+    - Session management with state persistence
+    - Batch processing and streaming results
+    - Real-time notifications via WebSocket
+    
+    ## Authentication
+    
+    The API supports multiple authentication methods:
+    - **API Key**: Include `X-API-Key` header
+    - **JWT Token**: Include `Authorization: Bearer <token>` header
+    - **Local Only**: Restricted to localhost connections (development mode)
+    - **OAuth2**: Enterprise integration (requires configuration)
+    
+    ## Rate Limiting
+    
+    API requests are rate-limited based on user role:
+    - Admin: Unlimited
+    - Agent: 60 requests/minute
+    - Readonly: 30 requests/minute
+    - Limited: 10 requests/minute
+    
+    ## WebSocket Notifications
+    
+    Real-time notifications are available via WebSocket at `/ws` endpoint.
+    Subscribe to query progress, session events, and system status updates.
+    
+  version: 1.0.0
+  contact:
+    name: VSCode Prolog Toolkit
+    url: https://github.com/arthwang/vscode-prolog
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.prolog-toolkit.example.com
+    description: Production server (example)
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+  - LocalOnly: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check API server health and backend status
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  backend:
+                    type: object
+                    properties:
+                      running:
+                        type: boolean
+                      port:
+                        type: integer
+
+  /api:
+    get:
+      summary: API information
+      description: Get API metadata and available endpoints
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  description:
+                    type: string
+                  documentation:
+                    type: string
+                  endpoints:
+                    type: object
+
+  /api/v1/query:
+    post:
+      summary: Execute Prolog query
+      description: Execute a single Prolog query with optional session context
+      tags:
+        - Query Execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Prolog query to execute
+                  example: "member(X, [1,2,3])"
+                session_id:
+                  type: string
+                  description: Session ID for context (optional)
+                  example: "session_123"
+                options:
+                  type: object
+                  properties:
+                    timeout:
+                      type: integer
+                      description: Query timeout in milliseconds
+                      default: 30000
+                    max_results:
+                      type: integer
+                      description: Maximum number of results
+                      default: 100
+                    reasoning_mode:
+                      type: string
+                      enum: [default, clp, probabilistic, n3, custom]
+                      default: default
+                    stream:
+                      type: boolean
+                      description: Enable streaming for large results
+                      default: false
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/batch:
+    post:
+      summary: Execute batch queries
+      description: Execute multiple Prolog queries in batch
+      tags:
+        - Query Execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - queries
+              properties:
+                queries:
+                  type: array
+                  items:
+                    oneOf:
+                      - type: string
+                      - type: object
+                        properties:
+                          query:
+                            type: string
+                          timeout:
+                            type: integer
+                session_id:
+                  type: string
+                batch_options:
+                  type: object
+                  properties:
+                    parallel:
+                      type: boolean
+                      description: Execute queries in parallel
+                      default: false
+                    fail_fast:
+                      type: boolean
+                      description: Stop on first error
+                      default: false
+                    timeout:
+                      type: integer
+                      description: Total batch timeout
+      responses:
+        '200':
+          description: Batch executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions:
+    get:
+      summary: List sessions
+      description: Get list of all sessions accessible to the user
+      tags:
+        - Session Management
+      parameters:
+        - name: include_inactive
+          in: query
+          description: Include inactive sessions
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Sessions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create session
+      description: Create a new Prolog session
+      tags:
+        - Session Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Session name
+                description:
+                  type: string
+                  description: Session description
+                config:
+                  type: object
+                  description: Session configuration
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{session_id}:
+    get:
+      summary: Get session details
+      description: Get detailed information about a specific session
+      tags:
+        - Session Management
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete session
+      description: Delete a Prolog session
+      tags:
+        - Session Management
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{session_id}/state:
+    get:
+      summary: Export session state
+      description: Export the current state of a session
+      tags:
+        - Session Management
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session state exported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  state:
+                    type: object
+                  exported_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Import session state
+      description: Import state into a session
+      tags:
+        - Session Management
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: object
+                  description: Session state to import
+      responses:
+        '200':
+          description: Session state imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  message:
+                    type: string
+                  imported_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/reasoning/clp:
+    post:
+      summary: CLP constraint solving
+      description: Execute Constraint Logic Programming reasoning
+      tags:
+        - Advanced Reasoning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - constraints
+                - variables
+              properties:
+                constraints:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of constraint strings
+                  example: ["X + Y #= 10", "X #> Y"]
+                domain:
+                  type: string
+                  enum: [fd, r, q]
+                  default: fd
+                  description: Constraint domain
+                variables:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of variable names
+                  example: ["X", "Y"]
+      responses:
+        '200':
+          description: CLP reasoning completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  domain:
+                    type: string
+                  solution:
+                    type: array
+                  error:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/reasoning/probabilistic:
+    post:
+      summary: Probabilistic inference
+      description: Execute probabilistic reasoning and inference
+      tags:
+        - Advanced Reasoning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                facts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      fact:
+                        type: string
+                      probability:
+                        type: number
+                        minimum: 0
+                        maximum: 1
+                  description: Array of probabilistic facts
+                query:
+                  type: string
+                  description: Query for probabilistic inference
+                samples:
+                  type: integer
+                  default: 1000
+                  description: Number of Monte Carlo samples
+      responses:
+        '200':
+          description: Probabilistic reasoning completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  query:
+                    type: string
+                  probability:
+                    type: number
+                  evidence:
+                    type: object
+                  samples:
+                    type: integer
+                  error:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/reasoning/n3:
+    post:
+      summary: N3/RDF reasoning
+      description: Execute N3/RDF semantic web reasoning
+      tags:
+        - Advanced Reasoning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                rules:
+                  type: string
+                  description: N3 rules
+                data:
+                  type: string
+                  description: RDF/N3 data
+                query:
+                  type: string
+                  description: SPARQL or N3 query
+      responses:
+        '200':
+          description: N3 reasoning completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  query:
+                    type: string
+                  results:
+                    type: array
+                  inferred_triples:
+                    type: array
+                  count:
+                    type: integer
+                  error:
+                    type: string
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/history:
+    get:
+      summary: Get query history
+      description: Retrieve query execution history with filtering options
+      tags:
+        - Query History
+      parameters:
+        - name: session_id
+          in: query
+          description: Filter by session ID
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of results
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 1000
+        - name: offset
+          in: query
+          description: Number of results to skip
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: status
+          in: query
+          description: Filter by query status
+          schema:
+            type: string
+            enum: [completed, error, cancelled]
+      responses:
+        '200':
+          description: Query history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QueryHistoryItem'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  has_more:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/status:
+    get:
+      summary: Get system status
+      description: Get current system status and health information
+      tags:
+        - System
+      responses:
+        '200':
+          description: System status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backend:
+                    type: object
+                    properties:
+                      running:
+                        type: boolean
+                      active_queries:
+                        type: integer
+                      active_sessions:
+                        type: integer
+                      resource_usage:
+                        type: object
+                  scheduler:
+                    type: object
+                  query_statistics:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+    LocalOnly:
+      type: apiKey
+      in: header
+      name: X-Local-Access
+      description: Local-only access (localhost)
+
+  schemas:
+    QueryResponse:
+      type: object
+      properties:
+        query_id:
+          type: string
+          description: Unique query identifier
+        success:
+          type: boolean
+          description: Whether query executed successfully
+        results:
+          type: array
+          description: Query results
+        execution_time:
+          type: number
+          description: Execution time in milliseconds
+        more_available:
+          type: boolean
+          description: Whether more results are available
+        cursor:
+          type: string
+          nullable: true
+          description: Cursor for pagination
+        streaming_info:
+          type: object
+          nullable: true
+          description: Streaming information
+
+    BatchResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+          description: Unique batch identifier
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              query_index:
+                type: integer
+              success:
+                type: boolean
+              results:
+                type: array
+              error:
+                type: string
+                nullable: true
+        total_queries:
+          type: integer
+        successful_queries:
+          type: integer
+
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+        user_id:
+          type: string
+          nullable: true
+
+    SessionCreated:
+      type: object
+      properties:
+        session_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    SessionDetails:
+      type: object
+      properties:
+        session_id:
+          type: string
+        config:
+          type: object
+        state:
+          type: object
+        statistics:
+          type: object
+
+    QueryHistoryItem:
+      type: object
+      properties:
+        query_id:
+          type: string
+        query:
+          type: string
+        session_id:
+          type: string
+        status:
+          type: string
+        execution_time:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        results_count:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        details:
+          type: object
+          nullable: true
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Bad Request"
+            message: "Query parameter is required"
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Valid authentication required"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "Insufficient permissions for this operation"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "Resource not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"
+
+tags:
+  - name: System
+    description: System health and information endpoints
+  - name: Query Execution
+    description: Prolog query execution endpoints
+  - name: Session Management
+    description: Session creation and management endpoints
+  - name: Advanced Reasoning
+    description: Advanced reasoning capabilities (CLP, probabilistic, N3)
+  - name: Query History
+    description: Query history and analytics endpoints

@@ -1,0 +1,23 @@
+{
+  "testTimeout": 30000,
+  "backendPort": 3061,
+  "testResources": {
+    "simple": "test/resources/sample.n3",
+    "complex": "test/resources/complex.n3"
+  },
+  "n3Examples": {
+    "basic": "@prefix : <http://example.org/> . :socrates a :Person .",
+    "withRules": "@prefix : <http://example.org/> . @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> . :socrates a :Person . { ?x a :Person } => { ?x a :Mortal } .",
+    "complex": "@prefix : <http://example.org/> . @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . :socrates a :Person . :Person rdfs:subClassOf :Mortal . { ?x a :Person } => { ?x a :Mortal } ."
+  },
+  "expectedResults": {
+    "socrates_is_mortal": {
+      "goal": "rdf(socrates, type, Mortal)",
+      "shouldSucceed": true
+    },
+    "plato_is_person": {
+      "goal": "rdf(plato, type, Person)",
+      "shouldSucceed": true
+    }
+  }
+}

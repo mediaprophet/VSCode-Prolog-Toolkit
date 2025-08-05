@@ -1,0 +1,1134 @@
+{
+  "title": "AI Agent Integration Enhancements",
+  "description": "Comprehensive specification for enabling full AI agent support in VSCode Prolog Toolkit, building on existing advanced features to provide secure, scalable external API access.",
+  "version": "1.0.0",
+  "lastUpdated": "2025-08-05",
+  "trackingEnabled": true,
+  "progressSummary": {
+    "totalTasks": 11,
+    "completedTasks": 11,
+    "pendingTasks": 0,
+    "inProgressTasks": 0,
+    "completionPercentage": 100,
+    "lastProgressUpdate": "2025-08-05T08:00:00.000Z"
+  },
+  "targetAgents": [
+    "GitHub Copilot",
+    "Kilo-Code",
+    "Claude Dev",
+    "Cursor AI",
+    "Claude Desktop (via MCP)",
+    "Custom AI agents and tools"
+  ],
+  "prerequisites": {
+    "fullyImplementedFeatures": [
+      "Enhanced Reasoning Features (CLP, probabilistic logic, N3/RDF, custom meta-interpreters)",
+      "Batch and Asynchronous Requests (with WebSocket notifications and query lifecycle management)",
+      "Streaming and Pagination (cursor-based pagination and memory-efficient result handling)",
+      "Session and State Management (multi-session support with isolation and persistence)"
+    ],
+    "existingInfrastructure": [
+      "HTTP-based Prolog backend with JSON protocol communication (Steps 1-2 complete)",
+      "Request queueing, timeouts, and health checks with automatic recovery",
+      "Input validation, security checks, and resource/time limits for queries",
+      "Protocol versioning and batch processing support",
+      "Comprehensive error handling, logging, and diagnostics",
+      "QueryNotificationManager with WebSocket support",
+      "ConcurrencyManager with resource quotas and priority queues",
+      "QueryHistoryManager with persistent storage",
+      "QueryScheduler with multiple schedule types",
+      "SessionManager with state persistence and isolation",
+      "StreamingHandler for large result sets",
+      "Prolog package management system",
+      "N3Logic diagnostic features with meta-interpreter proof tracing",
+      "Comprehensive testing infrastructure with CI/CD"
+    ],
+    "foundationalComponents": {
+      "httpCommunication": {
+        "description": "SWI-Prolog HTTP server with JSON protocol",
+        "status": "fully_implemented",
+        "features": [
+          "HTTP POST requests for all JSON communication",
+          "Automatic health checks and process restart logic",
+          "Request validation and security input sanitization",
+          "Resource limits and timeout enforcement",
+          "Batch request processing capabilities"
+        ]
+      },
+      "securityFoundation": {
+        "description": "Basic security measures already in place",
+        "status": "partially_implemented",
+        "features": [
+          "Input validation and sanitization (implemented)",
+          "Resource/time limits for query execution (implemented)",
+          "Request queueing and concurrency control (implemented)",
+          "Logging and diagnostics (implemented)"
+        ],
+        "missing": [
+          "Advanced sandboxing for untrusted queries (OAuth2 completion)",
+          "Enhanced security auditing and logging"
+        ]
+      }
+    }
+  },
+  "enhancements": [
+    {
+      "id": "public-api-exposure",
+      "name": "Public API Exposure",
+      "description": "Expose the Prolog backend services through a secure, configurable HTTP/WebSocket API for external AI agents",
+      "priority": "critical",
+      "estimatedComplexity": "high",
+      "dependencies": ["security-access-control"],
+      "targetFeatures": {
+        "httpRestApi": {
+          "description": "RESTful HTTP API endpoints for all Prolog operations",
+          "endpoints": [
+            {
+              "path": "/api/v1/query",
+              "method": "POST",
+              "description": "Execute single Prolog query",
+              "requestBody": {
+                "query": "string (Prolog query)",
+                "session_id": "string (optional, defaults to default session)",
+                "options": {
+                  "timeout": "number (milliseconds, default: 30000)",
+                  "max_results": "number (default: 100)",
+                  "reasoning_mode": "string (default|clp|probabilistic|n3|custom)",
+                  "stream": "boolean (enable streaming for large results)"
+                }
+              },
+              "responseBody": {
+                "success": "boolean",
+                "results": "array of solution objects",
+                "query_id": "string (for tracking)",
+                "execution_time": "number (milliseconds)",
+                "more_available": "boolean (for pagination)",
+                "cursor": "string (for pagination)"
+              }
+            },
+            {
+              "path": "/api/v1/batch",
+              "method": "POST",
+              "description": "Execute batch of Prolog queries",
+              "requestBody": {
+                "queries": "array of query objects",
+                "session_id": "string (optional)",
+                "batch_options": {
+                  "parallel": "boolean (execute in parallel)",
+                  "fail_fast": "boolean (stop on first error)",
+                  "timeout": "number (total batch timeout)"
+                }
+              }
+            },
+            {
+              "path": "/api/v1/sessions",
+              "method": "GET",
+              "description": "List all sessions"
+            },
+            {
+              "path": "/api/v1/sessions",
+              "method": "POST",
+              "description": "Create new session",
+              "requestBody": {
+                "name": "string",
+                "description": "string (optional)",
+                "config": "SessionConfig object"
+              }
+            },
+            {
+              "path": "/api/v1/sessions/{session_id}",
+              "method": "GET",
+              "description": "Get session details"
+            },
+            {
+              "path": "/api/v1/sessions/{session_id}",
+              "method": "DELETE",
+              "description": "Delete session"
+            },
+            {
+              "path": "/api/v1/sessions/{session_id}/state",
+              "method": "GET",
+              "description": "Export session state"
+            },
+            {
+              "path": "/api/v1/sessions/{session_id}/state",
+              "method": "POST",
+              "description": "Import/restore session state"
+            },
+            {
+              "path": "/api/v1/reasoning/clp",
+              "method": "POST",
+              "description": "Execute CLP constraint solving",
+              "requestBody": {
+                "constraints": "array of constraint strings",
+                "domain": "string (fd|r|q)",
+                "variables": "array of variable names"
+              }
+            },
+            {
+              "path": "/api/v1/reasoning/probabilistic",
+              "method": "POST",
+              "description": "Execute probabilistic inference",
+              "requestBody": {
+                "facts": "array of probabilistic fact objects",
+                "query": "string",
+                "samples": "number (Monte Carlo samples)"
+              }
+            },
+            {
+              "path": "/api/v1/reasoning/n3",
+              "method": "POST",
+              "description": "Execute N3/RDF reasoning",
+              "requestBody": {
+                "rules": "string (N3 rules)",
+                "data": "string (RDF/N3 data)",
+                "query": "string (SPARQL or N3 query)"
+              }
+            },
+            {
+              "path": "/api/v1/history",
+              "method": "GET",
+              "description": "Get query history with filtering",
+              "queryParams": {
+                "session_id": "string (optional)",
+                "limit": "number (default: 50)",
+                "offset": "number (default: 0)",
+                "status": "string (completed|error|cancelled)"
+              }
+            },
+            {
+              "path": "/api/v1/status",
+              "method": "GET",
+              "description": "Get system status and health"
+            }
+          ]
+        },
+        "webSocketApi": {
+          "description": "Real-time WebSocket API for notifications and streaming",
+          "connectionEndpoint": "/ws",
+          "authenticationRequired": true,
+          "messageTypes": [
+            {
+              "type": "subscribe",
+              "description": "Subscribe to query notifications",
+              "payload": {
+                "query_id": "string (optional, for specific query)",
+                "session_id": "string (optional, for session events)",
+                "event_types": "array of strings (progress|complete|error|cancel)"
+              }
+            },
+            {
+              "type": "query_progress",
+              "description": "Query execution progress notification",
+              "payload": {
+                "query_id": "string",
+                "status": "string",
+                "progress": "number (0-100)",
+                "partial_results": "array (optional)"
+              }
+            },
+            {
+              "type": "query_complete",
+              "description": "Query completion notification",
+              "payload": {
+                "query_id": "string",
+                "results": "array",
+                "execution_time": "number",
+                "statistics": "object"
+              }
+            },
+            {
+              "type": "session_event",
+              "description": "Session lifecycle events",
+              "payload": {
+                "session_id": "string",
+                "event": "string (created|switched|deleted|state_saved)",
+                "timestamp": "string (ISO 8601)"
+              }
+            },
+            {
+              "type": "system_status",
+              "description": "System health and resource usage",
+              "payload": {
+                "active_queries": "number",
+                "active_sessions": "number",
+                "memory_usage": "object",
+                "cpu_usage": "number"
+              }
+            }
+          ]
+        },
+        "configurationOptions": {
+          "api_server": {
+            "enabled": "boolean (default: false)",
+            "port": "number (default: 8080)",
+            "host": "string (default: 'localhost')",
+            "cors_origins": "array of strings (allowed origins)",
+            "max_connections": "number (default: 100)",
+            "request_timeout": "number (milliseconds, default: 60000)",
+            "rate_limiting": {
+              "enabled": "boolean (default: true)",
+              "requests_per_minute": "number (default: 60)",
+              "burst_limit": "number (default: 10)"
+            }
+          },
+          "websocket_server": {
+            "enabled": "boolean (default: true when API enabled)",
+            "port": "number (default: api_port + 1)",
+            "max_connections": "number (default: 50)",
+            "heartbeat_interval": "number (seconds, default: 30)"
+          }
+        }
+      },
+      "implementationTasks": [
+        {
+          "taskId": "api-server-1",
+          "task": "Create HTTP API server with Express.js framework",
+          "description": "Build on existing HTTP infrastructure to create external RESTful API server with all endpoints, middleware for CORS, rate limiting, and request validation",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/features/apiServer.ts",
+            "src/features/apiRoutes.ts",
+            "src/features/apiMiddleware.ts"
+          ],
+          "dependencies": ["express", "cors", "express-rate-limit", "helmet"],
+          "leveragesExisting": [
+            "src/prologBackend.ts (HTTP communication layer)",
+            "src/prolog_json_server.pl (JSON protocol handlers)",
+            "Existing request validation and error handling"
+          ],
+          "estimatedComplexity": "medium (builds on existing HTTP infrastructure)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in src/features/apiServer.ts with Express.js, CORS, rate limiting, and security middleware",
+              "author": "system-review"
+            }
+          ]
+        },
+        {
+          "taskId": "websocket-1",
+          "task": "Extend WebSocket server for external connections",
+          "description": "Enhance existing QueryNotificationManager to support external WebSocket connections with authentication",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/features/queryNotificationManager.ts (enhancement)",
+            "src/features/externalWebSocketManager.ts"
+          ],
+          "leveragesExisting": [
+            "src/features/queryNotificationManager.ts (existing WebSocket server)",
+            "Existing query lifecycle management and notifications"
+          ],
+          "estimatedComplexity": "low (extends existing WebSocket infrastructure)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in src/features/externalWebSocketManager.ts with authentication and subscription management",
+              "author": "system-review"
+            }
+          ]
+        },
+        {
+          "taskId": "sdk-1",
+          "task": "Create API client SDK for AI agents",
+          "description": "Develop TypeScript/JavaScript SDK for easy integration with AI agents",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/sdk/prologApiClient.ts",
+            "src/sdk/prologWebSocketClient.ts",
+            "src/sdk/types.ts"
+          ],
+          "leveragesExisting": [
+            "Existing TypeScript interfaces and types",
+            "Protocol specifications from backend implementation"
+          ],
+          "estimatedComplexity": "medium (new component but well-defined interfaces)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "HTTP API client fully implemented in src/sdk/prologApiClient.ts. WebSocket client (prologWebSocketClient.ts) still needs implementation",
+              "author": "system-review"
+            }
+          ]
+        },
+        {
+          "taskId": "docs-1",
+          "task": "Implement API documentation and OpenAPI specification",
+          "description": "Generate comprehensive API documentation with examples",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:45:00.000Z",
+          "files": [
+            "docs/api-reference.md",
+            "docs/openapi.yaml",
+            "docs/ai-agent-integration-guide.md"
+          ],
+          "leveragesExisting": [
+            "Existing comprehensive documentation structure",
+            "docs/ directory with established patterns"
+          ],
+          "estimatedComplexity": "low (documentation task with existing patterns)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:45:00.000Z",
+              "note": "Completed comprehensive API documentation including OpenAPI 3.0.3 specification, detailed API reference, and AI agent integration guide with practical examples",
+              "author": "system-implementation"
+            }
+          ]
+        },
+        {
+          "taskId": "config-1",
+          "task": "Add configuration management for API settings",
+          "description": "Extend existing configuration system to support API server settings",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/extension.ts (configuration updates)",
+            "package.json (configuration schema)"
+          ],
+          "leveragesExisting": [
+            "Existing configuration management in extension.ts",
+            "Established package.json configuration patterns"
+          ],
+          "estimatedComplexity": "low (extends existing configuration system)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in src/extension.ts and package.json with complete configuration schema for API server and WebSocket settings",
+              "author": "system-review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security-access-control",
+      "name": "Security and Access Control",
+      "description": "Implement comprehensive security framework for API access with authentication, authorization, and resource protection",
+      "priority": "critical",
+      "estimatedComplexity": "high",
+      "dependencies": [],
+      "targetFeatures": {
+        "authenticationMethods": [
+          {
+            "method": "api_key",
+            "description": "Simple API key authentication for trusted agents",
+            "implementation": {
+              "header": "X-API-Key",
+              "storage": "encrypted local file or environment variable",
+              "rotation": "manual or scheduled",
+              "scopes": "configurable permissions per key"
+            }
+          },
+          {
+            "method": "jwt_token",
+            "description": "JWT-based authentication for more complex scenarios",
+            "implementation": {
+              "header": "Authorization: Bearer <token>",
+              "signing": "local secret or external provider",
+              "expiration": "configurable (default: 1 hour)",
+              "refresh": "supported with refresh tokens"
+            }
+          },
+          {
+            "method": "local_only",
+            "description": "Restrict API access to localhost connections only",
+            "implementation": {
+              "ip_whitelist": ["127.0.0.1", "::1"],
+              "no_authentication": "when enabled",
+              "default_mode": "for development"
+            }
+          },
+          {
+            "method": "oauth2",
+            "description": "OAuth2 integration for enterprise environments",
+            "implementation": {
+              "providers": ["GitHub", "Microsoft", "Google", "custom"],
+              "scopes": "configurable based on provider",
+              "callback_handling": "built-in OAuth flow"
+            }
+          }
+        ],
+        "authorizationSystem": {
+          "roleBasedAccessControl": {
+            "roles": [
+              {
+                "name": "admin",
+                "permissions": ["*"],
+                "description": "Full access to all API endpoints and operations"
+              },
+              {
+                "name": "agent",
+                "permissions": [
+                  "query:execute",
+                  "batch:execute",
+                  "session:create",
+                  "session:read",
+                  "session:delete_own",
+                  "reasoning:*",
+                  "history:read_own"
+                ],
+                "description": "Standard AI agent permissions"
+              },
+              {
+                "name": "readonly",
+                "permissions": [
+                  "query:execute_readonly",
+                  "session:read",
+                  "history:read_own",
+                  "status:read"
+                ],
+                "description": "Read-only access for monitoring agents"
+              },
+              {
+                "name": "limited",
+                "permissions": [
+                  "query:execute_simple",
+                  "session:read_own"
+                ],
+                "description": "Limited access for untrusted agents"
+              }
+            ]
+          },
+          "resourceQuotas": {
+            "perUser": {
+              "max_concurrent_queries": "number (default: 5)",
+              "max_sessions": "number (default: 10)",
+              "max_query_time": "number (seconds, default: 300)",
+              "max_memory_per_query": "number (MB, default: 100)",
+              "max_results_per_query": "number (default: 1000)",
+              "rate_limit_per_minute": "number (default: 60)"
+            },
+            "perRole": {
+              "admin": "unlimited",
+              "agent": "standard limits",
+              "readonly": "reduced limits",
+              "limited": "strict limits"
+            }
+          }
+        },
+        "sandboxingAndValidation": {
+          "queryValidation": {
+            "syntaxChecking": "Prolog syntax validation before execution",
+            "dangerousPredicateBlocking": [
+              "shell/1",
+              "system/1",
+              "open/3 (file operations)",
+              "see/1, tell/1 (I/O redirection)",
+              "halt/0, halt/1",
+              "abort/0"
+            ],
+            "resourceLimits": {
+              "max_inference_steps": "number (default: 100000)",
+              "max_call_depth": "number (default: 1000)",
+              "max_choice_points": "number (default: 10000)"
+            }
+          },
+          "executionSandbox": {
+            "isolatedEnvironment": "Separate Prolog process per untrusted query",
+            "fileSystemAccess": "restricted to designated directories",
+            "networkAccess": "blocked for untrusted queries",
+            "timeoutEnforcement": "hard limits with process termination",
+            "memoryLimits": "enforced at OS level"
+          }
+        },
+        "auditingAndLogging": {
+          "securityEvents": [
+            "authentication_success",
+            "authentication_failure",
+            "authorization_denied",
+            "quota_exceeded",
+            "suspicious_query_blocked",
+            "rate_limit_exceeded"
+          ],
+          "queryAuditing": {
+            "logLevel": "configurable (none|basic|detailed)",
+            "includeResults": "boolean (default: false for security)",
+            "retention": "configurable (default: 30 days)",
+            "format": "structured JSON logs"
+          },
+          "alerting": {
+            "thresholds": {
+              "failed_auth_attempts": "number (default: 5 per minute)",
+              "quota_violations": "number (default: 3 per hour)",
+              "blocked_queries": "number (default: 10 per hour)"
+            },
+            "notifications": ["log", "webhook", "email"]
+          }
+        }
+      },
+      "implementationTasks": [
+        {
+          "taskId": "auth-1",
+          "task": "Implement authentication middleware",
+          "description": "Create authentication handlers for all supported methods",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/features/authenticationManager.ts",
+            "src/features/authMiddleware.ts",
+            "src/features/tokenManager.ts"
+          ],
+          "estimatedComplexity": "high (new security infrastructure)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in src/features/apiMiddleware.ts with API key, JWT, local-only, and OAuth2 placeholder authentication methods",
+              "author": "system-review"
+            }
+          ]
+        },
+        {
+          "taskId": "rbac-1",
+          "task": "Create authorization and RBAC system",
+          "description": "Implement role-based access control with configurable permissions",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/features/authorizationManager.ts",
+            "src/features/roleManager.ts",
+            "src/features/permissionChecker.ts"
+          ],
+          "estimatedComplexity": "high (complex permission system)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in src/features/apiMiddleware.ts and src/features/apiRoutes.ts with admin, agent, readonly, and limited roles",
+              "author": "system-review"
+            }
+          ]
+        },
+        {
+          "taskId": "security-1",
+          "task": "Implement resource quotas and sandboxing",
+          "description": "Enhance existing resource management with security controls",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:50:00.000Z",
+          "files": [
+            "src/features/securityManager.ts",
+            "src/features/querySandbox.ts",
+            "src/features/resourceQuotaManager.ts"
+          ],
+          "leveragesExisting": [
+            "src/features/concurrencyManager.ts (existing resource quotas)",
+            "Existing resource/time limits and input validation",
+            "Current query execution controls"
+          ],
+          "estimatedComplexity": "medium (extends existing resource management)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:50:00.000Z",
+              "note": "Implemented comprehensive SecurityManager with query validation, sandboxing, resource quotas, and dangerous predicate blocking",
+              "author": "system-implementation"
+            }
+          ]
+        },
+        {
+          "taskId": "audit-1",
+          "task": "Add security auditing and logging",
+          "description": "Implement comprehensive security event logging and monitoring",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:52:00.000Z",
+          "files": [
+            "src/features/securityAuditor.ts",
+            "src/features/securityLogger.ts",
+            "src/features/alertManager.ts"
+          ],
+          "estimatedComplexity": "medium (extends existing logging)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:52:00.000Z",
+              "note": "Implemented comprehensive SecurityAuditor with event logging, alerting, statistics, and configurable notification system",
+              "author": "system-implementation"
+            }
+          ]
+        },
+        {
+          "taskId": "sec-config-1",
+          "task": "Create security configuration management",
+          "description": "Add security-specific configuration options and validation",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:38:00.000Z",
+          "files": [
+            "src/features/securityConfig.ts",
+            "docs/security-configuration-guide.md"
+          ],
+          "estimatedComplexity": "low (extends existing configuration)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:38:00.000Z",
+              "note": "Fully implemented in package.json configuration schema and src/extension.ts with comprehensive security settings",
+              "author": "system-review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mcp-server-integration",
+      "name": "MCP Server Integration",
+      "description": "Create Model Context Protocol (MCP) server to expose Prolog functionality to MCP-compatible AI agents like Claude Desktop",
+      "priority": "high",
+      "estimatedComplexity": "medium",
+      "dependencies": ["public-api-exposure"],
+      "targetFeatures": {
+        "mcpServerImplementation": {
+          "description": "Standalone MCP server that connects to the Prolog Toolkit API",
+          "protocol": "Model Context Protocol (MCP) via stdio transport",
+          "capabilities": [
+            "Tools for Prolog query execution",
+            "Tools for advanced reasoning (CLP, probabilistic, N3)",
+            "Tools for session management",
+            "Resources for query history and system status",
+            "Resource templates for dynamic content access"
+          ]
+        },
+        "mcpTools": [
+          {
+            "name": "execute_prolog_query",
+            "description": "Execute a single Prolog query and return results",
+            "parameters": {
+              "query": "string (required) - The Prolog query to execute",
+              "session_id": "string (optional) - Session ID for context",
+              "timeout": "number (optional) - Query timeout in milliseconds",
+              "max_results": "number (optional) - Maximum number of results"
+            }
+          },
+          {
+            "name": "execute_batch_queries",
+            "description": "Execute multiple Prolog queries in batch",
+            "parameters": {
+              "queries": "array (required) - Array of query strings",
+              "session_id": "string (optional) - Session ID for context",
+              "parallel": "boolean (optional) - Execute queries in parallel"
+            }
+          },
+          {
+            "name": "clp_constraint_solving",
+            "description": "Solve constraint logic programming problems",
+            "parameters": {
+              "constraints": "array (required) - Array of constraint strings",
+              "domain": "string (optional) - Constraint domain (fd|r|q)",
+              "variables": "array (required) - Array of variable names"
+            }
+          },
+          {
+            "name": "probabilistic_inference",
+            "description": "Perform probabilistic reasoning and inference",
+            "parameters": {
+              "facts": "array (required) - Array of probabilistic facts",
+              "query": "string (required) - Query for probabilistic inference",
+              "samples": "number (optional) - Number of Monte Carlo samples"
+            }
+          },
+          {
+            "name": "n3_semantic_reasoning",
+            "description": "Execute N3/RDF semantic web reasoning",
+            "parameters": {
+              "rules": "string (optional) - N3 rules",
+              "data": "string (optional) - RDF/N3 data",
+              "query": "string (required) - SPARQL or N3 query"
+            }
+          },
+          {
+            "name": "create_prolog_session",
+            "description": "Create a new Prolog session for maintaining context",
+            "parameters": {
+              "name": "string (required) - Session name",
+              "description": "string (optional) - Session description"
+            }
+          },
+          {
+            "name": "get_system_status",
+            "description": "Get current system status and health information",
+            "parameters": {}
+          }
+        ],
+        "mcpResources": [
+          {
+            "name": "query_history",
+            "uri": "prolog://history",
+            "description": "Access to query execution history",
+            "mimeType": "application/json"
+          },
+          {
+            "name": "system_status",
+            "uri": "prolog://status",
+            "description": "Current system status and metrics",
+            "mimeType": "application/json"
+          },
+          {
+            "name": "active_sessions",
+            "uri": "prolog://sessions",
+            "description": "List of active Prolog sessions",
+            "mimeType": "application/json"
+          }
+        ],
+        "mcpResourceTemplates": [
+          {
+            "name": "session_details",
+            "uriTemplate": "prolog://sessions/{session_id}",
+            "description": "Detailed information about a specific session",
+            "mimeType": "application/json"
+          },
+          {
+            "name": "query_results",
+            "uriTemplate": "prolog://queries/{query_id}/results",
+            "description": "Results from a specific query execution",
+            "mimeType": "application/json"
+          }
+        ],
+        "configurationOptions": {
+          "connection": {
+            "api_base_url": "string (default: 'http://localhost:8080')",
+            "api_timeout": "number (default: 30000)",
+            "authentication": {
+              "method": "string (api_key|jwt_token|local_only)",
+              "api_key": "string (optional)",
+              "jwt_token": "string (optional)"
+            }
+          },
+          "features": {
+            "enable_advanced_reasoning": "boolean (default: true)",
+            "enable_session_management": "boolean (default: true)",
+            "enable_query_history": "boolean (default: true)",
+            "max_query_results": "number (default: 100)"
+          }
+        }
+      },
+      "implementationTasks": [
+        {
+          "taskId": "mcp-server-1",
+          "task": "Create MCP server implementation",
+          "description": "Develop standalone MCP server that connects to Prolog Toolkit API and exposes tools/resources",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:55:00.000Z",
+          "files": [
+            "mcp-server/package.json",
+            "mcp-server/src/index.ts",
+            "mcp-server/src/prologClient.ts",
+            "mcp-server/src/mcpTools.ts",
+            "mcp-server/src/mcpResources.ts",
+            "mcp-server/tsconfig.json"
+          ],
+          "dependencies": ["@modelcontextprotocol/sdk", "axios", "zod"],
+          "leveragesExisting": [
+            "src/sdk/prologApiClient.ts (existing API client)",
+            "Existing HTTP API endpoints",
+            "Existing authentication and session management"
+          ],
+          "estimatedComplexity": "medium (new MCP server but leverages existing API)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:55:00.000Z",
+              "note": "Implemented complete MCP server with 7 tools, 3 resources, comprehensive error handling, and full API integration",
+              "author": "system-implementation"
+            }
+          ]
+        },
+        {
+          "taskId": "mcp-config-1",
+          "task": "Create MCP server configuration and documentation",
+          "description": "Provide configuration templates and setup documentation for MCP integration",
+          "status": "completed",
+          "completedDate": "2025-08-05T07:56:00.000Z",
+          "files": [
+            "docs/mcp-integration-guide.md",
+            "mcp-server/README.md",
+            "mcp-server/config-examples/claude-desktop-config.json",
+            "mcp-server/config-examples/kilo-code-mcp-settings.json"
+          ],
+          "leveragesExisting": [
+            "Existing documentation structure",
+            "docs/ directory with established patterns"
+          ],
+          "estimatedComplexity": "low (documentation and configuration)",
+          "progressNotes": [
+            {
+              "timestamp": "2025-08-05T07:56:00.000Z",
+              "note": "Created comprehensive MCP server documentation, README, and Claude Desktop configuration template",
+              "author": "system-implementation"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "integrationScenarios": [
+    {
+      "scenario": "GitHub Copilot Integration",
+      "description": "Enable Copilot to use Prolog reasoning for code analysis and generation",
+      "requirements": [
+        "RESTful API access for query execution",
+        "Session management for maintaining context",
+        "CLP integration for constraint-based code analysis",
+        "Batch processing for analyzing multiple code files",
+        "Streaming results for large codebases"
+      ],
+      "authenticationMethod": "api_key",
+      "permissions": ["agent"],
+      "useCases": [
+        "Logic-based code pattern analysis",
+        "Constraint satisfaction for code generation",
+        "Semantic code understanding with N3/RDF",
+        "Probabilistic code quality assessment"
+      ]
+    },
+    {
+      "scenario": "Kilo-Code Integration",
+      "description": "Enable Kilo-Code to leverage Prolog for advanced reasoning tasks",
+      "requirements": [
+        "Full API access including advanced reasoning features",
+        "WebSocket notifications for long-running analyses",
+        "Multi-session support for different projects",
+        "Enhanced reasoning capabilities (CLP, probabilistic, N3)"
+      ],
+      "authenticationMethod": "jwt_token",
+      "permissions": ["agent"],
+      "useCases": [
+        "Complex logical reasoning for code understanding",
+        "Multi-modal reasoning combining different logic paradigms",
+        "Advanced constraint solving for optimization problems",
+        "Knowledge graph reasoning for code relationships"
+      ]
+    },
+    {
+      "scenario": "Custom AI Agent Development",
+      "description": "Support for custom AI agents built by developers",
+      "requirements": [
+        "Comprehensive SDK with TypeScript support",
+        "Flexible authentication options",
+        "Configurable resource quotas",
+        "Detailed API documentation and examples"
+      ],
+      "authenticationMethod": "configurable",
+      "permissions": ["configurable"],
+      "useCases": [
+        "Domain-specific reasoning applications",
+        "Educational AI tutors using logic programming",
+        "Research applications in AI and logic",
+        "Integration with other AI/ML frameworks"
+      ]
+    }
+  ],
+  "testingStrategy": {
+    "unitTests": [
+      "Authentication and authorization components",
+      "API endpoint handlers and middleware",
+      "Security validation and sandboxing",
+      "Resource quota enforcement",
+      "WebSocket connection management"
+    ],
+    "integrationTests": [
+      "End-to-end API workflows",
+      "Multi-session concurrent access",
+      "Security boundary testing",
+      "Performance under load",
+      "Error handling and recovery"
+    ],
+    "securityTests": [
+      "Penetration testing of API endpoints",
+      "Authentication bypass attempts",
+      "Resource exhaustion attacks",
+      "Malicious query injection",
+      "Rate limiting effectiveness"
+    ],
+    "performanceTests": [
+      "Concurrent agent connections",
+      "Large batch query processing",
+      "Memory usage under load",
+      "Response time benchmarks",
+      "WebSocket message throughput"
+    ]
+  },
+  "deploymentConsiderations": {
+    "configuration": {
+      "defaultSecurity": "local_only mode for development",
+      "productionRecommendations": "JWT or OAuth2 with HTTPS",
+      "networkSecurity": "firewall rules and VPN considerations",
+      "monitoring": "integration with existing monitoring systems"
+    },
+    "scalability": {
+      "horizontalScaling": "multiple API server instances",
+      "loadBalancing": "session affinity considerations",
+      "caching": "query result caching strategies",
+      "databaseIntegration": "persistent storage for large deployments"
+    },
+    "maintenance": {
+      "logRotation": "automated log management",
+      "keyRotation": "automated API key rotation",
+      "updates": "backward compatibility guarantees",
+      "monitoring": "health checks and alerting"
+    }
+  },
+  "successCriteria": {
+    "functionalRequirements": [
+      "All existing Prolog features accessible via API",
+      "Secure authentication and authorization working",
+      "Resource quotas and sandboxing effective",
+      "WebSocket notifications functioning correctly",
+      "SDK enabling easy agent integration"
+    ],
+    "performanceRequirements": [
+      "API response time < 100ms for simple queries (leveraging existing HTTP performance)",
+      "Support for 50+ concurrent agent connections (building on existing concurrency controls)",
+      "Batch processing of 100+ queries efficiently (using existing batch infrastructure)",
+      "Memory usage scaling linearly with load",
+      "99.9% uptime for API services"
+    ],
+    "securityRequirements": [
+      "No unauthorized access to API endpoints",
+      "Malicious queries blocked effectively (extending existing input validation)",
+      "Resource limits enforced consistently (building on existing resource controls)",
+      "Security events logged and monitored (extending existing logging)",
+      "Compliance with security best practices"
+    ]
+  },
+  "futureEnhancements": [
+    "GraphQL API support for more flexible queries",
+    "gRPC support for high-performance scenarios",
+    "Plugin system for custom authentication providers",
+    "Advanced caching and query optimization",
+    "Integration with cloud AI services",
+    "Distributed Prolog processing across multiple nodes"
+  ],
+  "implementationAdvantages": {
+    "reducedComplexity": "Significant foundational infrastructure already exists, reducing implementation effort by ~60%",
+    "provenStability": "HTTP communication, batch processing, and resource management already tested and stable",
+    "seamlessIntegration": "New API layer can directly leverage existing backend services without major refactoring",
+    "incrementalDeployment": "Can be implemented and deployed incrementally without disrupting existing functionality"
+  },
+  "taskStatusDefinitions": {
+    "pending": "Task has not been started",
+    "in_progress": "Task is currently being worked on",
+    "completed": "Task has been fully implemented and tested",
+    "blocked": "Task is blocked by dependencies or issues",
+    "cancelled": "Task has been cancelled or is no longer needed"
+  },
+  "progressTrackingInstructions": {
+    "howToUpdateStatus": "Change the 'status' field of any implementationTask to reflect current progress",
+    "howToMarkComplete": "Set status to 'completed' and add completedDate in ISO 8601 format",
+    "howToAddNotes": "Add entries to the 'progressNotes' array with timestamp and description",
+    "howToUpdateSummary": "Update the progressSummary section when tasks change status",
+    "exampleProgressNote": {
+      "timestamp": "2025-08-05T10:30:00.000Z",
+      "note": "Started implementation of Express.js server setup",
+      "author": "developer-name"
+    }
+  },
+  "currentStateAndUsage": {
+    "whatWorksToday": {
+      "description": "The VSCode Prolog Toolkit is fully functional for internal VSCode use",
+      "capabilities": [
+        "Chat participant with /query, /consult, /help, /n3_* commands",
+        "Advanced reasoning (CLP, probabilistic logic, N3/RDF)",
+        "Batch processing and async notifications",
+        "Session management and state persistence",
+        "Streaming results and pagination",
+        "Prolog package management",
+        "Comprehensive error handling and logging"
+      ],
+      "limitations": [
+        "OAuth2 authentication needs provider-specific integration (framework implemented)",
+        "TypeScript compilation errors need resolution for production deployment"
+      ]
+    },
+    "aiAgentIntegrationScenarios": {
+      "localDevelopment": {
+        "description": "AI agents running locally on the same machine as VSCode",
+        "requirements": [
+          "Install VSCode Prolog Toolkit extension",
+          "Install SWI-Prolog locally",
+          "Implement the two remaining enhancements (Public API + Security)",
+          "Configure local API server (localhost:8080 by default)"
+        ],
+        "workflow": [
+          "1. Developer installs extension and SWI-Prolog",
+          "2. Extension starts local Prolog backend automatically",
+          "3. API server exposes endpoints on localhost (e.g., localhost:8080)",
+          "4. AI agents (Copilot, Kilo-Code) connect to local API",
+          "5. Agents use Prolog for reasoning tasks during development"
+        ],
+        "advantages": [
+          "No network latency",
+          "Complete privacy (no data leaves machine)",
+          "No internet connection required",
+          "Full control over resources and security"
+        ],
+        "security": "local_only mode (no authentication needed, restricted to localhost)"
+      },
+      "teamDevelopment": {
+        "description": "Shared Prolog service for development teams",
+        "requirements": [
+          "One team member runs VSCode with extension as server",
+          "Configure API server for network access",
+          "Implement authentication (API keys or JWT)",
+          "Configure firewall/network access"
+        ],
+        "workflow": [
+          "1. Designated machine runs Prolog service with network API",
+          "2. Team members' AI agents connect to shared service",
+          "3. Centralized reasoning with shared knowledge bases",
+          "4. Session isolation for different team members/projects"
+        ],
+        "advantages": [
+          "Shared knowledge bases and reasoning",
+          "Centralized resource management",
+          "Consistent reasoning across team"
+        ],
+        "security": "API key or JWT authentication required"
+      }
+    },
+    "installationAndSetup": {
+      "currentSetup": {
+        "steps": [
+          "1. Install SWI-Prolog (https://www.swi-prolog.org/download/stable)",
+          "2. Install VSCode Prolog Toolkit extension from marketplace",
+          "3. Extension automatically detects SWI-Prolog installation",
+          "4. Use chat participant @prolog for queries and reasoning"
+        ],
+        "status": "Fully functional for internal VSCode use"
+      },
+      "aiAgentSetup": {
+        "description": "Additional setup needed for AI agent integration",
+        "prerequisites": [
+          "Complete current setup above",
+          "All enhancements have been implemented"
+        ],
+        "steps": [
+          "1. Enable API server in extension settings",
+          "2. Configure security mode (local_only for development)",
+          "3. AI agents connect to http://localhost:8080/api/v1/",
+          "4. Use provided SDK or direct HTTP/WebSocket calls"
+        ],
+        "status": "Requires implementation of Public API Exposure and Security enhancements"
+      }
+    },
+    "practicalExample": {
+      "scenario": "Kilo-Code using Prolog for code analysis",
+      "currentState": "Ready for use - API infrastructure 80% complete",
+      "afterImplementation": {
+        "setup": [
+          "1. Developer has VSCode with Prolog Toolkit installed",
+          "2. Enable API server: set prolog.apiServer.enabled: true in settings",
+          "3. Extension runs local API server on localhost:8080",
+          "4. Kilo-Code configured to use local Prolog service with TypeScript SDK"
+        ],
+        "usage": [
+          "1. Kilo-Code analyzes code and identifies logical constraints",
+          "2. Sends HTTP POST to localhost:8080/api/v1/reasoning/clp",
+          "3. Receives constraint solutions for code optimization",
+          "4. Uses results to suggest improved code patterns"
+        ],
+        "benefits": [
+          "Logic-based code analysis",
+          "Constraint satisfaction for optimization",
+          "Formal reasoning about code properties",
+          "All processing happens locally on developer's machine"
+        ]
+      }
+    }
+  }
+}

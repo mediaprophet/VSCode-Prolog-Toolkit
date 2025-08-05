@@ -1,0 +1,46 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.exclude": {
+        "out": false, // set this to true to hide the "out" folder with the compiled JS files
+        "dist": true,
+        "**/*.vsix": true,
+        "node_modules": true,
+        ".nyc_output": true,
+        "coverage": true
+    },
+    "search.exclude": {
+        "out": true, // set this to false to include "out" folder in search results
+        "dist": true,
+        "node_modules": true,
+        ".nyc_output": true,
+        "coverage": true,
+        "test/logs": true
+    },
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "eslint.validate": ["typescript"],
+    "eslint.format.enable": true,
+    "prettier.requireConfig": true,
+    "yaml.schemas": {
+        "https://json.schemastore.org/github-workflow.json": "file:///workspace/vsc-prolog/.github/workflows/build.yaml"
+    },
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "files.associations": {
+        "*.pl": "prolog",
+        "*.pro": "prolog",
+        "*.prolog": "prolog",
+        "*.n3": "turtle"
+    },
+    "mochaExplorer.files": "test/**/*.test.ts",
+    "mochaExplorer.require": "ts-node/register"
+}

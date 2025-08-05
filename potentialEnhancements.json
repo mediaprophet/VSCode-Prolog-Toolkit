@@ -1,0 +1,337 @@
+{
+  "pendingEnhancements": [
+    {
+      "enhancement": "Public API Exposure",
+      "description": "Expose the Prolog backend HTTP API on a configurable port for external agents (with security controls). Allow REST or WebSocket connections from trusted AI agents or tools.",
+      "priority": "high",
+      "dependencies": ["All other enhancements should be completed first to provide a comprehensive API"],
+      "considerations": [
+        "Security: authentication, authorization, and access control for API endpoints.",
+        "Configurable port and network interface.",
+        "Backward compatibility with current extension-internal API.",
+        "Documentation for external API consumers.",
+        "Integration with existing advanced concurrency, history, and scheduling features."
+      ],
+      "subtasks": [
+        "Design and implement HTTP/WebSocket API endpoints with full feature exposure.",
+        "Add configuration options for port and allowed origins.",
+        "Implement authentication (e.g., token-based or local-only).",
+        "Integrate with concurrency manager, history manager, and query scheduler.",
+        "Document API usage and security model.",
+        "Test with external agent clients."
+      ],
+      "alreadyImplemented": false,
+      "estimatedComplexity": "high",
+      "blockedBy": []
+    },
+    {
+      "enhancement": "Security and Access Control",
+      "description": "Add authentication and authorization for API access. Implement resource quotas and sandboxing for untrusted queries.",
+      "priority": "high",
+      "dependencies": ["Should be implemented before or alongside Public API Exposure"],
+      "considerations": [
+        "Threat modeling and attack surface analysis.",
+        "User and agent identity management.",
+        "Resource limits and sandboxing techniques.",
+        "Integration with existing resource quota system."
+      ],
+      "subtasks": [
+        "Implement authentication (e.g., API keys, OAuth, local-only).",
+        "Add role-based access control (RBAC) or similar.",
+        "Enhance existing resource quotas with security controls.",
+        "Implement query sandboxing and validation.",
+        "Test security boundaries and failure modes."
+      ],
+      "alreadyImplemented": false,
+      "estimatedComplexity": "high",
+      "blockedBy": []
+    }
+  ],
+  "partiallyImplementedEnhancements": [],
+  "fullyImplementedEnhancements": [
+    {
+      "enhancement": "Enhanced Reasoning Features",
+      "description": "Integrate constraint logic programming (CLP), probabilistic logic, and support for custom meta-interpreters or agent-defined logic modules.",
+      "priority": "medium",
+      "considerations": [
+        "Compatibility with SWI-Prolog libraries (e.g., CLP(FD), CLP(R)).",
+        "Security and resource usage of user-defined logic.",
+        "Extensibility for future logic paradigms."
+      ],
+      "subtasks": [
+        {
+          "task": "Evaluate and integrate CLP and probabilistic logic libraries.",
+          "status": "completed",
+          "implementation": "Integrated CLP(FD), CLP(R), and CLP(Q) libraries with comprehensive constraint solving support for finite domains, real numbers, and rational numbers"
+        },
+        {
+          "task": "Design API for registering custom meta-interpreters.",
+          "status": "completed",
+          "implementation": "Created user-defined logic modules API with support for custom rules and meta-interpreters, including default and custom reasoning modes"
+        },
+        {
+          "task": "Add tests for new reasoning features.",
+          "status": "completed",
+          "implementation": "Created comprehensive test suite in enhanced-reasoning.test.ts covering CLP solving, probabilistic inference, logic modules, integration scenarios, and error handling"
+        },
+        {
+          "task": "Document usage and limitations.",
+          "status": "completed",
+          "implementation": "Created detailed documentation in docs/enhanced-reasoning-guide.md with API reference, usage examples, best practices, and troubleshooting guides"
+        }
+      ],
+      "alreadyImplemented": true,
+      "implementationDetails": {
+        "status": "fully_implemented",
+        "completedFeatures": [
+          "Full N3/Turtle reasoning with semantic web support",
+          "RDFS inference using library(semweb/rdfs)",
+          "Custom meta-interpreter for proof tracing",
+          "N3 rule processing and inference chains",
+          "Comprehensive N3 integration tests",
+          "Constraint Logic Programming (CLP) integration with CLP(FD), CLP(R), and CLP(Q) support",
+          "CLP constraint solving with arithmetic, domain, and global constraints",
+          "Persistent constraint management system",
+          "Probabilistic logic support with Monte Carlo sampling",
+          "Probabilistic fact definition and management",
+          "Probabilistic inference with evidence collection and uncertainty quantification",
+          "User-defined logic modules API with custom rule registration",
+          "Logic module query system with proof tracing",
+          "Support for default and custom meta-interpreters",
+          "Integration between CLP, probabilistic logic, and N3 reasoning",
+          "Comprehensive error handling and validation",
+          "Performance optimizations for constraint solving and probabilistic inference"
+        ],
+        "missingFeatures": [],
+        "files": [
+          "src/prolog_json_server.pl:1-20,215-227,948-1200+ (CLP, probabilistic, and logic module implementations)",
+          "docs/n3-reasoning-guide.md (existing N3 reasoning documentation)",
+          "docs/enhanced-reasoning-guide.md (comprehensive enhanced reasoning documentation)",
+          "test/n3-integration.test.ts (existing N3 integration tests)",
+          "test/enhanced-reasoning.test.ts (comprehensive enhanced reasoning test suite)"
+        ],
+        "newDependencies": [],
+        "testCoverage": {
+          "clpSolving": "Complete testing of CLP(FD), CLP(R), and CLP(Q) constraint solving with various constraint types",
+          "clpConstraintManagement": "Testing of persistent constraint addition and validation",
+          "probabilisticLogic": "Comprehensive testing of probabilistic fact definition and Monte Carlo inference",
+          "logicModules": "Testing of module registration, querying, and meta-interpreter functionality",
+          "integrationScenarios": "Testing of combined CLP, probabilistic, and N3 reasoning workflows",
+          "errorHandling": "Comprehensive error scenarios and edge case testing",
+          "performanceValidation": "Testing with large constraint problems and probabilistic knowledge bases"
+        },
+        "enhancedReasoningCapabilities": {
+          "clpDomains": [
+            "CLP(FD) - Finite Domain constraints over integers with arithmetic, domain, and global constraints",
+            "CLP(R) - Real number constraints with linear and non-linear arithmetic",
+            "CLP(Q) - Rational number constraints with exact arithmetic"
+          ],
+          "probabilisticFeatures": [
+            "Monte Carlo sampling for probabilistic inference",
+            "Probabilistic fact definition with probability validation",
+            "Evidence collection and uncertainty quantification",
+            "Integration with deterministic reasoning"
+          ],
+          "logicModuleFeatures": [
+            "Custom rule registration and management",
+            "Default and custom meta-interpreter support",
+            "Proof tracing and explanation generation",
+            "Module-based knowledge organization",
+            "Integration with existing N3/RDF reasoning"
+          ]
+        }
+      }
+    },
+    {
+      "enhancement": "Batch and Asynchronous Requests",
+      "description": "Support batching of multiple logic queries in a single request and add async notification/callbacks for long-running queries.",
+      "considerations": [
+        "Request/response protocol changes for batch support.",
+        "Concurrency and resource management for async queries.",
+        "Timeouts and error handling for batched/async operations."
+      ],
+      "subtasks": [
+        {
+          "task": "Extend JSON protocol to accept and return batches of queries.",
+          "status": "completed",
+          "implementation": "Enhanced prologBackend.ts sendRequest() method to handle batch arrays, updated prolog_json_server.pl with process_batch_element/2 predicate for batch processing"
+        },
+        {
+          "task": "Implement async processing and callback/notification mechanism.",
+          "status": "completed",
+          "implementation": "Created QueryNotificationManager class with WebSocket server, implemented sendRequestWithNotifications() method, added query status tracking with progress callbacks, cancellation support, and real-time notifications"
+        },
+        {
+          "task": "Add tests for batch and async scenarios.",
+          "status": "completed",
+          "implementation": "Created comprehensive test suite in callback-notification.test.ts covering query lifecycle, callbacks, WebSocket communication, batch processing, and backend integration"
+        },
+        {
+          "task": "Update documentation and usage examples.",
+          "status": "completed",
+          "implementation": "Created detailed documentation in docs/callback-notification-system.md with API reference, usage examples, WebSocket protocol specification, and integration guides"
+        }
+      ],
+      "alreadyImplemented": true,
+      "implementationDetails": {
+        "status": "fully_implemented",
+        "completedFeatures": [
+          "Batch request support in prologBackend.ts and prolog_json_server.pl",
+          "Async processing with threading and timeouts",
+          "Comprehensive error handling for batch operations",
+          "Test coverage in chat-integration.test.ts",
+          "Callback/notification mechanism for long-running queries with QueryNotificationManager",
+          "WebSocket-based real-time notifications (configurable port, default: main port + 2)",
+          "Query status tracking and management system with lifecycle events",
+          "Progress callbacks with real-time updates (onProgress, onComplete, onError, onCancel)",
+          "Query cancellation support via cancelQuery() method and WebSocket messages",
+          "Batch processing with individual query tracking and progress reporting",
+          "Event-driven callback system with comprehensive event emission",
+          "Comprehensive test coverage in callback-notification.test.ts",
+          "Query statistics and active query management",
+          "Automatic cleanup of completed queries after 30 seconds",
+          "WebSocket protocol for bidirectional client-server communication",
+          "Integration with existing streaming and N3 reasoning features",
+          "Advanced concurrency controls with resource quotas and priority queues",
+          "Persistent query history storage with filtering and statistics",
+          "Query scheduling and queuing system with multiple schedule types"
+        ],
+        "missingFeatures": [],
+        "files": [
+          "src/prologBackend.ts:114-150,165-310 (enhanced batch processing and notification methods)",
+          "src/prolog_json_server.pl:59-77,266-354,291-450 (WebSocket support and query tracking)",
+          "src/features/queryNotificationManager.ts (complete notification system)",
+          "src/features/concurrencyManager.ts (advanced concurrency controls)",
+          "src/features/queryHistoryManager.ts (persistent query history storage)",
+          "src/features/queryScheduler.ts (query scheduling and queuing system)",
+          "test/callback-notification.test.ts (comprehensive test suite)",
+          "test/advanced-concurrency.test.ts (concurrency, history, and scheduler tests)",
+          "docs/callback-notification-system.md (complete documentation)",
+          "docs/advanced-concurrency-features.md (advanced features documentation)",
+          "package.json (added ws dependency and test scripts)",
+          "CALLBACK_NOTIFICATION_IMPLEMENTATION.md (implementation summary)"
+        ],
+        "newDependencies": [
+          "ws@^8.18.0 (WebSocket server implementation)",
+          "@types/ws@^8.5.12 (TypeScript definitions)"
+        ],
+        "testCoverage": {
+          "queryLifecycle": "Complete testing of pending → running → completed/error/cancelled/timeout transitions",
+          "callbackFunctionality": "Verification of onProgress, onComplete, onError, onCancel callbacks",
+          "webSocketCommunication": "Real-time notification testing and bidirectional messaging",
+          "backendIntegration": "Integration testing with actual Prolog queries",
+          "batchProcessing": "Individual tracking and notification for batch operations",
+          "errorHandling": "Comprehensive error scenarios and edge cases",
+          "concurrencyControls": "Resource quotas, priority queues, and query cancellation",
+          "historyManagement": "Persistent storage, filtering, statistics, and cleanup",
+          "queryScheduling": "Immediate, delayed, recurring, and conditional query execution",
+          "systemIntegration": "Full integration of all advanced concurrency features"
+        }
+      }
+    },
+    {
+      "enhancement": "Streaming and Pagination",
+      "description": "Implement streaming of large result sets for queries with many solutions and add cursor-based pagination for chat and API responses.",
+      "considerations": [
+        "Protocol and UI changes to support partial/streamed results.",
+        "Resource and memory management for large datasets.",
+        "User experience for navigating paginated/streamed results."
+      ],
+      "subtasks": [
+        "Design streaming/pagination protocol (e.g., cursors, tokens).",
+        "Implement backend support for partial result delivery.",
+        "Update chat and API clients to handle paginated/streamed data.",
+        "Test with large datasets and long-running queries."
+      ],
+      "alreadyImplemented": true,
+      "implementationDetails": {
+        "status": "fully_implemented",
+        "completedFeatures": [
+          "Full streaming support with StreamingHandler class",
+          "Cursor-based pagination for N3 commands",
+          "Automatic chunking with configurable max_results_per_chunk",
+          "Chat streaming with progress indicators",
+          "Memory-efficient large result handling"
+        ],
+        "files": ["src/features/streamingHandler.ts", "src/prologBackend.ts:153-230", "src/prolog_json_server.pl:397-451", "src/extension.ts:234-271"]
+      }
+    },
+    {
+      "enhancement": "Session and State Management",
+      "description": "Support multiple concurrent sessions for different agents or users. Allow agents to save and restore Prolog knowledge base state.",
+      "considerations": [
+        "Session isolation and resource allocation.",
+        "Persistence and serialization of Prolog state.",
+        "Session lifecycle management (create, destroy, restore).",
+        "Integration with existing concurrency and history systems."
+      ],
+      "subtasks": [
+        {
+          "task": "Design session management API and data structures.",
+          "status": "completed",
+          "implementation": "Created comprehensive SessionManager class with SessionConfig, SessionState, and SessionSnapshot interfaces. Designed API for session creation, switching, deletion, and state management."
+        },
+        {
+          "task": "Implement session creation, switching, and teardown.",
+          "status": "completed",
+          "implementation": "Implemented full session lifecycle management with createSession(), switchToSession(), deleteSession(), and listSessions() methods. Added session isolation with per-session resource quotas and managers."
+        },
+        {
+          "task": "Add state save/restore functionality.",
+          "status": "completed",
+          "implementation": "Implemented comprehensive state persistence with saveSessionState(), restoreSessionState(), createSnapshot(), and export/import functionality. Added Prolog-side state management with prolog_session_manager.pl module."
+        },
+        {
+          "task": "Integrate with concurrency manager for per-session resource limits.",
+          "status": "completed",
+          "implementation": "Created per-session ConcurrencyManager and QueryHistoryManager instances with isolated resource quotas. Integrated with existing PrologBackend for seamless session-aware query execution."
+        },
+        {
+          "task": "Test multi-session and state persistence scenarios.",
+          "status": "completed",
+          "implementation": "Created comprehensive test suite in session-management.test.ts covering session creation, switching, state persistence, resource isolation, multi-session scenarios, and error handling."
+        }
+      ],
+      "alreadyImplemented": true,
+      "implementationDetails": {
+        "status": "fully_implemented",
+        "completedFeatures": [
+          "Multi-session support with session isolation and resource allocation",
+          "Comprehensive session lifecycle management (create, switch, delete, list)",
+          "Persistent session state storage with automatic save/restore functionality",
+          "Session snapshots for state versioning and rollback capabilities",
+          "Per-session resource quotas and concurrency management",
+          "Per-session query history tracking and statistics",
+          "Session-aware Prolog knowledge base state management",
+          "Export/import functionality for session portability",
+          "Integration with existing concurrency, history, and notification systems",
+          "WebSocket-based real-time session status updates",
+          "Automatic session cleanup for idle sessions",
+          "Session metadata and user/agent association",
+          "Comprehensive error handling and validation",
+          "Full TypeScript and Prolog integration",
+          "Session statistics and monitoring capabilities"
+        ],
+        "missingFeatures": [],
+        "files": [
+          "src/features/sessionManager.ts (complete session management system)",
+          "src/prolog_session_manager.pl (Prolog-side session state management)",
+          "src/prologBackend.ts:10,34-47,81-90,125-127,169-173 (session integration)",
+          "src/prolog_json_server.pl:12,194-218,716-870 (session command handlers)",
+          "test/session-management.test.ts (comprehensive test suite)"
+        ],
+        "newDependencies": [],
+        "testCoverage": {
+          "sessionLifecycle": "Complete testing of session creation, switching, deletion, and listing",
+          "stateManagement": "Verification of state save/restore, snapshots, and persistence",
+          "resourceIsolation": "Testing of per-session resource quotas and manager isolation",
+          "multiSessionScenarios": "Concurrent session handling and state isolation testing",
+          "prologIntegration": "Integration testing with Prolog backend and state management",
+          "errorHandling": "Comprehensive error scenarios and edge case testing",
+          "persistence": "Disk storage, loading, and cleanup functionality testing",
+          "eventSystem": "Session event emission and handling verification"
+        }
+      }
+    }
+  ]
+}

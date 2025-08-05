@@ -1,0 +1,7 @@
+{
+  "timeout": 10000,
+  "retries": 2,
+  "slow": 2000,
+  "testResourcesPath": "./test/resources",
+  "logPath": "./test/logs"
+}

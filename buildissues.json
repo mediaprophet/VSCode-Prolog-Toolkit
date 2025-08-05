@@ -1,0 +1,188 @@
+{
+  "summary": {
+    "totalErrors": 35,
+    "configUsed": "tsconfig.build.json",
+    "description": "Remaining TypeScript errors after applying relaxed build configuration. These are actual code issues that need fixing for production deployment.",
+    "lastUpdated": "2025-08-05T07:23:00Z"
+  },
+  "categories": {
+    "extension_configuration": {
+      "count": 18,
+      "description": "Type mismatches in extension configuration and OAuth setup",
+      "priority": "high",
+      "issues": [
+        {
+          "file": "src/extension.ts",
+          "lines": [1216, 1217, 1218, 1219, 1221, 1222, 1223, 1224, 1227, 1228, 1229, 1230, 1234, 1235, 1238, 1239, 1242, 1243, 1246, 1247],
+          "error": "TS2347: Untyped function calls may not accept type arguments",
+          "description": "Generic type arguments on untyped function calls in extension configuration"
+        },
+        {
+          "file": "src/extension.ts",
+          "line": 1220,
+          "error": "TS2741: Property 'providers' is missing in type",
+          "description": "OAuth configuration missing required 'providers' property",
+          "fix": "Add providers: string[] property to OAuth config object"
+        }
+      ]
+    },
+    "websocket_compatibility": {
+      "count": 4,
+      "description": "WebSocket type compatibility issues between different WebSocket implementations",
+      "priority": "medium",
+      "issues": [
+        {
+          "file": "src/features/externalWebSocketManager.ts",
+          "line": 71,
+          "error": "TS2345: Argument type mismatch for WebSocket",
+          "description": "Type incompatibility between @types/ws and native WebSocket",
+          "fix": "Use proper WebSocket type casting or interface"
+        },
+        {
+          "file": "src/features/externalWebSocketManager.ts",
+          "lines": [226, 241, 253],
+          "error": "TS2551: Property 'methods' does not exist on type 'AuthConfig'",
+          "description": "AuthConfig interface uses 'methods' instead of 'method'",
+          "fix": "Change 'methods' to 'method' in AuthConfig usage"
+        },
+        {
+          "file": "src/features/externalWebSocketManager.ts",
+          "lines": [326, 390, 423, 447],
+          "error": "TS2345: Property 'method' is missing in AuthenticatedUser",
+          "description": "AuthenticatedUser objects missing required 'method' property",
+          "fix": "Add method property to AuthenticatedUser objects"
+        },
+        {
+          "file": "src/sdk/prologWebSocketClient.ts",
+          "line": 90,
+          "error": "TS2351: This expression is not constructable",
+          "description": "WebSocket constructor type issue",
+          "fix": "Use proper WebSocket constructor or type assertion"
+        },
+        {
+          "file": "src/sdk/prologWebSocketClient.ts",
+          "lines": [92, 101, 105, 116, 122],
+          "error": "TS2531: Object is possibly 'null'",
+          "description": "WebSocket object null checks needed",
+          "fix": "Add null checks before WebSocket operations"
+        }
+      ]
+    },
+    "lsp_client_issues": {
+      "count": 3,
+      "description": "Language Server Protocol client compatibility issues",
+      "priority": "medium",
+      "issues": [
+        {
+          "file": "src/features/prologLSPClient.ts",
+          "line": 130,
+          "error": "TS2339: Property 'onReady' does not exist on type 'LanguageClient'",
+          "description": "LanguageClient API change - onReady method not available",
+          "fix": "Use alternative LanguageClient ready detection method"
+        },
+        {
+          "file": "src/features/prologLSPServer.ts",
+          "line": 1522,
+          "error": "TS2339: Property 'onSemanticTokensFull' does not exist",
+          "description": "LSP connection missing semantic tokens handler",
+          "fix": "Use correct semantic tokens API or remove if not supported"
+        },
+        {
+          "file": "src/features/prologLSPServer.ts",
+          "line": 1529,
+          "error": "TS2554: Expected 0 arguments, but got 1",
+          "description": "Function call with incorrect number of arguments",
+          "fix": "Check function signature and adjust arguments"
+        }
+      ]
+    },
+    "missing_dependencies": {
+      "count": 2,
+      "description": "Missing or problematic dependencies",
+      "priority": "high",
+      "issues": [
+        {
+          "file": "src/utils/snippets_from_txt.ecl.ts",
+          "line": 1,
+          "error": "TS2307: Cannot find module 'fs-extra-plus'",
+          "description": "Missing fs-extra-plus dependency or type declarations",
+          "fix": "Install fs-extra-plus or replace with alternative, add @types if needed"
+        },
+        {
+          "file": "src/sdk/types.ts",
+          "line": 424,
+          "error": "TS2456: Type alias 'Session' circularly references itself",
+          "description": "Circular type reference in Session type definition",
+          "fix": "Refactor Session type to remove circular reference"
+        }
+      ]
+    },
+    "data_model_issues": {
+      "count": 2,
+      "description": "Data model and interface issues",
+      "priority": "low",
+      "issues": [
+        {
+          "file": "src/features/queryHistoryManager.ts",
+          "line": 428,
+          "error": "TS2339: Property 'deleted' does not exist on type 'QueryHistoryEntry'",
+          "description": "QueryHistoryEntry interface missing 'deleted' property",
+          "fix": "Add 'deleted?: boolean' to QueryHistoryEntry interface or remove usage"
+        },
+        {
+          "file": "src/features/sessionManager.ts",
+          "line": 569,
+          "error": "TS1308: 'await' expressions are only allowed within async functions",
+          "description": "Await used in non-async function",
+          "fix": "Make containing function async or remove await"
+        }
+      ]
+    }
+  },
+  "fixPriority": [
+    {
+      "priority": "critical",
+      "description": "Must fix before production deployment",
+      "issues": [
+        "missing_dependencies",
+        "extension_configuration"
+      ]
+    },
+    {
+      "priority": "high", 
+      "description": "Should fix for optimal functionality",
+      "issues": [
+        "websocket_compatibility",
+        "lsp_client_issues"
+      ]
+    },
+    {
+      "priority": "medium",
+      "description": "Fix when convenient",
+      "issues": [
+        "data_model_issues"
+      ]
+    }
+  ],
+  "quickFixes": {
+    "fs_extra_plus": {
+      "command": "npm install fs-extra-plus @types/fs-extra-plus",
+      "alternative": "Replace with standard fs-extra package"
+    },
+    "oauth_providers": {
+      "fix": "Add providers: [] property to OAuth configuration objects"
+    },
+    "websocket_types": {
+      "fix": "Use consistent WebSocket type imports and add null checks"
+    },
+    "circular_session_type": {
+      "fix": "Break circular reference by using interface instead of type alias"
+    }
+  },
+  "testingNotes": {
+    "buildCommand": "npm run compile",
+    "strictCommand": "npm run compile:strict", 
+    "watchCommand": "npm run compile:watch",
+    "note": "Use tsconfig.build.json for production builds to avoid strict mode issues"
+  }
+}

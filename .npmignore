@@ -1,0 +1,68 @@
+# Source files
+src/
+test/
+.vscode/
+.github/
+
+# Development files
+.eslintrc.js
+.prettierrc.js
+.nycrc.json
+tsconfig.json
+.husky/
+
+# Test and coverage
+coverage/
+.nyc_output/
+test/logs/
+test/temp/
+
+# Build artifacts
+*.tsbuildinfo
+.eslintcache
+
+# Documentation (keep README.md)
+CONTRIBUTING.md
+fullimplementation.md
+implementationsteps.json
+groknotes.md
+updategroknotes.md
+problem_unsolved.md
+recommendations.json
+update_node_24.json
+npm-deps.json
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+node_trace.*.log
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Git files
+.git/
+.gitignore
+.gitpod.yml
+
+# Package manager files
+package-lock.json
+yarn.lock
+.pnpm-lock.yaml
+
+# Environment files
+.env*
+
+# Legacy files
+vsc-extension-quickstart.md
+old_prologBackend.ts.zip

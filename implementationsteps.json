@@ -1,0 +1,200 @@
+[
+  {
+    "step": 0,
+    "title": "Project and Testing Environment Setup",
+    "details": "Establish a robust, reproducible development and testing environment before implementation begins.",
+    "status": "complete",
+    "subtasks": [
+      "Set up Node.js and SWI-Prolog version management (e.g., .nvmrc, .swipl-version, or document requirements).",
+      "Initialize package.json with scripts for build, test, lint, and clean.",
+      "Configure TypeScript (tsconfig.json) for strict type checking and CommonJS compatibility.",
+      "Set up Mocha, Chai, and ts-node for TypeScript test execution.",
+      "Add a test:watch script for rapid feedback during development.",
+      "Configure .gitignore and .npmignore for clean source control and packaging.",
+      "Add pre-commit hooks for linting and formatting (e.g., with husky).",
+      "Document all setup steps in CONTRIBUTING.md.",
+      "Add a VS Code devcontainer or .vscode/settings.json for consistent dev experience.",
+      "Ensure all test and resource files are in a dedicated test/resources directory."
+    ]
+  },
+  {
+    "step": 1,
+    "title": "Create Prolog Backend Service (Node.js Module)",
+    "details": "Create src/prologBackend.ts. Implement a class that spawns SWI-Prolog as a child process using Node.js child_process.spawn. The backend now uses HTTP (via SWI-Prolog's http_server) for JSON-based protocol communication. All requests (query, consult, help, N3 commands) and responses (results, errors, proof trees) are sent over HTTP. Ensure the backend can be started, stopped, and restarted gracefully. All implementation must be robust and production-grade ready.",
+    "status": "complete (HTTP refactor, git checkpoint: Node24-HTTP-Upgrade)",
+    "subtasks": [
+      "Refactor backend to use HTTP server in SWI-Prolog for JSON protocol communication. (done)",
+      "Update Node.js backend to use axios for HTTP requests to Prolog server. (done)",
+      "Add health checks and restart logic for backend process. (done)",
+      "Support configuration of Prolog executable and arguments. (done)",
+      "Gracefully handle backend shutdown and cleanup. (done)",
+      "Add version checks for SWI-Prolog compatibility. (done)",
+      "Add automatic recovery if the Prolog process crashes. (done)",
+      "Implement request queueing and timeouts. (done)",
+      "Add logging and diagnostics for backend events and errors. (done)",
+      "Ensure concurrency control (handle multiple requests safely). (done)",
+      "Fix TypeScript errors: use proper Node.js types, ensure EventEmitter methods (on, off) are available. (done)",
+      "Sanitize and validate all input before sending to Prolog. (done)"
+    ]
+  },
+  {
+    "step": 2,
+    "title": "Implement Request/Response Protocol",
+    "details": "In src/prologBackend.ts and src/prolog_json_server.pl, implement logic to parse incoming JSON requests over HTTP, execute the corresponding Prolog command, and return a JSON response. For queries, parse variable bindings and booleans. For consult, report success or error. For help, return formatted documentation. For N3 commands, implement handlers as described in n3logic_diagnostics_plan.md. All implementation must be robust and production-grade ready.",
+    "status": "complete (HTTP refactor, git checkpoint: Node24-HTTP-Upgrade)",
+    "subtasks": [
+      "Refactor protocol to use HTTP POST for all JSON requests/responses. (done)",
+      "Validate all incoming JSON for schema and type safety. (done)",
+      "Add protocol versioning for future extensibility. (done)",
+      "Support batching of requests (for future performance improvements). (done)",
+      "Add input validation and security checks. (done)",
+      "Implement resource/time limits for queries to prevent runaway processes. (done)",
+      "Add logging and diagnostics for requests and errors. (done)",
+      "Improve help command for broader predicate support. (done)",
+      "Ensure the server is robust against malformed input and unexpected errors. (done)"
+    ]
+  },
+  {
+    "step": 3,
+    "title": "Prolog Package Management Enhancements",
+    "details": "Add robust, user-friendly Prolog package management features to the extension and chat handler.",
+    "status": "complete",
+    "subtasks": [
+      "List available SWI-Prolog packs (from official or custom sources). (done)",
+      "Show installed packs and their versions. (done)",
+      "Install a Prolog pack by name (e.g., /prolog pack install <name>). (done)",
+      "Uninstall a Prolog pack by name. (done)",
+      "Update a Prolog pack by name. (done)",
+      "Show info about a pack (description, version, dependencies). (done)",
+      "Search for packs by keyword. (done)",
+      "Graceful error messages and progress notifications in chat. (done)",
+      "Integrate all commands with the chat handler. (done)",
+      "Validate pack names and user input. (done)",
+      "Warn about untrusted or deprecated packs. (done)",
+      "Allow users to add/remove custom pack servers (optional). (done)"
+    ]
+  },
+  {
+    "step": 4,
+    "title": "Output Formatting and Error Handling",
+    "details": "In the chat handler, format variable bindings, booleans, and errors for display in the chat. Use Markdown code blocks for Prolog code and results. Handle and display errors gracefully. All implementation must be robust and production-grade ready.",
+    "status": "complete",
+    "subtasks": [
+      "Format multi-solution queries as readable tables or lists. (done)",
+      "Add support for streaming large outputs (e.g., many triples). (done)",
+      "Provide clear, actionable error messages for common user mistakes. (done)",
+      "Improve formatting of variable bindings and multi-solution queries. (done)",
+      "Add structured error codes and user guidance for common errors. (done)",
+      "Support localization and user customization of output. (done)",
+      "Add more user-friendly and context-aware error messages. (done)"
+    ]
+  },
+  {
+    "step": 5,
+    "title": "Integrate Backend Service with Chat Handler",
+    "details": "Update the chat participant handler in src/extension.ts to use the new backend service. For each command (/query, /consult, /help, /n3_*), send a JSON request to the backend and await a structured response. Display results, errors, and documentation in the chat view. All implementation must be robust and production-grade ready.",
+    "status": "complete",
+    "subtasks": [
+      "Add user notifications for backend status (starting, ready, error). (done)",
+      "Implement retry logic for failed backend requests. (done)",
+      "Add telemetry (optional, privacy-respecting) for usage/error analytics. (done)",
+      "Provide graceful fallback if backend is unavailable. (done)",
+      "Show user feedback for backend startup/shutdown/errors. (done)",
+      "Support cancellation of chat requests (if user cancels). (done)",
+      "Fix TypeScript errors related to event handling. (done)",
+      "Add chat participant configuration to package.json with chatParticipants contribution point. (done)",
+      "Implement comprehensive chat command routing (/query, /consult, /help, /status). (done)",
+      "Add rich markdown formatting for query results and help documentation. (done)",
+      "Implement dynamic port configuration for backend service. (done)",
+      "Add follow-up suggestions and context-aware chat responses. (done)",
+      "Create integration tests for chat-backend communication. (done)"
+    ]
+  },
+  {
+    "step": 6,
+    "title": "Implement N3Logic Diagnostic Features",
+    "details": "Add support for /n3_load, /n3_list, /n3_reason, and /n3_explain commands. Implement corresponding backend handlers using SWI-Prolog's semweb library. For /n3_explain, implement a meta-interpreter to generate proof trees. Format and display results and explanations in the chat view. All implementation must be robust and production-grade ready.",
+    "status": "complete",
+    "subtasks": [
+      "Implement full N3 reasoning using semweb/n3's reasoning predicates. (done)",
+      "Implement a real meta-interpreter for proof tracing in /n3_explain, and format proof trees for chat. (done)",
+      "Add support for N3 file import/export via chat. (done)",
+      "Validate and sanitize N3 input to prevent injection or resource abuse. (done)",
+      "Ensure N3 triple output uses readable, prefixed names (e.g., :socrates) instead of full IRIs. (done)"
+    ]
+  },
+  {
+    "step": 7,
+    "title": "Testing and Documentation",
+    "details": "Test all chat commands with sample Prolog and N3 files. Update README.md to document the new chat features and commands. Ensure code is robust, commented, and follows project style. All implementation must be robust and production-grade ready.",
+    "status": "complete (comprehensive testing infrastructure, git checkpoint: Step7-Testing-Documentation-Complete)",
+    "subtasks": [
+      "Add automated integration tests for all chat commands. (done)",
+      "Test backend independently from VS Code extension (unit tests for backend, integration tests for extension-backend communication). (done)",
+      "Mock or stub Prolog process for fast, deterministic unit tests. (done)",
+      "Automate test environment setup (e.g., npm run setup-test-env). (done)",
+      "Ensure test logs are written to /logs and are cleaned up between runs. (done)",
+      "Continuous Integration (CI) setup for automated testing on push/PR (e.g., GitHub Actions). (done)",
+      "Provide and maintain sample Prolog and N3 files in a dedicated test/resources folder. (done)",
+      "Document all error codes and troubleshooting steps. (done)",
+      "Add a changelog and versioning for releases. (done)",
+      "Update documentation (README.md, usage examples) as features evolve. (done)",
+      "Maintain a user-facing changelog and clear versioning for all releases. (done)",
+      "Comprehensive testing (unit, integration, and user testing). (done)"
+    ]
+  },
+  {
+    "step": 8,
+    "title": "General UI/UX and LSP Enhancements",
+    "details": "Ensure a polished, user-friendly, and extensible experience. All implementation must be robust and production-grade ready.",
+    "status": "complete",
+    "subtasks": [
+      "Evaluate and, if appropriate, implement LSP/LanguageClient support for advanced features (e.g., custom requests for queries, help, and N3 diagnostics). (done)",
+      "Ensure chat participant and commands are correctly registered in package.json (chatParticipants contribution point). (done)",
+      "Add and maintain chat participant icon, command descriptions, and ensure markdown formatting is consistent and attractive in chat responses. (done)"
+    ]
+  },
+  {
+    "step": 9,
+    "title": "Developer Onboarding & Documentation",
+    "details": "Maintain and update onboarding and contribution documentation for all contributors.",
+    "status": "in progress (git checkpoint: 3428992) - robust batch protocol and test coverage complete",
+    "subtasks": [
+      "Support batching of requests (for future performance improvements). (done)",
+      "Add and update architecture diagrams and troubleshooting guides.",
+      "Document developer onboarding steps and best practices."
+    ]
+  },
+  {
+    "step": 10,
+    "title": "Internationalization (i18n)",
+    "details": "Plan for and support localization of chat responses and error messages.",
+    "status": "pending",
+    "subtasks": [
+      "Structure code to support future language packs.",
+      "Add localization support for chat responses and error messages."
+    ]
+  },
+  {
+    "step": 11,
+    "title": "Performance and Scalability",
+    "details": "Ensure the extension performs well with large knowledge bases and long-running queries.",
+    "status": "complete",
+    "subtasks": [
+      "Implement streaming or paginated responses for large result sets. (done)",
+      "Add progress indicators or notifications for long-running tasks. (done)"
+    ]
+  },
+  {
+    "step": 12,
+    "title": "Automated Code Quality and Security",
+    "details": "Ensure code quality and security through automated tools and CI integration.",
+    "status": "pending",
+    "subtasks": [
+      "Integrate ESLint and Prettier for code style and formatting.",
+      "Run npm audit and/or CodeQL for dependency and code security.",
+      "Add lint, format, and security checks to CI pipeline.",
+      "Block merges on critical issues."
+    ]
+  }
+]

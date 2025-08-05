@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "vscode-prolog-toolkit": {
+      "command": "node",
+      "args": ["./dist/index.js"],
+      "env": {
+        "PROLOG_TOOLKIT_API_URL": "http://localhost:3000",
+        "PROLOG_TOOLKIT_API_KEY": "",
+        "PROLOG_TOOLKIT_TIMEOUT": "30000"
+      }
+    }
+  }
+}

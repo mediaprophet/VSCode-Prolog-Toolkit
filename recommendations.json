@@ -1,0 +1,58 @@
+{
+  "recommendations": [
+    {
+      "id": 1,
+      "area": "JSON Parsing in prologBackend.ts",
+      "description": "Update handleStdout to robustly handle multi-line and nested JSON objects using a brace-matching or buffer-based approach, ensuring all complete JSON objects are parsed before processing.",
+  "status": "Done. Brace-matching and buffer-based JSON parsing logic implemented and validated."
+    },
+    {
+      "id": 2,
+      "area": "PlDoc Integration in prolog_json_server.pl",
+      "description": "Replace use of predicate_summary/2 with pldoc:doc_comment/4 for extracting structured documentation (summary, args, examples) from PlDoc comments. Ensure foo_with_pldoc.pl contains valid PlDoc comments.",
+  "status": "Done. Now uses pldoc:doc_comment/4 for PlDoc extraction; foo_with_pldoc.pl updated with valid comments."
+    },
+    {
+      "id": 3,
+      "area": "Test [1] (Start/Stop) Logic",
+      "description": "Update test to wait for the 'stopped' event after calling backend.stop(), ensuring the process is fully terminated before assertions.",
+  "status": "Done. Test now waits for 'stopped' event after backend.stop()."
+    },
+    {
+      "id": 4,
+      "area": "Test [3] (Query Output) Logic",
+      "description": "Ensure deterministic queries (e.g., write(hello), nl.) in handle_cmd/3 capture and return output correctly in the JSON response.",
+  "status": "Done. Deterministic queries now capture and return output correctly in JSON response."
+    },
+    {
+      "id": 5,
+      "area": "Test [8] (Batch Requests) Timeout",
+      "description": "Increase the timeout for batch request tests to accommodate processing of multiple commands, especially with complex help responses.",
+  "status": "Done. Timeout for batch requests increased to 10 seconds."
+    },
+    {
+      "id": 6,
+      "area": "Health Check Frequency",
+      "description": "Increase the health check interval in prologBackend.ts to reduce server load and avoid interfering with test execution.",
+  "status": "Done. Health check interval increased to 10 seconds."
+    },
+    {
+      "id": 7,
+      "area": "foo_with_pldoc.pl Content",
+      "description": "Ensure foo_with_pldoc.pl contains detailed and valid PlDoc comments for foo/2, including @arg and @example annotations.",
+  "status": "Done. foo_with_pldoc.pl now contains detailed and valid PlDoc comments for foo/2."
+    },
+    {
+      "id": 8,
+      "area": "SWI-Prolog Version/PlDoc Availability",
+      "description": "Verify SWI-Prolog version and PlDoc library availability. Upgrade or install as needed to ensure pldoc:doc_comment/4 is available.",
+  "status": "Pending. Current logs indicate missing predicates. Explicitly verify SWI-Prolog version and PlDoc predicates at startup. Log the version and PlDoc predicate availability in prolog_json_server.pl."
+    {
+      "id": 9,
+      "area": "PlDoc/Prolog Startup Diagnostics",
+      "description": "At startup, log the SWI-Prolog version and check for the presence of PlDoc predicates (e.g., pldoc:doc_comment/4). If missing, log a clear warning and suggest upgrade or installation steps.",
+      "status": "Pending. Not yet implemented."
+    }
+    }
+  ]
+}

@@ -1,0 +1,678 @@
+{
+  "name": "vscode-prolog-toolkit",
+  "displayName": "VSCode Prolog Toolkit",
+  "description": "Advanced Prolog language support, debugging, and tooling for Visual Studio Code.",
+  "version": "1.2.00",
+  "publisher": "mediaprophet",
+  "icon": "images/vsplogo.png",
+  "license": "MIT",
+  "engines": {},
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Snippets",
+    "Linters",
+    "Debuggers"
+  ],
+  "keywords": [
+    "prolog",
+    "debug",
+    "linter",
+    "snippet",
+    "format",
+    "syntax",
+    "color"
+  ],
+  "author": "Timothy Holborn",
+  "contributors": [
+    {
+      "name": "Amaury Rabouan",
+      "url": "https://github.com/AmauryRabouan/new-vsc-prolog",
+      "contribution": "Original project foundation (https://github.com/AmauryRabouan/new-vsc-prolog)"
+    },
+    {
+      "name": "Guillaume Nollet"
+    },
+    {
+      "name": "Arthur Wang",
+      "email": "rthrwang@gmail.com"
+    },
+    {
+      "name": "Phil Hargett",
+      "url": "https://github.com/hargettp"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit"
+  },
+  "bugs": {
+    "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues"
+  },
+  "main": "./out/pub/extension.js",
+  "activationEvents": [
+    "onLanguage:prolog"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "prolog",
+        "aliases": [
+          "Prolog",
+          "swipl"
+        ],
+        "configuration": "./prolog.configuration.json",
+        "extensions": [
+          ".pl",
+          ".pro",
+          ".prolog",
+          ".plt",
+          ".ecl"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "prolog",
+        "scopeName": "source.prolog",
+        "path": "./syntaxes/prolog.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "prolog",
+        "path": "./snippets/prolog.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "prolog.linter.nextErrLine",
+        "title": "Prolog: Goto next error line"
+      },
+      {
+        "command": "prolog.linter.prevErrLine",
+        "title": "Prolog: Goto previous error line"
+      },
+      {
+        "command": "prolog.load.document",
+        "title": "Prolog: load document"
+      },
+      {
+        "command": "prolog.query.goal",
+        "title": "Prolog: query goal under cursor"
+      },
+      {
+        "command": "prolog.refactorPredicate",
+        "title": "Prolog: refactor predicate under cursor"
+      },
+      {
+        "command": "prolog.lsp.executeQuery",
+        "title": "Prolog LSP: Execute Query",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.lsp.getHelp",
+        "title": "Prolog LSP: Get Help for Predicate",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.lsp.runN3Diagnostics",
+        "title": "Prolog LSP: Run N3 Diagnostics",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.openSettings",
+        "title": "Prolog: Open Settings",
+        "category": "Prolog"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "prolog.linter.nextErrLine",
+        "key": "f8"
+      },
+      {
+        "command": "prolog.linter.prevErrLine",
+        "key": "shift+f8"
+      },
+      {
+        "command": "prolog.load.document",
+        "key": "alt+x l"
+      },
+      {
+        "command": "prolog.query.goal",
+        "key": "alt+x q"
+      },
+      {
+        "command": "prolog.lsp.executeQuery",
+        "key": "ctrl+shift+q"
+      },
+      {
+        "command": "prolog.lsp.getHelp",
+        "key": "ctrl+shift+h"
+      },
+      {
+        "command": "prolog.openSettings",
+        "key": "ctrl+shift+,"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "prolog.load.document",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.query.goal",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.linter.nextErrLine",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.linter.prevErrLine",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.refactorPredicate",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.lsp.executeQuery",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.lsp.getHelp",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.lsp.runN3Diagnostics",
+          "when": "resourceLangId == prolog"
+        },
+        {
+          "command": "prolog.openSettings",
+          "when": "resourceLangId == prolog"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "prolog.load.document",
+          "when": "resourceLangId == prolog"
+        }
+      ]
+    },
+    "breakpoints": [
+      {
+        "language": "prolog"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "prolog",
+        "label": "Prolog",
+        "program": "./out/pub/features/prologDebugSession.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program",
+              "startupQuery",
+              "cwd",
+              "runtimeExecutable",
+              "runtimeArgs",
+              "traceCmds"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to the program.",
+                "default": "${file}"
+              },
+              "startupQuery": {
+                "type": "string",
+                "description": "The goal to query for starting debugging.",
+                "default": "start"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop program after launch.",
+                "default": true
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Absolute path to the working directory of the program being debugged.",
+                "default": "${workspaceRoot}"
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment variable passed to the program.",
+                "default": {}
+              },
+              "runtimeExecutable": {
+                "type": "string",
+                "default": "/usr/bin/swipl",
+                "description": "Points to the Prolog executable."
+              },
+              "runtimeArgs": {
+                "type": "array",
+                "description": "Command line arguments passed to the debug executable.",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "traceCmds": {
+                "type": "object",
+                "description": "Mapping between vscode debug commands and prolog trace options.",
+                "default": {
+                  "continue": [
+                    "leap",
+                    "l"
+                  ],
+                  "stepover": [
+                    "skip",
+                    "s"
+                  ],
+                  "stepinto": [
+                    "creep",
+                    "c"
+                  ],
+                  "stepout": [
+                    "up",
+                    "u"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "Debug Prolog Files",
+            "type": "prolog",
+            "request": "launch",
+            "runtimeExecutable": "/usr/bin/swipl",
+            "runtimeArgs": [],
+            "env": {},
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
+            "startupQuery": "start",
+            "stopOnEntry": true,
+            "traceCmds": {
+              "continue": [
+                "leap",
+                "l"
+              ],
+              "stepover": [
+                "skip",
+                "s"
+              ],
+              "stepinto": [
+                "creep",
+                "c"
+              ],
+              "stepout": [
+                "up",
+                "u"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "prolog",
+        "name": "prolog",
+        "description": "🤖 Prolog language assistant for queries, consulting files, getting help, and N3 reasoning. Supports SWI-Prolog queries, file consultation, predicate documentation, and semantic web reasoning with N3 logic.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "query",
+            "description": "Execute a Prolog query and get results with variable bindings"
+          },
+          {
+            "name": "consult",
+            "description": "Load and consult a Prolog file into the knowledge base"
+          },
+          {
+            "name": "help",
+            "description": "Get documentation and help for Prolog predicates"
+          },
+          {
+            "name": "status",
+            "description": "Check the status of the Prolog backend and extension"
+          },
+          {
+            "name": "n3_load",
+            "description": "Load N3/Turtle semantic web data for reasoning"
+          },
+          {
+            "name": "n3_list",
+            "description": "List loaded N3 triples with optional filtering"
+          },
+          {
+            "name": "n3_reason",
+            "description": "Perform N3 reasoning and inference on loaded data"
+          },
+          {
+            "name": "n3_explain",
+            "description": "Explain reasoning results with detailed proof trees"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "",
+      "properties": {
+        "prolog.executablePath": {
+          "type": "string",
+          "default": "/usr/bin/swipl",
+          "description": "Points to the Prolog executable."
+        },
+        "prolog.dialect": {
+          "type": "string",
+          "enum": [
+            "swi",
+            "ecl"
+          ],
+          "default": "swi",
+          "description": "swi: SWI-Prolog; ecl: ECLiPSe(eclipseclp)."
+        },
+        "prolog.linter.run": {
+          "type": "string",
+          "enum": [
+            "onSave",
+            "onType",
+            "never"
+          ],
+          "default": "onType",
+          "description": "How to trigger the linter."
+        },
+        "prolog.format.addSpace": {
+          "type": "boolean",
+          "default": true,
+          "description": "add a space after commas"
+        },
+        "prolog.linter.delay": {
+          "type": "number",
+          "default": 500,
+          "description": "The milliseconds to delay when using onType trigger."
+        },
+        "prolog.linter.enableMsgInOutput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable errors and warnings in OUTPUT channel."
+        },
+        "prolog.terminal.runtimeArgs": {
+          "type": "array",
+          "description": "Arguments of Prolog executable run in terminal.",
+          "default": []
+        },
+        "prolog.telemetry.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable privacy-respecting telemetry for usage analytics (local only, not transmitted)."
+        },
+        "prolog.apiServer.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable HTTP API server for external AI agent access."
+        },
+        "prolog.apiServer.port": {
+          "type": "number",
+          "default": 8080,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Port number for the HTTP API server."
+        },
+        "prolog.apiServer.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host address for the HTTP API server."
+        },
+        "prolog.apiServer.corsOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "http://localhost:*"
+          ],
+          "description": "Allowed CORS origins for API requests."
+        },
+        "prolog.apiServer.maxConnections": {
+          "type": "number",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of concurrent connections."
+        },
+        "prolog.apiServer.requestTimeout": {
+          "type": "number",
+          "default": 60000,
+          "minimum": 1000,
+          "maximum": 300000,
+          "description": "Request timeout in milliseconds."
+        },
+        "prolog.apiServer.rateLimiting.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable rate limiting for API requests."
+        },
+        "prolog.apiServer.rateLimiting.requestsPerMinute": {
+          "type": "number",
+          "default": 60,
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum requests per minute per client."
+        },
+        "prolog.apiServer.rateLimiting.burstLimit": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum burst requests allowed."
+        },
+        "prolog.apiServer.auth.method": {
+          "type": "string",
+          "enum": [
+            "local_only",
+            "api_key",
+            "jwt_token",
+            "oauth2"
+          ],
+          "default": "local_only",
+          "description": "Authentication method for API access."
+        },
+        "prolog.apiServer.auth.apiKeys": {
+          "type": "object",
+          "default": {},
+          "description": "API keys configuration (key -> {role, permissions}).",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "agent",
+                  "readonly",
+                  "limited"
+                ]
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "prolog.apiServer.auth.jwtSecret": {
+          "type": "string",
+          "default": "",
+          "description": "JWT secret for token authentication (leave empty to generate automatically)."
+        },
+        "prolog.apiServer.auth.jwtExpiration": {
+          "type": "string",
+          "default": "1h",
+          "description": "JWT token expiration time (e.g., '1h', '30m', '7d')."
+        },
+        "prolog.webSocketServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable WebSocket server for real-time notifications (enabled automatically when API server is enabled)."
+        },
+        "prolog.webSocketServer.port": {
+          "type": "number",
+          "default": 8081,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Port number for the WebSocket server."
+        },
+        "prolog.webSocketServer.maxConnections": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 500,
+          "description": "Maximum number of concurrent WebSocket connections."
+        },
+        "prolog.webSocketServer.heartbeatInterval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "WebSocket heartbeat interval in seconds."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "prologSettings",
+          "name": "Prolog Settings",
+          "type": "webview",
+          "when": "resourceLangId == prolog"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "prolog-toolkit",
+          "title": "Prolog Toolkit",
+          "icon": "$(gear)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "prologSettings",
+        "contents": "Configure your Prolog extension settings.\n[Open Settings](command:prolog.openSettings)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "build": "npm run esbuild",
+    "build:watch": "npm run esbuild-watch",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServer.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run -S esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run -S esbuild-base -- --sourcemap --watch",
+    "compile": "tsc -p tsconfig.build.json",
+    "compile:watch": "tsc -watch -p tsconfig.build.json",
+    "compile:strict": "tsc -p ./",
+    "test": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.test.ts",
+    "test:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.test.ts --watch",
+    "test:all": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register \"test/**/*.test.ts\"",
+    "test:n3": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/n3-integration.test.ts",
+    "test:n3:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/n3-integration.test.ts --watch",
+    "test:performance": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/performance-scalability.test.ts --timeout 20000",
+    "test:performance:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/performance-scalability.test.ts --timeout 20000 --watch",
+    "test:coverage": "nyc npm run test:all",
+    "test:unit": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.unit.test.ts",
+    "test:integration": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/chat-commands-integration.test.ts",
+    "test:callback-notification": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/callback-notification.test.ts --timeout 30000",
+    "test:advanced-concurrency": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/advanced-concurrency.test.ts --timeout 30000",
+    "test:lsp": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/lsp-integration.test.ts --timeout 60000",
+    "test:lsp:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/lsp-integration.test.ts --timeout 60000 --watch",
+    "test:validate": "node scripts/validate-tests.js",
+    "test:ci": "npm run setup-test-env && npm run test:all && npm run test:coverage",
+    "test:clean": "rimraf test/logs/* test/temp/* coverage/*",
+    "clean": "rimraf out dist *.vsix",
+    "setup-test-env": "node test/setup-test-env.js",
+    "package": "vsce package",
+    "syntax4swi": "yaml2json --pretty --save ./syntaxes/prolog.swi.tmLanguage.yaml",
+    "syntax4ecl": "yaml2json --pretty --save ./syntaxes/prolog.ecl.tmLanguage.yaml",
+    "pkgvars": "node ./node_modules/vscode/bin/install",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/bluebird": "^3.5.42",
+    "@types/chai": "^5.2.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsesc": "^3.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.0.0",
+    "@types/sinon": "^17.0.4",
+    "@types/uuid": "^10.0.0",
+    "@types/vscode": "^1.102.0",
+    "@types/which": "^3.0.4",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.0",
+    "chai": "^5.2.1",
+    "cross-env": "^10.0.0",
+    "esbuild": "^0.25.8",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "husky": "^9.1.7",
+    "mocha": "^11.7.1",
+    "nyc": "^15.1.0",
+    "ovsx": "^0.10.5",
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.5",
+    "sinon": "^21.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.68.0",
+    "axios": "^1.6.8",
+    "command-exists": "^1.2.9",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "fast-glob": "^3.3.3",
+    "helmet": "^7.1.0",
+    "js-string-escape": "^1.0.1",
+    "jsesc": "^3.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "os": "^0.1.2",
+    "process-promises": "^1.0.0",
+    "readline-promise": "1.0.5",
+    "split": "^1.0.1",
+    "uuid": "^9.0.1",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "vscode-uri": "^3.0.8",
+    "which": "^5.0.0",
+    "ws": "^8.18.0"
+  }
+}

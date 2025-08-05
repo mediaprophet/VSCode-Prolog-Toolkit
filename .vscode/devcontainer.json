@@ -1,0 +1,17 @@
+{
+  "name": "New-VSC-Prolog DevContainer",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:18",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.tabSize": 2
+      }
+    }
+  },
+  "postCreateCommand": "npm install"
+}

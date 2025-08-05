@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "outDir": "../out/test",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node", "mocha", "chai"],
+    "baseUrl": "..",
+    "paths": {
+      "*": ["node_modules/*", "src/*"]
+    }
+  },
+  "include": [
+    "../src/**/*",
+    "./**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "./**/*.js",
+    "run-with-logs.js",
+    "setup-test-env.js",
+    "structure-check.js",
+    "syntax-check.js"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
+}
