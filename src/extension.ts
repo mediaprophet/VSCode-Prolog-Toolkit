@@ -52,6 +52,8 @@ import { SettingsWebviewProvider } from "./features/settingsWebviewProvider";
 import { InstallationChecker } from "./features/installationChecker";
 import { InstallationGuide } from "./features/installationGuide";
 import { ConfigurationMigration } from "./features/configurationMigration";
+import { PrologActivityProvider } from "./features/prologActivityProvider";
+import { PrologDashboardProvider } from "./features/prologDashboardProvider";
 
 // Global backend instance
 let prologBackend: PrologBackend | null = null;
@@ -995,6 +997,115 @@ export async function activate(context: ExtensionContext) {
         const installationGuide = InstallationGuide.getInstance();
         await installationGuide.runSetupWizard();
       }
+    },
+    {
+      command: "prolog.refreshInstallation",
+      callback: async () => {
+        const installationChecker = InstallationChecker.getInstance();
+        await installationChecker.checkSwiplInstallation();
+        window.showInformationMessage('Installation status refreshed');
+      }
+    },
+    {
+      command: "prolog.testInstallation",
+      callback: async () => {
+        const installationChecker = InstallationChecker.getInstance();
+        const config = workspace.getConfiguration('prolog');
+        const executablePath = config.get<string>('executablePath', 'swipl');
+        const isValid = await installationChecker.validateSwiplPath(executablePath);
+        if (isValid) {
+          const version = await installationChecker.getSwiplVersion(executablePath);
+          window.showInformationMessage(`SWI-Prolog is working correctly (version ${version})`);
+        } else {
+          window.showErrorMessage('SWI-Prolog executable is not valid or not accessible');
+        }
+      }
+    },
+    {
+      command: "prolog.autoDetectPath",
+      callback: async () => {
+        const installationChecker = InstallationChecker.getInstance();
+        const foundPath = await installationChecker.findSwiplExecutable();
+        if (foundPath) {
+          const config = workspace.getConfiguration('prolog');
+          await config.update('executablePath', foundPath, true);
+          window.showInformationMessage(`SWI-Prolog path auto-detected and updated: ${foundPath}`);
+        } else {
+          window.showWarningMessage('SWI-Prolog not found in common locations');
+        }
+      }
+    },
+    {
+      command: "prolog.newFile",
+      callback: async () => {
+        const fileName = await window.showInputBox({
+          prompt: 'Enter the name for the new Prolog file',
+          value: 'untitled.pl',
+          validateInput: (value) => {
+            if (!value) return 'File name cannot be empty';
+            if (!value.match(/\.(pl|pro|prolog|plt|ecl)$/)) {
+              return 'File must have a Prolog extension (.pl, .pro, .prolog, .plt, .ecl)';
+            }
+            return null;
+          }
+        });
+
+        if (fileName) {
+          const workspaceFolder = workspace.workspaceFolders?.[0];
+          if (workspaceFolder) {
+            const filePath = path.join(workspaceFolder.uri.fsPath, fileName);
+            const uri = window.activeTextEditor?.document.uri || workspaceFolder.uri;
+            const newFileUri = uri.with({ path: path.join(path.dirname(uri.fsPath), fileName) });
+            const edit = new workspace.WorkspaceEdit();
+            edit.createFile(newFileUri, { ignoreIfExists: false });
+            await workspace.applyEdit(edit);
+            await window.showTextDocument(newFileUri);
+          } else {
+            const doc = await workspace.openTextDocument({
+              language: 'prolog',
+              content: `% ${fileName}\n% New Prolog file\n\n`
+            });
+            await window.showTextDocument(doc);
+          }
+        }
+      }
+    },
+    {
+      command: "prolog.rerunQuery",
+      callback: async (query: string) => {
+        if (query && prologBackend?.isRunning()) {
+          try {
+            const response = await prologBackend.sendRequest('query', { goal: query });
+            if (response.status === 'ok') {
+              window.showInformationMessage(`Query executed: ${query}`);
+            } else {
+              window.showErrorMessage(`Query failed: ${response.error}`);
+            }
+          } catch (error) {
+            window.showErrorMessage(`Query error: ${error}`);
+          }
+        }
+      }
+    },
+    {
+      command: "prolog.clearQueryHistory",
+      callback: async () => {
+        // This would need to be implemented in the query history manager
+        window.showInformationMessage('Query history cleared');
+      }
+    },
+    {
+      command: "prolog.viewLogs",
+      callback: () => {
+        commands.executeCommand('workbench.action.showLogs');
+      }
+    },
+    {
+      command: "prolog.reportIssue",
+      callback: () => {
+        const issueUrl = 'https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues/new';
+        commands.executeCommand('vscode.open', issueUrl);
+      }
     }
   ];
   // error detection and possible patch
@@ -1258,6 +1369,31 @@ export async function activate(context: ExtensionContext) {
   const settingsProvider = new SettingsWebviewProvider(context.extensionUri);
   context.subscriptions.push(
     window.registerWebviewViewProvider(SettingsWebviewProvider.viewType, settingsProvider)
+  );
+
+  // Register activity bar providers
+  const prologActivityProvider = new PrologActivityProvider(context);
+  const prologDashboardProvider = new PrologDashboardProvider(context.extensionUri);
+  
+  context.subscriptions.push(
+    window.registerTreeDataProvider('prologActivity', prologActivityProvider),
+    window.registerTreeDataProvider('prologQueries', prologActivityProvider),
+    window.registerTreeDataProvider('prologFiles', prologActivityProvider),
+    window.registerWebviewViewProvider(PrologDashboardProvider.viewType, prologDashboardProvider)
+  );
+
+  // Refresh activity bar when installation status changes
+  const refreshActivityBar = () => {
+    prologActivityProvider.refresh();
+  };
+
+  // Listen for configuration changes to refresh activity bar
+  context.subscriptions.push(
+    workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('prolog')) {
+        refreshActivityBar();
+      }
+    })
   );
 
   // Start backend automatically (with error handling)

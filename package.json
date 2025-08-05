@@ -157,6 +157,46 @@
         "command": "prolog.setupWizard",
         "title": "Prolog: Setup Wizard",
         "category": "Prolog"
+      },
+      {
+        "command": "prolog.refreshInstallation",
+        "title": "Prolog: Refresh Installation Status",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.testInstallation",
+        "title": "Prolog: Test Installation",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.autoDetectPath",
+        "title": "Prolog: Auto-Detect Path",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.newFile",
+        "title": "Prolog: New File",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.rerunQuery",
+        "title": "Prolog: Rerun Query",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.clearQueryHistory",
+        "title": "Prolog: Clear Query History",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.viewLogs",
+        "title": "Prolog: View Logs",
+        "category": "Prolog"
+      },
+      {
+        "command": "prolog.reportIssue",
+        "title": "Prolog: Report Issue",
+        "category": "Prolog"
       }
     ],
     "keybindings": [
@@ -639,6 +679,29 @@
           "type": "webview",
           "when": "resourceLangId == prolog"
         }
+      ],
+      "prolog-toolkit": [
+        {
+          "id": "prologDashboard",
+          "name": "Dashboard",
+          "type": "webview",
+          "when": "true"
+        },
+        {
+          "id": "prologActivity",
+          "name": "Prolog Explorer",
+          "when": "true"
+        },
+        {
+          "id": "prologQueries",
+          "name": "Query History",
+          "when": "true"
+        },
+        {
+          "id": "prologFiles",
+          "name": "Prolog Files",
+          "when": "true"
+        }
       ]
     },
     "viewsContainers": {
@@ -646,7 +709,7 @@
         {
           "id": "prolog-toolkit",
           "title": "Prolog Toolkit",
-          "icon": "$(gear)"
+          "icon": "./images/prolog-activity-icon.svg"
         }
       ]
     },
