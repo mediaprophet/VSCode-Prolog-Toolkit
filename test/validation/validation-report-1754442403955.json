@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-08-06T01:06:43.955Z",
+  "platform": "win32",
+  "nodeVersion": "v24.5.0",
+  "duration": 2443,
+  "results": {
+    "total": 52,
+    "passed": 52,
+    "failed": 0,
+    "skipped": 0,
+    "errors": []
+  },
+  "environment": {
+    "cwd": "f:\\github-dev\\VSCode-Prolog-Toolkit",
+    "arch": "x64",
+    "totalmem": 274508017664,
+    "freemem": 225375305728
+  }
+}

@@ -64,6 +64,9 @@
     "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues"
   },
   "main": "./out/pub/extension.js",
+  "browser": {
+    "vscode": "./test/vscode-mock.js"
+  },
   "activationEvents": [
     "onLanguage:prolog"
   ],

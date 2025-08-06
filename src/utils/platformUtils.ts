@@ -26,7 +26,7 @@ export type PlatformType = 'windows' | 'macos' | 'linux';
 /**
  * Supported architecture types
  */
-export type ArchitectureType = 'x64' | 'arm64' | 'x86';
+export type ArchitectureType = 'x64' | 'arm64' | 'x86' | 'x32';
 
 /**
  * Platform-specific configurations
@@ -166,7 +166,7 @@ export class PlatformUtils {
           break;
         case 'ia32':
         case 'x32':
-          this._architecture = 'x86';
+          this._architecture = 'x32';
           break;
         default:
           // Default to x64 for unknown architectures
