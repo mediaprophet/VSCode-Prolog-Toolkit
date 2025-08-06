@@ -1,0 +1,6 @@
+{
+  "name": "Prolog LSP for VS Code",
+  "description": "Already configured through the VSCode Prolog Toolkit extension",
+  "status": "native_support",
+  "setup": "Install the VSCode Prolog Toolkit extension from the marketplace"
+}

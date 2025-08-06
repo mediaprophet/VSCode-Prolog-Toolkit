@@ -1,0 +1,31 @@
+{
+  "LSP.sublime-settings": {
+    "clients": {
+      "prolog-lsp": {
+        "enabled": true,
+        "command": [
+          "node",
+          "./out/pub/features/prologLSPServer.js",
+          "--stdio"
+        ],
+        "selector": "source.prolog",
+        "settings": {
+          "prolog": {
+            "executablePath": "swipl",
+            "dialect": "swi",
+            "linter": {
+              "run": "onType",
+              "delay": 500
+            }
+          }
+        },
+        "initializationOptions": {
+          "enableSnippets": true,
+          "enableFormatting": true,
+          "enableDiagnostics": true
+        }
+      }
+    }
+  },
+  "Prolog.sublime-syntax": "\n%YAML 1.2\n---\nname: Prolog\nfile_extensions: [pl, pro, prolog, plt, ecl]\nscope: source.prolog\n\ncontexts:\n  main:\n    - include: comments\n    - include: strings\n    - include: numbers\n    - include: predicates\n    - include: variables\n    - include: operators\n\n  comments:\n    - match: '%.*$'\n      scope: comment.line.prolog\n    - match: '/\\*'\n      push: block_comment\n\n  block_comment:\n    - meta_scope: comment.block.prolog\n    - match: '\\*/'\n      pop: true\n\n  strings:\n    - match: \"'\"\n      push: single_quoted_string\n    - match: '\"'\n      push: double_quoted_string\n\n  single_quoted_string:\n    - meta_scope: string.quoted.single.prolog\n    - match: \"'\"\n      pop: true\n\n  double_quoted_string:\n    - meta_scope: string.quoted.double.prolog\n    - match: '\"'\n      pop: true\n\n  numbers:\n    - match: '\\b\\d+(\\.\\d+)?\\b'\n      scope: constant.numeric.prolog\n\n  predicates:\n    - match: '\\b[a-z][a-zA-Z0-9_]*(?=\\s*\\()'\n      scope: entity.name.function.prolog\n\n  variables:\n    - match: '\\b[A-Z_][a-zA-Z0-9_]*\\b'\n      scope: variable.prolog\n\n  operators:\n    - match: ':-|->|;|,|\\+|\\-|\\*|/|=|\\\\=|==|\\\\==|@<|@>|@=<|@>='\n      scope: keyword.operator.prolog\n      "
+}

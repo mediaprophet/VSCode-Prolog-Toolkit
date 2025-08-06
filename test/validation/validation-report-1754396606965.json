@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-08-05T12:23:26.965Z",
+  "platform": "win32",
+  "nodeVersion": "v24.5.0",
+  "duration": 2264,
+  "results": {
+    "total": 37,
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [
+      {
+        "suite": "Platform Tests",
+        "error": "Unexpected token 'R', \"Running te\"... is not valid JSON",
+        "stack": "SyntaxError: Unexpected token 'R', \"Running te\"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at ValidationRunner.runTestSuite (f:\\github-dev\\VSCode-Prolog-Toolkit\\test\\validation\\run-validation.js:53:34)\n    at ValidationRunner.runAllValidationTests (f:\\github-dev\\VSCode-Prolog-Toolkit\\test\\validation\\run-validation.js:157:24)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async main (f:\\github-dev\\VSCode-Prolog-Toolkit\\test\\validation\\run-validation.js:257:9)"
+      }
+    ]
+  },
+  "environment": {
+    "cwd": "f:\\github-dev\\VSCode-Prolog-Toolkit",
+    "arch": "x64",
+    "totalmem": 274508017664,
+    "freemem": 224513589248
+  }
+}

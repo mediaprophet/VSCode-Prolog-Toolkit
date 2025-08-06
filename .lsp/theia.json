@@ -1,0 +1,20 @@
+{
+  "package.json": {
+    "name": "prolog-lsp-theia",
+    "version": "1.0.0",
+    "description": "Prolog LSP support for Theia",
+    "dependencies": {
+      "@theia/core": "latest",
+      "@theia/languages": "latest",
+      "vscode-languageserver-protocol": "latest"
+    },
+    "theiaExtensions": [
+      {
+        "frontend": "lib/browser/prolog-frontend-module",
+        "backend": "lib/node/prolog-backend-module"
+      }
+    ]
+  },
+  "frontend_module": "\nimport { ContainerModule } from 'inversify';\nimport { LanguageClientContribution } from '@theia/languages/lib/browser';\nimport { PrologLanguageClientContribution } from './prolog-language-client-contribution';\n\nexport default new ContainerModule(bind => {\n    bind(LanguageClientContribution).to(PrologLanguageClientContribution).inSingletonScope();\n});\n      ",
+  "client_contribution": "\nimport { injectable } from 'inversify';\nimport { LanguageClientContribution, ILanguageClient } from '@theia/languages/lib/browser';\nimport { PROLOG_LANGUAGE_ID, PROLOG_LANGUAGE_NAME } from '../common';\n\n@injectable()\nexport class PrologLanguageClientContribution implements LanguageClientContribution {\n    readonly id = PROLOG_LANGUAGE_ID;\n    readonly name = PROLOG_LANGUAGE_NAME;\n\n    start(languageClient: ILanguageClient): void {\n        const command = 'node';\n        const args = ['./out/pub/features/prologLSPServer.js', '--stdio'];\n        \n        languageClient.start({\n            command,\n            args,\n            options: {}\n        });\n    }\n}\n      "
+}

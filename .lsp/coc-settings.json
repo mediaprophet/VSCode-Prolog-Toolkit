@@ -1,0 +1,35 @@
+{
+  "languageserver": {
+    "prolog": {
+      "command": "node",
+      "args": [
+        "./out/pub/features/prologLSPServer.js",
+        "--stdio"
+      ],
+      "filetypes": [
+        "prolog"
+      ],
+      "rootPatterns": [
+        ".git",
+        "*.pl",
+        "*.pro",
+        "*.prolog"
+      ],
+      "settings": {
+        "prolog": {
+          "executablePath": "swipl",
+          "dialect": "swi",
+          "linter": {
+            "run": "onType",
+            "delay": 500
+          }
+        }
+      },
+      "initializationOptions": {
+        "enableSnippets": true,
+        "enableFormatting": true,
+        "enableDiagnostics": true
+      }
+    }
+  }
+}

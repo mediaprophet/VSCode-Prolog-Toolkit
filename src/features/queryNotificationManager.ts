@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import * as WebSocket from 'ws';
+import WebSocket from 'ws';
 
 export interface QueryStatus {
   id: string;
@@ -148,7 +148,7 @@ export class QueryNotificationManager extends EventEmitter {
 
     const message = JSON.stringify(notification);
     this.wsClients.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === ws.OPEN) {
         try {
           ws.send(message);
         } catch (error: unknown) {

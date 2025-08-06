@@ -1,4 +1,4 @@
-import * as WebSocket from 'ws';
+import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import { QueryNotificationManager } from './queryNotificationManager';
 import { AuthConfig, verifyJwtToken, hasPermission } from './apiMiddleware';
@@ -473,7 +473,7 @@ export class ExternalWebSocketManager extends EventEmitter {
    */
   private sendToClient(clientId: string, message: Record<string, unknown>): void {
     const client = this.clients.get(clientId);
-    if (!client || client.ws.readyState !== WebSocket.OPEN) return;
+    if (!client || client.ws.readyState !== client.ws.OPEN) return;
 
     try {
       client.ws.send(JSON.stringify(message));

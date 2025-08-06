@@ -11,7 +11,7 @@ import { QueryHistoryManager, QueryHistoryOptions } from './features/queryHistor
 import { QueryScheduler, ScheduledQuery } from './features/queryScheduler';
 import { SessionManager, SessionManagerOptions } from './features/sessionManager';
 import { InstallationGuide } from './features/installationGuide';
-import * as vscode from 'vscode';
+import { UIHandler, defaultUIHandler } from './features/uiHandler';
 
 export interface PrologBackendOptions {
   swiplPath?: string;
@@ -35,6 +35,7 @@ export interface PrologBackendOptions {
     enableDependencies?: boolean;
   };
   sessionOptions?: Partial<SessionManagerOptions>;
+  uiHandler?: UIHandler;
 }
 
 export class PrologBackend extends EventEmitter {
@@ -53,6 +54,7 @@ export class PrologBackend extends EventEmitter {
   private queryScheduler: QueryScheduler;
   private sessionManager: SessionManager;
   private runningQueries: Map<string, {cancel: () => void}> = new Map();
+  private uiHandler: UIHandler;
 
   // Logging and diagnostics
   private log(msg: string) {
@@ -66,6 +68,7 @@ export class PrologBackend extends EventEmitter {
     this.port = options.port || 3060;
     this.maxResultsPerChunk = options.maxResultsPerChunk || 50;
     this.streamingEnabled = options.streamingEnabled ?? true;
+    this.uiHandler = options.uiHandler || defaultUIHandler;
     
     // Initialize notification manager
     this.notificationManager = new QueryNotificationManager({
@@ -1145,7 +1148,7 @@ export class PrologBackend extends EventEmitter {
             
             // Show enhanced error message for backend startup failures
             if (err.code === 'ENOENT' || err.message?.includes('not found')) {
-              const action = await vscode.window.showErrorMessage(
+              const action = await this.uiHandler.showErrorMessage(
                 'SWI-Prolog backend failed to start. The Prolog backend requires SWI-Prolog to provide language features.',
                 'Install SWI-Prolog',
                 'Setup Wizard',
@@ -1156,13 +1159,15 @@ export class PrologBackend extends EventEmitter {
               const installationGuide = InstallationGuide.getInstance();
               switch (action) {
                 case 'Install SWI-Prolog':
-                  await installationGuide.showInstallationGuideDialog();
+                  // In LSP context, we can't show the installation guide dialog
+                  // This would need to be handled by the extension
+                  console.log('SWI-Prolog installation required');
                   break;
                 case 'Setup Wizard':
-                  await vscode.commands.executeCommand('prolog.setupWizard');
+                  await this.uiHandler.executeCommand('prolog.setupWizard');
                   break;
                 case 'Configure Path':
-                  await vscode.commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+                  await this.uiHandler.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
                   break;
               }
             }
