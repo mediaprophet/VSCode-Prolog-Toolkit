@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { EventEmitter } from 'events';
 
 export interface PrologApiClientConfig {
@@ -107,9 +107,9 @@ export class PrologApiClient extends EventEmitter {
       retries: {
         enabled: true,
         maxRetries: 3,
-        retryDelay: 1000
+        retryDelay: 1000,
       },
-      ...config
+      ...config,
     };
 
     this.client = axios.create({
@@ -117,8 +117,8 @@ export class PrologApiClient extends EventEmitter {
       timeout: this.config.timeout,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'PrologApiClient/1.0.0'
-      }
+        'User-Agent': 'PrologApiClient/1.0.0',
+      },
     });
 
     this.setupAuthentication();
@@ -142,11 +142,11 @@ export class PrologApiClient extends EventEmitter {
   private setupInterceptors(): void {
     // Request interceptor
     this.client.interceptors.request.use(
-      (config) => {
+      config => {
         this.emit('requestStart', config);
         return config;
       },
-      (error) => {
+      error => {
         this.emit('requestError', error);
         return Promise.reject(error);
       }
@@ -154,17 +154,17 @@ export class PrologApiClient extends EventEmitter {
 
     // Response interceptor with retry logic
     this.client.interceptors.response.use(
-      (response) => {
+      response => {
         this.emit('responseSuccess', response);
         return response;
       },
-      async (error) => {
+      async error => {
         this.emit('responseError', error);
-        
+
         if (this.config.retries?.enabled && this.shouldRetry(error)) {
           return this.retryRequest(error);
         }
-        
+
         return Promise.reject(error);
       }
     );
@@ -223,10 +223,12 @@ export class PrologApiClient extends EventEmitter {
   /**
    * List all sessions
    */
-  async listSessions(includeInactive: boolean = false): Promise<{ sessions: Session[]; total: number }> {
+  async listSessions(
+    includeInactive: boolean = false
+  ): Promise<{ sessions: Session[]; total: number }> {
     try {
       const response = await this.client.get('/api/v1/sessions', {
-        params: { include_inactive: includeInactive }
+        params: { include_inactive: includeInactive },
       });
       return response.data;
     } catch (error) {
@@ -333,12 +335,14 @@ export class PrologApiClient extends EventEmitter {
   /**
    * Get query history
    */
-  async getHistory(options: {
-    session_id?: string;
-    limit?: number;
-    offset?: number;
-    status?: string;
-  } = {}): Promise<any> {
+  async getHistory(
+    options: {
+      session_id?: string;
+      limit?: number;
+      offset?: number;
+      status?: string;
+    } = {}
+  ): Promise<any> {
     try {
       const response = await this.client.get('/api/v1/history', { params: options });
       return response.data;
@@ -376,11 +380,11 @@ export class PrologApiClient extends EventEmitter {
    */
   updateAuth(auth: PrologApiClientConfig['auth']): void {
     this.config.auth = auth;
-    
+
     // Clear existing auth headers
     delete this.client.defaults.headers['X-API-Key'];
     delete this.client.defaults.headers['Authorization'];
-    
+
     // Set new auth headers
     this.setupAuthentication();
   }
@@ -424,22 +428,25 @@ export class PrologApiClient extends EventEmitter {
   /**
    * Test connection to the API
    */
-  async testConnection(): Promise<{ connected: boolean; latency: number; version?: string }> {
+  async testConnection(): Promise<{ connected: boolean; latency: number; version?: string; error?: string }> {
     const start = Date.now();
-    
+
     try {
       const response = await this.health();
       const latency = Date.now() - start;
-      
+
       return {
         connected: true,
         latency,
-        version: response.version
+        version: response.version,
       };
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn('[PrologApiClient] Connection test failed:', errorMsg);
       return {
         connected: false,
-        latency: Date.now() - start
+        latency: Date.now() - start,
+        error: errorMsg,
       };
     }
   }
@@ -460,8 +467,8 @@ export function createApiKeyClient(baseUrl: string, apiKey: string): PrologApiCl
     baseUrl,
     auth: {
       type: 'api_key',
-      apiKey
-    }
+      apiKey,
+    },
   });
 }
 
@@ -473,8 +480,8 @@ export function createJwtClient(baseUrl: string, jwtToken: string): PrologApiCli
     baseUrl,
     auth: {
       type: 'jwt_token',
-      jwtToken
-    }
+      jwtToken,
+    },
   });
 }
 
@@ -485,7 +492,7 @@ export function createLocalClient(baseUrl: string = 'http://localhost:8080'): Pr
   return new PrologApiClient({
     baseUrl,
     auth: {
-      type: 'none'
-    }
+      type: 'none',
+    },
   });
 }

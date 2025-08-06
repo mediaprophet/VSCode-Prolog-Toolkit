@@ -1,26 +1,19 @@
-"use strict";
+'use strict';
 import {
-  CommentRule,
   Disposable,
   IndentAction,
   languages,
-  OnEnterRule,
-  Position,
-  Range,
-  Selection,
-  TextDocument,
-  window,
-  workspace
-} from "vscode";
+} from 'vscode';
 // automatic indentation on change
 export function loadEditHelpers(subscriptions: Disposable[]) {
   subscriptions.push(
-    languages.setLanguageConfiguration("prolog", {
+    languages.setLanguageConfiguration('prolog', {
       indentationRules: {
         decreaseIndentPattern: /(\s*\)|\s*\])$/,
-        increaseIndentPattern: /(.*:-\s*|.*-->\s*|.*:->\s*|.*:<-\s*|.+\[|.+\()$/
+        increaseIndentPattern: /(.*:-\s*|.*-->\s*|.*:->\s*|.*:<-\s*|.+\[|.+\()$/,
       },
-      wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
+      wordPattern:
+        /(-?\d*\.\d\w*)|([^`~!@%^&*()\-=+[{}\\|;:'",./<>??\s]+)/g,
       onEnterRules: [
         // {
         //   beforeText: /.+:-|:- begin_tests.+\.$/,
@@ -28,15 +21,15 @@ export function loadEditHelpers(subscriptions: Disposable[]) {
         // },
         {
           beforeText: /(^\s*|.*%.+)$/,
-          action: { indentAction: IndentAction.None }
+          action: { indentAction: IndentAction.None },
         },
         {
           beforeText: /.+\.$/,
-          action: { indentAction: IndentAction.Outdent }
+          action: { indentAction: IndentAction.Outdent },
         },
         {
-          beforeText: /.+\([^\)]*$/,
-          action: { indentAction: IndentAction.Indent }
+          beforeText: /.+\([^)]*$/,
+          action: { indentAction: IndentAction.Indent },
         },
         // {
         //   beforeText: /.+\[[^\]]*$/,
@@ -44,36 +37,34 @@ export function loadEditHelpers(subscriptions: Disposable[]) {
         // },
         {
           // e.g. /** | */
-          beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
+          beforeText: /^\s*\/\*\*(?!\/)([^*]|\*(?!\/))*$/,
           afterText: /^\s*\*\/$/,
           action: {
             indentAction: IndentAction.IndentOutdent,
-            appendText: " * "
-          }
+            appendText: ' * ',
+          },
         },
         {
           // e.g. /** ...|
-          beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
-          action: { indentAction: IndentAction.None, appendText: " * " }
+          beforeText: /^\s*\/\*\*(?!\/)([^*]|\*(?!\/))*$/,
+          action: { indentAction: IndentAction.None, appendText: ' * ' },
         },
         {
           // e.g.  * ...|
-          beforeText: /^(\t|(\ \ ))*\ \*(\ ([^\*]|\*(?!\/))*)?$/,
-          action: { indentAction: IndentAction.None, appendText: "* " }
+          beforeText: /^(\t|( ))* \*( ([^*]|\*(?!\/))*)?$/,
+          action: { indentAction: IndentAction.None, appendText: '* ' },
         },
         {
           // e.g.  */|
-          beforeText: /^(\t|(\ \ ))*\ \*\/\s*$/,
-          action: { indentAction: IndentAction.None, removeText: 1 }
+          beforeText: /^(\t|( ))* \*\/\s*$/,
+          action: { indentAction: IndentAction.None, removeText: 1 },
         },
         {
           // e.g.  *-----*/|
-          beforeText: /^(\t|(\ \ ))*\ \*[^/]*\*\/\s*$/,
-          action: { indentAction: IndentAction.None, removeText: 1 }
-        }
-      ]
+          beforeText: /^(\t|( ))* \*[^/]*\*\/\s*$/,
+          action: { indentAction: IndentAction.None, removeText: 1 },
+        },
+      ],
     })
   );
-
-
 }

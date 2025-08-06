@@ -4,9 +4,16 @@ import * as path from 'path';
 
 export interface SecurityEvent {
   id: string;
-  type: 'authentication_success' | 'authentication_failure' | 'authorization_denied' | 
-        'quota_exceeded' | 'suspicious_query_blocked' | 'rate_limit_exceeded' | 
-        'resource_limit_exceeded' | 'dangerous_predicate_blocked' | 'sandbox_violation';
+  type:
+    | 'authentication_success'
+    | 'authentication_failure'
+    | 'authorization_denied'
+    | 'quota_exceeded'
+    | 'suspicious_query_blocked'
+    | 'rate_limit_exceeded'
+    | 'resource_limit_exceeded'
+    | 'dangerous_predicate_blocked'
+    | 'sandbox_violation';
   userId?: string;
   userRole?: string;
   ipAddress?: string;
@@ -95,7 +102,7 @@ export class SecurityAuditor extends EventEmitter {
     const securityEvent: SecurityEvent = {
       ...event,
       id: this.generateEventId(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Store event
@@ -119,7 +126,12 @@ export class SecurityAuditor extends EventEmitter {
   /**
    * Log authentication success
    */
-  logAuthenticationSuccess(userId: string, userRole: string, ipAddress?: string, userAgent?: string): void {
+  logAuthenticationSuccess(
+    userId: string,
+    userRole: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): void {
     this.logSecurityEvent({
       type: 'authentication_success',
       userId,
@@ -129,15 +141,20 @@ export class SecurityAuditor extends EventEmitter {
       severity: 'low',
       message: `User ${userId} authenticated successfully`,
       details: {
-        method: 'api_key' // This could be dynamic based on auth method
-      }
+        method: 'api_key', // This could be dynamic based on auth method
+      },
     });
   }
 
   /**
    * Log authentication failure
    */
-  logAuthenticationFailure(reason: string, ipAddress?: string, userAgent?: string, details?: any): void {
+  logAuthenticationFailure(
+    reason: string,
+    ipAddress?: string,
+    userAgent?: string,
+    details?: any
+  ): void {
     this.logSecurityEvent({
       type: 'authentication_failure',
       ipAddress,
@@ -146,15 +163,20 @@ export class SecurityAuditor extends EventEmitter {
       message: `Authentication failed: ${reason}`,
       details: {
         reason,
-        ...details
-      }
+        ...details,
+      },
     });
   }
 
   /**
    * Log authorization denied
    */
-  logAuthorizationDenied(userId: string, resource: string, requiredPermission: string, ipAddress?: string): void {
+  logAuthorizationDenied(
+    userId: string,
+    resource: string,
+    requiredPermission: string,
+    ipAddress?: string
+  ): void {
     this.logSecurityEvent({
       type: 'authorization_denied',
       userId,
@@ -163,8 +185,8 @@ export class SecurityAuditor extends EventEmitter {
       message: `Access denied to ${resource} for user ${userId}`,
       details: {
         resource,
-        requiredPermission
-      }
+        requiredPermission,
+      },
     });
   }
 
@@ -180,15 +202,20 @@ export class SecurityAuditor extends EventEmitter {
       details: {
         quotaType,
         limit,
-        actual
-      }
+        actual,
+      },
     });
   }
 
   /**
    * Log suspicious query blocked
    */
-  logSuspiciousQueryBlocked(userId: string, query: string, reason: string, predicate?: string): void {
+  logSuspiciousQueryBlocked(
+    userId: string,
+    query: string,
+    reason: string,
+    predicate?: string
+  ): void {
     this.logSecurityEvent({
       type: 'suspicious_query_blocked',
       userId,
@@ -197,8 +224,8 @@ export class SecurityAuditor extends EventEmitter {
       details: {
         query: this.config.includeResults ? query : '[REDACTED]',
         reason,
-        predicate
-      }
+        predicate,
+      },
     });
   }
 
@@ -214,8 +241,8 @@ export class SecurityAuditor extends EventEmitter {
       message: `Rate limit exceeded for user ${userId} on ${endpoint}`,
       details: {
         endpoint,
-        limit
-      }
+        limit,
+      },
     });
   }
 
@@ -231,8 +258,8 @@ export class SecurityAuditor extends EventEmitter {
       details: {
         resource,
         limit,
-        actual
-      }
+        actual,
+      },
     });
   }
 
@@ -247,8 +274,8 @@ export class SecurityAuditor extends EventEmitter {
       message: `Dangerous predicate blocked for user ${userId}: ${predicate}`,
       details: {
         predicate,
-        query: this.config.includeResults ? query : '[REDACTED]'
-      }
+        query: this.config.includeResults ? query : '[REDACTED]',
+      },
     });
   }
 
@@ -263,23 +290,25 @@ export class SecurityAuditor extends EventEmitter {
       message: `Sandbox violation detected for user ${userId}: ${violation}`,
       details: {
         violation,
-        query: this.config.includeResults ? query : '[REDACTED]'
-      }
+        query: this.config.includeResults ? query : '[REDACTED]',
+      },
     });
   }
 
   /**
    * Get security events with filtering
    */
-  getSecurityEvents(filter: {
-    type?: SecurityEvent['type'];
-    userId?: string;
-    severity?: SecurityEvent['severity'];
-    startDate?: Date;
-    endDate?: Date;
-    limit?: number;
-    offset?: number;
-  } = {}): {
+  getSecurityEvents(
+    filter: {
+      type?: SecurityEvent['type'];
+      userId?: string;
+      severity?: SecurityEvent['severity'];
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): {
     events: SecurityEvent[];
     total: number;
   } {
@@ -311,18 +340,20 @@ export class SecurityAuditor extends EventEmitter {
 
     return {
       events: filteredEvents.slice(offset, offset + limit),
-      total
+      total,
     };
   }
 
   /**
    * Get security alerts
    */
-  getSecurityAlerts(filter: {
-    acknowledged?: boolean;
-    severity?: SecurityAlert['severity'];
-    limit?: number;
-  } = {}): SecurityAlert[] {
+  getSecurityAlerts(
+    filter: {
+      acknowledged?: boolean;
+      severity?: SecurityAlert['severity'];
+      limit?: number;
+    } = {}
+  ): SecurityAlert[] {
     let alerts = [...this.alerts];
 
     if (filter.acknowledged !== undefined) {
@@ -374,7 +405,7 @@ export class SecurityAuditor extends EventEmitter {
     for (const event of recentEvents) {
       eventsByType[event.type] = (eventsByType[event.type] || 0) + 1;
       eventsBySeverity[event.severity] = (eventsBySeverity[event.severity] || 0) + 1;
-      
+
       if (event.userId) {
         userEventCounts[event.userId] = (userEventCounts[event.userId] || 0) + 1;
       }
@@ -391,14 +422,17 @@ export class SecurityAuditor extends EventEmitter {
       eventsBySeverity,
       topUsers,
       alertsGenerated: this.alerts.length,
-      unacknowledgedAlerts: this.alerts.filter(a => !a.acknowledged).length
+      unacknowledgedAlerts: this.alerts.filter(a => !a.acknowledged).length,
     };
   }
 
   /**
    * Export security events to file
    */
-  async exportEvents(filePath: string, filter: Parameters<typeof this.getSecurityEvents>[0] = {}): Promise<void> {
+  async exportEvents(
+    filePath: string,
+    filter: Parameters<typeof this.getSecurityEvents>[0] = {}
+  ): Promise<void> {
     const { events } = this.getSecurityEvents(filter);
     const data = JSON.stringify(events, null, 2);
     await fs.promises.writeFile(filePath, data, 'utf8');
@@ -486,9 +520,15 @@ export class SecurityAuditor extends EventEmitter {
   /**
    * Check specific threshold
    */
-  private checkThreshold(key: string, threshold: number, windowMs: number, now: Date, event: SecurityEvent): void {
+  private checkThreshold(
+    key: string,
+    threshold: number,
+    windowMs: number,
+    now: Date,
+    event: SecurityEvent
+  ): void {
     const countData = this.eventCounts.get(key);
-    
+
     if (!countData || now.getTime() - countData.windowStart.getTime() > windowMs) {
       // Reset window
       this.eventCounts.set(key, { count: 1, windowStart: now });
@@ -507,7 +547,12 @@ export class SecurityAuditor extends EventEmitter {
   /**
    * Generate security alert
    */
-  private generateAlert(type: string, threshold: number, actual: number, triggerEvent: SecurityEvent): void {
+  private generateAlert(
+    type: string,
+    threshold: number,
+    actual: number,
+    triggerEvent: SecurityEvent
+  ): void {
     const alert: SecurityAlert = {
       id: this.generateEventId(),
       type: 'threshold_exceeded',
@@ -515,7 +560,7 @@ export class SecurityAuditor extends EventEmitter {
       message: `Security threshold exceeded: ${type} (${actual}/${threshold})`,
       events: [triggerEvent],
       timestamp: new Date(),
-      acknowledged: false
+      acknowledged: false,
     };
 
     this.alerts.push(alert);
@@ -552,13 +597,13 @@ export class SecurityAuditor extends EventEmitter {
       const response = await fetch(this.config.alerting.webhookUrl!, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           alert,
           timestamp: new Date().toISOString(),
-          source: 'VSCode Prolog Toolkit Security Auditor'
-        })
+          source: 'VSCode Prolog Toolkit Security Auditor',
+        }),
       });
 
       if (!response.ok) {
@@ -598,9 +643,12 @@ export class SecurityAuditor extends EventEmitter {
    */
   private setupCleanupInterval(): void {
     // Run cleanup every hour
-    setInterval(() => {
-      this.cleanupOldEvents();
-    }, 60 * 60 * 1000);
+    setInterval(
+      () => {
+        this.cleanupOldEvents();
+      },
+      60 * 60 * 1000
+    );
   }
 
   /**
@@ -629,8 +677,8 @@ export const defaultAuditConfig: AuditConfig = {
       failed_auth_attempts: 5,
       quota_violations: 3,
       blocked_queries: 10,
-      time_window: 60 // 1 hour
+      time_window: 60, // 1 hour
     },
-    notifications: ['log']
-  }
+    notifications: ['log'],
+  },
 };

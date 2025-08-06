@@ -162,7 +162,7 @@ This document summarizes the comprehensive UI/UX and LSP enhancements implemente
 - [`docs/step8-ui-ux-enhancements-summary.md`](./step8-ui-ux-enhancements-summary.md) - This summary document
 
 ### Backup Files
-- [`src/extension_backup.ts`](../src/extension_backup.ts) - Backup of original extension
+- [`src/extension.ts`](../src/extension.ts) - Backup of original extension
 
 ## 🧪 Validation Results
 

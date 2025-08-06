@@ -1,8 +1,8 @@
 import { expect } from 'chai';
-import { describe, it, beforeEach, afterEach } from 'mocha';
+import { afterEach, beforeEach, describe, it } from 'mocha';
 import * as sinon from 'sinon';
-import { PrologPackageManager, PrologPack } from '../src/features/prologPackageManager';
-import { PrologBackend } from '../src/prologBackend';
+import { PrologPack, PrologPackageManager } from '../src/features/prologPackageManager.js';
+import { PrologBackend } from '../src/prologBackend.js';
 
 describe('PrologPackageManager', () => {
   let packageManager: PrologPackageManager;
@@ -398,10 +398,10 @@ describe('PrologPackageManager', () => {
     it('should add custom pack servers', () => {
       const initialServers = packageManager.getPackServers();
       const newServer = 'https://custom-pack-server.com';
-      
+
       packageManager.addPackServer(newServer);
       const updatedServers = packageManager.getPackServers();
-      
+
       expect(updatedServers).to.have.length(initialServers.length + 1);
       expect(updatedServers).to.include(newServer);
     });
@@ -409,29 +409,29 @@ describe('PrologPackageManager', () => {
     it('should not add duplicate servers', () => {
       const initialServers = packageManager.getPackServers();
       const existingServer = initialServers[0];
-      
+
       packageManager.addPackServer(existingServer);
       const updatedServers = packageManager.getPackServers();
-      
+
       expect(updatedServers).to.have.length(initialServers.length);
     });
 
     it('should remove custom pack servers but not default', () => {
       const customServer = 'https://custom-pack-server.com';
       packageManager.addPackServer(customServer);
-      
+
       const beforeRemoval = packageManager.getPackServers();
       packageManager.removePackServer(customServer);
       const afterRemoval = packageManager.getPackServers();
-      
+
       expect(afterRemoval).to.have.length(beforeRemoval.length - 1);
       expect(afterRemoval).to.not.include(customServer);
-      
+
       // Try to remove default server (should not work)
       const defaultServer = afterRemoval[0];
       packageManager.removePackServer(defaultServer);
       const afterDefaultRemoval = packageManager.getPackServers();
-      
+
       expect(afterDefaultRemoval).to.include(defaultServer);
     });
   });
@@ -439,7 +439,7 @@ describe('PrologPackageManager', () => {
   describe('pack name validation', () => {
     it('should accept valid pack names', () => {
       const validNames = ['http', 'clpfd', 'pack_name', 'pack-name', 'pack123'];
-      
+
       for (const name of validNames) {
         const result = (packageManager as unknown as { validatePackName: (name: string) => boolean }).validatePackName(name);
         expect(result, `${name} should be valid`).to.be.true;
@@ -448,7 +448,7 @@ describe('PrologPackageManager', () => {
 
     it('should reject invalid pack names', () => {
       const invalidNames = ['pack@name', 'pack name', 'pack.name', 'pack/name', ''];
-      
+
       for (const name of invalidNames) {
         const result = (packageManager as unknown as { validatePackName: (name: string) => boolean }).validatePackName(name);
         expect(result, `${name} should be invalid`).to.be.false;

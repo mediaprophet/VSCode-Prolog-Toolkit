@@ -36,54 +36,48 @@ const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
     executablePaths: [
       'C:\\Program Files\\swipl\\bin\\swipl.exe',
       'C:\\swipl\\bin\\swipl.exe',
-      'swipl.exe'
+      'swipl.exe',
     ],
     packageManager: 'chocolatey',
-    installCommands: [
-      'choco install swi-prolog',
-      'winget install SWI.SWI-Prolog'
-    ],
+    installCommands: ['choco install swi-prolog', 'winget install SWI.SWI-Prolog'],
     pathSeparator: '\\',
     executableExtension: '.exe',
     defaultExecutablePath: 'swipl',
     defaultRuntimeArgs: [],
     configurationLocation: '%APPDATA%\\Code\\User\\settings.json',
     tempDirectory: process.env.TEMP || process.env.TMP || 'C:\\temp',
-    homeDirectory: process.env.USERPROFILE || 'C:\\Users\\Default'
+    homeDirectory: process.env.USERPROFILE || 'C:\\Users\\Default',
   },
   macos: {
     executablePaths: [
       '/usr/local/bin/swipl',
       '/opt/homebrew/bin/swipl',
       '/Applications/SWI-Prolog.app/Contents/MacOS/swipl',
-      '/usr/bin/swipl'
+      '/usr/bin/swipl',
     ],
     packageManager: 'homebrew',
-    installCommands: [
-      'brew install swi-prolog',
-      'port install swi-prolog'
-    ],
+    installCommands: ['brew install swi-prolog', 'port install swi-prolog'],
     pathSeparator: '/',
     executableExtension: '',
     defaultExecutablePath: '/usr/local/bin/swipl',
     defaultRuntimeArgs: ['--quiet'],
     configurationLocation: '~/Library/Application Support/Code/User/settings.json',
     tempDirectory: process.env.TMPDIR || '/tmp',
-    homeDirectory: process.env.HOME || '/Users/unknown'
+    homeDirectory: process.env.HOME || '/Users/unknown',
   },
   linux: {
     executablePaths: [
       '/usr/bin/swipl',
       '/usr/local/bin/swipl',
       '/opt/swipl/bin/swipl',
-      '~/.local/bin/swipl'
+      '~/.local/bin/swipl',
     ],
     packageManager: 'apt',
     installCommands: [
       'sudo apt install swi-prolog',
       'sudo yum install pl',
       'sudo dnf install pl',
-      'sudo pacman -S swi-prolog'
+      'sudo pacman -S swi-prolog',
     ],
     pathSeparator: '/',
     executableExtension: '',
@@ -91,8 +85,8 @@ const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
     defaultRuntimeArgs: ['--quiet'],
     configurationLocation: '~/.config/Code/User/settings.json',
     tempDirectory: process.env.TMPDIR || '/tmp',
-    homeDirectory: process.env.HOME || '/home/unknown'
-  }
+    homeDirectory: process.env.HOME || '/home/unknown',
+  },
 };
 
 /**
@@ -106,16 +100,16 @@ export interface EnvironmentVariables {
 const ENVIRONMENT_VARIABLES: Record<PlatformType, EnvironmentVariables> = {
   windows: {
     crossPlatform: ['SWIPL_HOME', 'PROLOG_PATH', 'PATH'],
-    platformSpecific: ['PROGRAMFILES', 'LOCALAPPDATA', 'APPDATA', 'USERPROFILE', 'TEMP', 'TMP']
+    platformSpecific: ['PROGRAMFILES', 'LOCALAPPDATA', 'APPDATA', 'USERPROFILE', 'TEMP', 'TMP'],
   },
   macos: {
     crossPlatform: ['SWIPL_HOME', 'PROLOG_PATH', 'PATH'],
-    platformSpecific: ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'TMPDIR']
+    platformSpecific: ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'TMPDIR'],
   },
   linux: {
     crossPlatform: ['SWIPL_HOME', 'PROLOG_PATH', 'PATH'],
-    platformSpecific: ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'TMPDIR']
-  }
+    platformSpecific: ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'TMPDIR'],
+  },
 };
 
 /**
@@ -133,15 +127,18 @@ export class PlatformUtils {
     if (this._platform === null) {
       const platform = os.platform();
       switch (platform) {
-        case 'win32':
+        case 'win32': {
           this._platform = 'windows';
           break;
-        case 'darwin':
+        }
+        case 'darwin': {
           this._platform = 'macos';
           break;
-        case 'linux':
+        }
+        case 'linux': {
           this._platform = 'linux';
           break;
+        }
         default:
           // Default to linux for unknown platforms
           this._platform = 'linux';
@@ -158,16 +155,18 @@ export class PlatformUtils {
     if (this._architecture === null) {
       const arch = os.arch();
       switch (arch) {
-        case 'x64':
+        case 'x64': {
           this._architecture = 'x64';
           break;
-        case 'arm64':
+        }
+        case 'arm64': {
           this._architecture = 'arm64';
           break;
-        case 'ia32':
-        case 'x32':
+        }
+        case 'ia32': {
           this._architecture = 'x32';
           break;
+        }
         default:
           // Default to x64 for unknown architectures
           this._architecture = 'x64';
@@ -184,11 +183,13 @@ export class PlatformUtils {
     if (this._config === null) {
       const platform = this.getPlatform();
       this._config = { ...PLATFORM_CONFIGS[platform] };
-      
+
       // Expand environment variables in paths
       this._config.tempDirectory = this.expandEnvironmentVariables(this._config.tempDirectory);
       this._config.homeDirectory = this.expandEnvironmentVariables(this._config.homeDirectory);
-      this._config.configurationLocation = this.expandEnvironmentVariables(this._config.configurationLocation);
+      this._config.configurationLocation = this.expandEnvironmentVariables(
+        this._config.configurationLocation
+      );
     }
     return this._config;
   }
@@ -203,7 +204,7 @@ export class PlatformUtils {
 
     // Expand environment variables first
     let normalizedPath = this.expandEnvironmentVariables(inputPath);
-    
+
     // Handle home directory expansion (~)
     if (normalizedPath.startsWith('~')) {
       const homeDir = this.getHomeDirectory();
@@ -405,7 +406,7 @@ export class PlatformUtils {
     if (this.isAbsolute(normalizedPath)) {
       return normalizedPath;
     }
-    
+
     const base = basePath ? this.normalizePath(basePath) : process.cwd();
     return path.resolve(base, normalizedPath);
   }
@@ -431,7 +432,7 @@ export class PlatformUtils {
       homeDirectory: this.getHomeDirectory(),
       tempDirectory: this.getTempDirectory(),
       pathSeparator: this.getPathSeparator(),
-      executableExtension: this.getExecutableExtension()
+      executableExtension: this.getExecutableExtension(),
     };
   }
 

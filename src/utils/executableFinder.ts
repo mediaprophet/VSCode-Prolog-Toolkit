@@ -47,33 +47,36 @@ export class ExecutableFinder {
    */
   private initializeStrategies(): void {
     switch (this.platform) {
-      case 'windows':
+      case 'windows': {
         this.strategies = [
           new WindowsPathStrategy(),
           new WindowsProgramFilesStrategy(),
           new WindowsRegistryStrategy(),
-          new WindowsEnvironmentStrategy()
+          new WindowsEnvironmentStrategy(),
         ];
         break;
-      case 'macos':
+      }
+      case 'macos': {
         this.strategies = [
           new MacOSWhichStrategy(),
           new MacOSHomebrewStrategy(),
           new MacOSApplicationsStrategy(),
           new MacOSMacPortsStrategy(),
-          new MacOSStandardPathsStrategy()
+          new MacOSStandardPathsStrategy(),
         ];
         break;
-      case 'linux':
+      }
+      case 'linux': {
         this.strategies = [
           new LinuxWhichStrategy(),
           new LinuxWhereisStrategy(),
           new LinuxStandardPathsStrategy(),
           new LinuxPackageManagerStrategy(),
           new LinuxSnapFlatpakStrategy(),
-          new LinuxUserLocalStrategy()
+          new LinuxUserLocalStrategy(),
         ];
         break;
+      }
     }
 
     // Sort strategies by priority (higher priority first)
@@ -85,7 +88,7 @@ export class ExecutableFinder {
    */
   public async findSwiplExecutable(): Promise<ExecutableDetectionResult> {
     const issues: string[] = [];
-    
+
     for (const strategy of this.strategies) {
       try {
         const foundPath = await strategy.detect();
@@ -94,20 +97,27 @@ export class ExecutableFinder {
           if (validation.found) {
             return {
               ...validation,
-              detectionMethod: strategy.name
+              detectionMethod: strategy.name,
             };
           } else {
-            issues.push(`Found potential executable at '${foundPath}' via ${strategy.name}, but validation failed: ${validation.issues?.join(', ')}`);
+            issues.push(
+              `Found potential executable at '${foundPath}' via ${strategy.name}, but validation failed: ${validation.issues?.join(', ')}`
+            );
           }
         }
       } catch (error) {
-        issues.push(`Strategy '${strategy.name}' failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        issues.push(
+          `Strategy '${strategy.name}' failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     }
 
     return {
       found: false,
-      issues: issues.length > 0 ? issues : ['No SWI-Prolog executable found using any detection strategy']
+      issues:
+        issues.length > 0
+          ? issues
+          : ['No SWI-Prolog executable found using any detection strategy'],
     };
   }
 
@@ -118,7 +128,7 @@ export class ExecutableFinder {
     if (!execPath) {
       return {
         found: false,
-        issues: ['Empty executable path provided']
+        issues: ['Empty executable path provided'],
       };
     }
 
@@ -132,7 +142,7 @@ export class ExecutableFinder {
         return {
           found: false,
           path: normalizedPath,
-          issues: ['Path exists but is not a file']
+          issues: ['Path exists but is not a file'],
         };
       }
 
@@ -150,7 +160,7 @@ export class ExecutableFinder {
           found: false,
           path: normalizedPath,
           permissions,
-          issues
+          issues,
         };
       }
 
@@ -161,7 +171,7 @@ export class ExecutableFinder {
           found: false,
           path: normalizedPath,
           permissions,
-          issues
+          issues,
         };
       }
 
@@ -170,14 +180,13 @@ export class ExecutableFinder {
         path: normalizedPath,
         version: this.extractVersion(versionResult.output),
         permissions,
-        issues: issues.length > 0 ? issues : undefined
+        issues: issues.length > 0 ? issues : undefined,
       };
-
     } catch (error) {
       return {
         found: false,
         path: normalizedPath,
-        issues: [`File system error: ${error instanceof Error ? error.message : 'Unknown error'}`]
+        issues: [`File system error: ${error instanceof Error ? error.message : 'Unknown error'}`],
       };
     }
   }
@@ -185,11 +194,13 @@ export class ExecutableFinder {
   /**
    * Check file permissions (Unix-style and Windows)
    */
-  private async checkPermissions(filePath: string): Promise<{readable: boolean, writable: boolean, executable: boolean}> {
+  private async checkPermissions(
+    filePath: string
+  ): Promise<{ readable: boolean; writable: boolean; executable: boolean }> {
     const permissions = {
       readable: false,
       writable: false,
-      executable: false
+      executable: false,
     };
 
     try {
@@ -222,25 +233,27 @@ export class ExecutableFinder {
   /**
    * Execute the binary to get version information
    */
-  private async getExecutableVersion(execPath: string): Promise<{success: boolean, output?: string, error?: string}> {
-    return new Promise((resolve) => {
+  private async getExecutableVersion(
+    execPath: string
+  ): Promise<{ success: boolean; output?: string; error?: string }> {
+    return new Promise(resolve => {
       const process = spawn(execPath, ['--version'], {
         stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 10000
+        timeout: 10000,
       });
 
       let stdout = '';
       let stderr = '';
 
-      process.stdout?.on('data', (data) => {
+      process.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      process.stderr?.on('data', (data) => {
+      process.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         if (code === 0) {
           resolve({ success: true, output: stdout });
         } else {
@@ -248,7 +261,7 @@ export class ExecutableFinder {
         }
       });
 
-      process.on('error', (error) => {
+      process.on('error', error => {
         resolve({ success: false, error: error.message });
       });
 
@@ -275,7 +288,7 @@ export class ExecutableFinder {
     if (versionMatch) {
       return versionMatch[1];
     }
-    
+
     // Fallback: try to extract any version-like pattern
     const fallbackMatch = output.match(/(\d+\.\d+\.\d+)/);
     return fallbackMatch ? fallbackMatch[1] : 'Unknown';
@@ -288,29 +301,33 @@ export class ExecutableFinder {
     // Import here to avoid circular dependencies
     const { PackageManagerIntegration } = await import('../features/packageManagerIntegration');
     const packageManager = PackageManagerIntegration.getInstance();
-    
+
     try {
       return await packageManager.getInstallationSuggestions();
     } catch (error) {
       // Fallback to basic suggestions if package manager integration fails
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn('[ExecutableFinder] Package manager integration failed, using fallback suggestions:', errorMsg);
       const suggestions: string[] = [];
       suggestions.push(`Install SWI-Prolog from https://www.swi-prolog.org/download/stable`);
 
       switch (this.platform) {
-        case 'windows':
+        case 'windows': {
           suggestions.push('Windows installation options:');
           suggestions.push('  • Download and run the .exe installer from the official website');
           suggestions.push('  • Use Chocolatey: choco install swi-prolog');
           suggestions.push('  • Use Winget: winget install SWI.SWI-Prolog');
           suggestions.push('  • Use Scoop: scoop install swi-prolog');
           break;
-        case 'macos':
+        }
+        case 'macos': {
           suggestions.push('macOS installation options:');
           suggestions.push('  • Use Homebrew: brew install swi-prolog');
           suggestions.push('  • Use MacPorts: sudo port install swi-prolog');
           suggestions.push('  • Download and install the .dmg file from the official website');
           break;
-        case 'linux':
+        }
+        case 'linux': {
           suggestions.push('Linux installation options:');
           suggestions.push('  • Ubuntu/Debian: sudo apt install swi-prolog');
           suggestions.push('  • CentOS/RHEL: sudo yum install pl');
@@ -320,6 +337,7 @@ export class ExecutableFinder {
           suggestions.push('  • Snap: sudo snap install swi-prolog');
           suggestions.push('  • Flatpak: flatpak install org.swi_prolog.SWI-Prolog');
           break;
+        }
       }
 
       return suggestions;
@@ -355,7 +373,7 @@ class WindowsProgramFilesStrategy implements DetectionStrategy {
     const paths = [
       'C:\\Program Files\\swipl\\bin\\swipl.exe',
       'C:\\Program Files (x86)\\swipl\\bin\\swipl.exe',
-      'C:\\swipl\\bin\\swipl.exe'
+      'C:\\swipl\\bin\\swipl.exe',
     ];
 
     if (process.env.ProgramFiles) {
@@ -388,7 +406,7 @@ class WindowsRegistryStrategy implements DetectionStrategy {
     // For now, we'll check common registry-based installation paths
     const registryPaths = [
       path.join(os.homedir(), 'AppData', 'Local', 'swipl', 'bin', 'swipl.exe'),
-      path.join(os.homedir(), 'AppData', 'Roaming', 'swipl', 'bin', 'swipl.exe')
+      path.join(os.homedir(), 'AppData', 'Roaming', 'swipl', 'bin', 'swipl.exe'),
     ];
 
     for (const execPath of registryPaths) {
@@ -446,7 +464,7 @@ class MacOSHomebrewStrategy implements DetectionStrategy {
   async detect(): Promise<string | null> {
     const homebrewPaths = [
       '/usr/local/bin/swipl', // Intel Macs
-      '/opt/homebrew/bin/swipl' // Apple Silicon Macs
+      '/opt/homebrew/bin/swipl', // Apple Silicon Macs
     ];
 
     for (const execPath of homebrewPaths) {
@@ -484,7 +502,7 @@ class MacOSMacPortsStrategy implements DetectionStrategy {
   async detect(): Promise<string | null> {
     const macPortsPaths = [
       '/opt/local/bin/swipl',
-      '/sw/bin/swipl' // Fink
+      '/sw/bin/swipl', // Fink
     ];
 
     for (const execPath of macPortsPaths) {
@@ -505,10 +523,7 @@ class MacOSStandardPathsStrategy implements DetectionStrategy {
   priority = 60;
 
   async detect(): Promise<string | null> {
-    const standardPaths = [
-      '/usr/bin/swipl',
-      path.join(os.homedir(), '.local', 'bin', 'swipl')
-    ];
+    const standardPaths = ['/usr/bin/swipl', path.join(os.homedir(), '.local', 'bin', 'swipl')];
 
     for (const execPath of standardPaths) {
       try {
@@ -543,22 +558,22 @@ class LinuxWhereisStrategy implements DetectionStrategy {
   priority = 95;
 
   async detect(): Promise<string | null> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const process = spawn('whereis', ['swipl'], {
         stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 5000
+        timeout: 5000,
       });
 
       let output = '';
-      process.stdout?.on('data', (data) => {
+      process.stdout?.on('data', data => {
         output += data.toString();
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         if (code === 0) {
           // whereis output format: "swipl: /usr/bin/swipl /usr/share/man/man1/swipl.1.gz"
           const match = output.match(/swipl:\s+([^\s]+)/);
-          if (match && match[1] && !match[1].includes('.gz')) {
+          if (match?.[1] && !match[1].includes('.gz')) {
             resolve(match[1]);
             return;
           }
@@ -583,11 +598,7 @@ class LinuxStandardPathsStrategy implements DetectionStrategy {
   priority = 90;
 
   async detect(): Promise<string | null> {
-    const standardPaths = [
-      '/usr/bin/swipl',
-      '/usr/local/bin/swipl',
-      '/opt/swipl/bin/swipl'
-    ];
+    const standardPaths = ['/usr/bin/swipl', '/usr/local/bin/swipl', '/opt/swipl/bin/swipl'];
 
     for (const execPath of standardPaths) {
       try {
@@ -609,7 +620,7 @@ class LinuxPackageManagerStrategy implements DetectionStrategy {
   async detect(): Promise<string | null> {
     const packagePaths = [
       '/usr/lib/swi-prolog/bin/x86_64-linux/swipl', // Debian/Ubuntu specific
-      '/usr/lib64/swi-prolog/bin/x86_64-linux/swipl' // 64-bit systems
+      '/usr/lib64/swi-prolog/bin/x86_64-linux/swipl', // 64-bit systems
     ];
 
     for (const execPath of packagePaths) {
@@ -633,7 +644,15 @@ class LinuxSnapFlatpakStrategy implements DetectionStrategy {
     const snapFlatpakPaths = [
       '/snap/bin/swi-prolog',
       '/var/lib/flatpak/exports/bin/org.swi_prolog.SWI-Prolog',
-      path.join(os.homedir(), '.local', 'share', 'flatpak', 'exports', 'bin', 'org.swi_prolog.SWI-Prolog')
+      path.join(
+        os.homedir(),
+        '.local',
+        'share',
+        'flatpak',
+        'exports',
+        'bin',
+        'org.swi_prolog.SWI-Prolog'
+      ),
     ];
 
     for (const execPath of snapFlatpakPaths) {
@@ -656,7 +675,7 @@ class LinuxUserLocalStrategy implements DetectionStrategy {
   async detect(): Promise<string | null> {
     const userPaths = [
       path.join(os.homedir(), '.local', 'bin', 'swipl'),
-      path.join(os.homedir(), 'bin', 'swipl')
+      path.join(os.homedir(), 'bin', 'swipl'),
     ];
 
     for (const execPath of userPaths) {

@@ -52,35 +52,38 @@ export class ApiServer {
    */
   private setupMiddleware(): void {
     // Security middleware
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:", "https:"],
+    this.app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-      crossOriginEmbedderPolicy: false, // Allow WebSocket connections
-    }));
+        crossOriginEmbedderPolicy: false, // Allow WebSocket connections
+      })
+    );
 
     // CORS configuration
-    this.app.use(cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        if (this.config.corsOrigins.includes('*') || 
-            this.config.corsOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        
-        callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
-    }));
+    this.app.use(
+      cors({
+        origin: (origin, callback) => {
+          // Allow requests with no origin (like mobile apps or curl requests)
+          if (!origin) return callback(null, true);
+
+          if (this.config.corsOrigins.includes('*') || this.config.corsOrigins.includes(origin)) {
+            return callback(null, true);
+          }
+
+          callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+      })
+    );
 
     // Rate limiting
     if (this.config.rateLimiting.enabled) {
@@ -90,16 +93,16 @@ export class ApiServer {
         message: {
           error: 'Too many requests',
           message: `Rate limit exceeded. Maximum ${this.config.rateLimiting.requestsPerMinute} requests per minute.`,
-          retryAfter: 60
+          retryAfter: 60,
         },
         standardHeaders: true,
         legacyHeaders: false,
         // Allow burst requests up to the burst limit
-        skip: (req) => {
+        skip: req => {
           const burstKey = `burst_${req.ip}`;
           // Simple burst tracking (in production, use Redis or similar)
           return false; // For now, apply rate limiting to all requests
-        }
+        },
       });
       this.app.use('/api/', limiter);
     }
@@ -113,7 +116,7 @@ export class ApiServer {
       req.setTimeout(this.config.requestTimeout, () => {
         res.status(408).json({
           error: 'Request timeout',
-          message: `Request exceeded ${this.config.requestTimeout}ms timeout`
+          message: `Request exceeded ${this.config.requestTimeout}ms timeout`,
         });
       });
       next();
@@ -126,12 +129,12 @@ export class ApiServer {
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       const start = Date.now();
       console.log(`[ApiServer] ${req.method} ${req.path} - ${req.ip}`);
-      
+
       res.on('finish', () => {
         const duration = Date.now() - start;
         console.log(`[ApiServer] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
       });
-      
+
       next();
     });
   }
@@ -148,8 +151,8 @@ export class ApiServer {
         version: '1.0.0',
         backend: {
           running: this.prologBackend.isRunning(),
-          port: this.prologBackend['port'] || 3060
-        }
+          port: this.prologBackend['port'] || 3060,
+        },
       });
     });
 
@@ -167,11 +170,11 @@ export class ApiServer {
           reasoning: {
             clp: 'POST /api/v1/reasoning/clp',
             probabilistic: 'POST /api/v1/reasoning/probabilistic',
-            n3: 'POST /api/v1/reasoning/n3'
+            n3: 'POST /api/v1/reasoning/n3',
           },
           history: 'GET /api/v1/history',
-          status: 'GET /api/v1/status'
-        }
+          status: 'GET /api/v1/status',
+        },
       });
     });
 
@@ -195,22 +198,22 @@ export class ApiServer {
           'POST /api/v1/batch',
           'GET /api/v1/sessions',
           'POST /api/v1/sessions',
-          'GET /api/v1/status'
-        ]
+          'GET /api/v1/status',
+        ],
       });
     });
 
     // Global error handler
     this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
       console.error(`[ApiServer] Error in ${req.method} ${req.path}:`, error);
-      
+
       // Don't send error details in production
       const isDevelopment = process.env.NODE_ENV !== 'production';
-      
+
       res.status(500).json({
         error: 'Internal Server Error',
         message: isDevelopment ? error.message : 'An unexpected error occurred',
-        ...(isDevelopment && { stack: error.stack })
+        ...(isDevelopment && { stack: error.stack }),
       });
     });
   }
@@ -232,9 +235,15 @@ export class ApiServer {
       try {
         this.server = this.app.listen(this.config.port, this.config.host, () => {
           this.isRunning = true;
-          console.log(`[ApiServer] HTTP API server started on ${this.config.host}:${this.config.port}`);
-          console.log(`[ApiServer] Health check: http://${this.config.host}:${this.config.port}/health`);
-          console.log(`[ApiServer] API documentation: http://${this.config.host}:${this.config.port}/api`);
+          console.log(
+            `[ApiServer] HTTP API server started on ${this.config.host}:${this.config.port}`
+          );
+          console.log(
+            `[ApiServer] Health check: http://${this.config.host}:${this.config.port}/health`
+          );
+          console.log(
+            `[ApiServer] API documentation: http://${this.config.host}:${this.config.port}/api`
+          );
           resolve();
         });
 
@@ -245,7 +254,6 @@ export class ApiServer {
 
         // Handle connection limits
         this.server.maxConnections = this.config.maxConnections;
-
       } catch (error: unknown) {
         reject(error);
       }
@@ -261,7 +269,7 @@ export class ApiServer {
     }
 
     return new Promise((resolve, reject) => {
-      this.server!.close((error) => {
+      this.server!.close(error => {
         if (error) {
           console.error('[ApiServer] Error stopping server:', error);
           reject(error);
@@ -288,7 +296,7 @@ export class ApiServer {
       running: this.isRunning,
       port: this.config.port,
       host: this.config.host,
-      connections: (this.server as any)?.connections || 0
+      connections: (this.server as any)?.connections || 0,
     };
   }
 

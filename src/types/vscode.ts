@@ -26,12 +26,11 @@ import {
   ChatResult,
   Terminal,
   TerminalExitStatus,
-  TextEditor,
   Uri,
   MarkdownString,
   MarkedString,
   SnippetString,
-  Command
+  Command,
 } from 'vscode';
 
 // Extension Context and Lifecycle
@@ -75,10 +74,13 @@ export interface ExtensionConfiguration {
     };
     auth: {
       method: 'local_only' | 'api_key' | 'jwt_token' | 'oauth2';
-      apiKeys: Record<string, {
-        role: 'admin' | 'agent' | 'readonly' | 'limited';
-        permissions: string[];
-      }>;
+      apiKeys: Record<
+        string,
+        {
+          role: 'admin' | 'agent' | 'readonly' | 'limited';
+          permissions: string[];
+        }
+      >;
       jwtSecret: string;
       jwtExpiration: string;
     };

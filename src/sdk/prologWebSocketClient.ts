@@ -66,13 +66,13 @@ export class PrologWebSocketClient extends EventEmitter {
         enabled: true,
         maxAttempts: 5,
         delay: 1000,
-        backoff: true
+        backoff: true,
       },
       heartbeat: {
         enabled: true,
-        interval: 30000
+        interval: 30000,
       },
-      ...config
+      ...config,
     };
   }
 
@@ -98,7 +98,7 @@ export class PrologWebSocketClient extends EventEmitter {
           resolve();
         });
 
-        this.ws.on('message', (data) => {
+        this.ws.on('message', data => {
           this.handleMessage(data);
         });
 
@@ -107,13 +107,13 @@ export class PrologWebSocketClient extends EventEmitter {
           this.stopHeartbeat();
           this.emit('disconnected', code, reason);
           console.log(`[PrologWebSocketClient] Disconnected (${code}: ${reason})`);
-          
+
           if (this.config.reconnect?.enabled && code !== 1000) {
             this.scheduleReconnect();
           }
         });
 
-        this.ws.on('error', (error) => {
+        this.ws.on('error', error => {
           this.emit('error', error);
           console.error('[PrologWebSocketClient] WebSocket error:', error);
           reject(error);
@@ -122,7 +122,6 @@ export class PrologWebSocketClient extends EventEmitter {
         this.ws.on('pong', () => {
           this.emit('pong');
         });
-
       } catch (error) {
         reject(error);
       }
@@ -152,7 +151,10 @@ export class PrologWebSocketClient extends EventEmitter {
   /**
    * Subscribe to query notifications
    */
-  async subscribeToQuery(queryId: string, eventTypes: string[] = ['progress', 'complete', 'error']): Promise<void> {
+  async subscribeToQuery(
+    queryId: string,
+    eventTypes: string[] = ['progress', 'complete', 'error']
+  ): Promise<void> {
     if (!this.isConnected) {
       throw new Error('WebSocket not connected');
     }
@@ -160,7 +162,7 @@ export class PrologWebSocketClient extends EventEmitter {
     const message = {
       type: 'subscribe',
       query_id: queryId,
-      event_types: eventTypes
+      event_types: eventTypes,
     };
 
     this.send(message);
@@ -170,7 +172,10 @@ export class PrologWebSocketClient extends EventEmitter {
   /**
    * Subscribe to session events
    */
-  async subscribeToSession(sessionId: string, eventTypes: string[] = ['created', 'switched', 'deleted', 'state_saved']): Promise<void> {
+  async subscribeToSession(
+    sessionId: string,
+    eventTypes: string[] = ['created', 'switched', 'deleted', 'state_saved']
+  ): Promise<void> {
     if (!this.isConnected) {
       throw new Error('WebSocket not connected');
     }
@@ -178,7 +183,7 @@ export class PrologWebSocketClient extends EventEmitter {
     const message = {
       type: 'subscribe',
       session_id: sessionId,
-      event_types: eventTypes
+      event_types: eventTypes,
     };
 
     this.send(message);
@@ -195,7 +200,7 @@ export class PrologWebSocketClient extends EventEmitter {
 
     const message = {
       type: 'subscribe',
-      event_types: ['system_status']
+      event_types: ['system_status'],
     };
 
     this.send(message);
@@ -212,7 +217,7 @@ export class PrologWebSocketClient extends EventEmitter {
 
     const message = {
       type: 'unsubscribe',
-      query_id: queryId
+      query_id: queryId,
     };
 
     this.send(message);
@@ -229,7 +234,7 @@ export class PrologWebSocketClient extends EventEmitter {
 
     const message = {
       type: 'unsubscribe',
-      session_id: sessionId
+      session_id: sessionId,
     };
 
     this.send(message);
@@ -246,7 +251,7 @@ export class PrologWebSocketClient extends EventEmitter {
 
     const message = {
       type: 'cancel_query',
-      query_id: queryId
+      query_id: queryId,
     };
 
     this.send(message);
@@ -262,7 +267,7 @@ export class PrologWebSocketClient extends EventEmitter {
 
     const message = {
       type: 'get_query_status',
-      query_id: queryId
+      query_id: queryId,
     };
 
     this.send(message);
@@ -277,7 +282,7 @@ export class PrologWebSocketClient extends EventEmitter {
     }
 
     const message = {
-      type: 'get_system_status'
+      type: 'get_system_status',
     };
 
     this.send(message);
@@ -311,7 +316,7 @@ export class PrologWebSocketClient extends EventEmitter {
    */
   private buildConnectionUrl(): string {
     const url = new URL(this.config.url);
-    
+
     if (this.config.auth?.type === 'api_key' && this.config.auth.apiKey) {
       url.searchParams.set('api_key', this.config.auth.apiKey);
     } else if (this.config.auth?.type === 'jwt_token' && this.config.auth.jwtToken) {
@@ -327,57 +332,58 @@ export class PrologWebSocketClient extends EventEmitter {
   private handleMessage(data: WebSocket.Data): void {
     try {
       const message = JSON.parse(data.toString());
-      
+
       switch (message.type) {
-        case 'welcome':
+        case 'welcome': {
           this.emit('welcome', message);
           break;
-        
-        case 'query_progress':
+        }
+        case 'query_progress': {
           this.emit('queryProgress', message as QueryNotification);
           this.emit('notification', message);
           break;
-        
-        case 'query_complete':
+        }
+        case 'query_complete': {
           this.emit('queryComplete', message as QueryNotification);
           this.emit('notification', message);
           break;
-        
-        case 'session_event':
+        }
+        case 'session_event': {
           this.emit('sessionEvent', message as SessionEvent);
           this.emit('notification', message);
           break;
-        
+        }
         case 'system_status':
-        case 'system_status_response':
+        case 'system_status_response': {
           this.emit('systemStatus', message as SystemStatus);
           this.emit('notification', message);
           break;
-        
-        case 'query_status_response':
+        }
+        case 'query_status_response': {
           this.emit('queryStatusResponse', message);
           break;
-        
-        case 'query_cancel_response':
+        }
+        case 'query_cancel_response': {
           this.emit('queryCancelResponse', message);
           break;
-        
-        case 'subscribed':
+        }
+        case 'subscribed': {
           this.emit('subscribed', message);
           break;
-        
-        case 'unsubscribed':
+        }
+        case 'unsubscribed': {
           this.emit('unsubscribed', message);
           break;
-        
-        case 'error':
+        }
+        case 'error': {
           this.emit('serverError', message);
           break;
-        
-        case 'pong':
+        }
+        case 'pong': {
           this.emit('pong', message);
           break;
-        
+        }
+
         default:
           this.emit('unknownMessage', message);
           console.warn('[PrologWebSocketClient] Unknown message type:', message.type);
@@ -403,24 +409,28 @@ export class PrologWebSocketClient extends EventEmitter {
    * Schedule reconnection attempt
    */
   private scheduleReconnect(): void {
-    if (!this.config.reconnect?.enabled || 
-        this.reconnectAttempts >= (this.config.reconnect.maxAttempts || 5)) {
+    if (
+      !this.config.reconnect?.enabled ||
+      this.reconnectAttempts >= (this.config.reconnect.maxAttempts || 5)
+    ) {
       this.emit('reconnectFailed');
       return;
     }
 
     this.reconnectAttempts++;
-    
+
     let delay = this.config.reconnect.delay || 1000;
     if (this.config.reconnect.backoff) {
       delay *= Math.pow(2, this.reconnectAttempts - 1);
     }
 
-    console.log(`[PrologWebSocketClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
+    console.log(
+      `[PrologWebSocketClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`
+    );
+
     this.reconnectTimer = setTimeout(() => {
       this.emit('reconnecting', this.reconnectAttempts);
-      this.connect().catch((error) => {
+      this.connect().catch(error => {
         console.error('[PrologWebSocketClient] Reconnection failed:', error);
         this.scheduleReconnect();
       });
@@ -466,8 +476,8 @@ export function createApiKeyWebSocketClient(url: string, apiKey: string): Prolog
     url,
     auth: {
       type: 'api_key',
-      apiKey
-    }
+      apiKey,
+    },
   });
 }
 
@@ -479,19 +489,21 @@ export function createJwtWebSocketClient(url: string, jwtToken: string): PrologW
     url,
     auth: {
       type: 'jwt_token',
-      jwtToken
-    }
+      jwtToken,
+    },
   });
 }
 
 /**
  * Convenience function to create a local WebSocket client (no authentication)
  */
-export function createLocalWebSocketClient(url: string = 'ws://localhost:8081'): PrologWebSocketClient {
+export function createLocalWebSocketClient(
+  url: string = 'ws://localhost:8081'
+): PrologWebSocketClient {
   return new PrologWebSocketClient({
     url,
     auth: {
-      type: 'none'
-    }
+      type: 'none',
+    },
   });
 }

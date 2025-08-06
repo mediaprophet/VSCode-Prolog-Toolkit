@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import * as vscode from 'vscode';
-import { PrologLSPExtension } from '../src/features/prologLSPExtension';
+import { PrologLSPExtension } from '../src/features/prologLSPExtension.js';
 
 describe('UI/UX Enhancements', () => {
   let mockContext: vscode.ExtensionContext;
@@ -58,10 +58,10 @@ describe('UI/UX Enhancements', () => {
   describe('Chat Participant Configuration', () => {
     it('should have enhanced chat participant configuration in package.json', async () => {
       const packageJson = require('../package.json');
-      
+
       expect(packageJson.contributes.chatParticipants).to.be.an('array');
       expect(packageJson.contributes.chatParticipants).to.have.length(1);
-      
+
       const chatParticipant = packageJson.contributes.chatParticipants[0];
       expect(chatParticipant.id).to.equal('prolog');
       expect(chatParticipant.description).to.include('🤖');
@@ -73,7 +73,7 @@ describe('UI/UX Enhancements', () => {
       const packageJson = require('../package.json');
       const chatParticipant = packageJson.contributes.chatParticipants[0];
       const commandNames = chatParticipant.commands.map((cmd: any) => cmd.name);
-      
+
       const expectedCommands = ['query', 'consult', 'help', 'status', 'n3_load', 'n3_list', 'n3_reason', 'n3_explain'];
       expectedCommands.forEach(cmd => {
         expect(commandNames).to.include(cmd);
@@ -86,7 +86,7 @@ describe('UI/UX Enhancements', () => {
       const packageJson = require('../package.json');
       const commands = packageJson.contributes.commands;
       const commandIds = commands.map((cmd: any) => cmd.command);
-      
+
       expect(commandIds).to.include('prolog.lsp.executeQuery');
       expect(commandIds).to.include('prolog.lsp.getHelp');
       expect(commandIds).to.include('prolog.lsp.runN3Diagnostics');
@@ -96,7 +96,7 @@ describe('UI/UX Enhancements', () => {
       const packageJson = require('../package.json');
       const keybindings = packageJson.contributes.keybindings;
       const commandIds = keybindings.map((kb: any) => kb.command);
-      
+
       expect(commandIds).to.include('prolog.lsp.executeQuery');
       expect(commandIds).to.include('prolog.lsp.getHelp');
     });
@@ -105,7 +105,7 @@ describe('UI/UX Enhancements', () => {
       const packageJson = require('../package.json');
       const contextMenus = packageJson.contributes.menus['editor/context'];
       const commandIds = contextMenus.map((menu: any) => menu.command);
-      
+
       expect(commandIds).to.include('prolog.lsp.executeQuery');
       expect(commandIds).to.include('prolog.lsp.getHelp');
       expect(commandIds).to.include('prolog.lsp.runN3Diagnostics');

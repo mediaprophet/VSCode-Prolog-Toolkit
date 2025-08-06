@@ -14,15 +14,15 @@ export function safeGet<T, K extends keyof T>(obj: T | null | undefined, key: K)
  */
 export function safeGetNested<T>(obj: any, path: string): T | undefined {
   if (!obj || typeof obj !== 'object') return undefined;
-  
+
   const keys = path.split('.');
   let current = obj;
-  
+
   for (const key of keys) {
     if (current == null || typeof current !== 'object') return undefined;
     current = current[key];
   }
-  
+
   return current as T;
 }
 
@@ -77,8 +77,8 @@ export function createSafeAccessor<T extends Record<string, any>>(obj: T | null 
       return obj != null && key in obj;
     },
     keys(): (keyof T)[] {
-      return obj ? Object.keys(obj) as (keyof T)[] : [];
-    }
+      return obj ? (Object.keys(obj) as (keyof T)[]) : [];
+    },
   };
 }
 

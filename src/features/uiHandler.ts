@@ -11,5 +11,5 @@ export const defaultUIHandler: UIHandler = {
   executeCommand: async (command: string, ...rest: any[]): Promise<any> => {
     console.log(`Command execution requested: ${command}`);
     return undefined;
-  }
+  },
 };

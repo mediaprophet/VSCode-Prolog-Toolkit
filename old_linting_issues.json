@@ -1,0 +1,42 @@
+[
+  {
+    "phase": 1,
+    "description": "Fix all 'no-unused-vars' warnings and errors by removing, using, or prefixing unused variables with _ if intentionally unused.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 2,
+    "description": "Fix all 'no-redeclare' errors by renaming or removing duplicate variable declarations.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 3,
+    "description": "Fix all 'no-namespace' errors by converting TypeScript namespaces to ES2015 module syntax.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 4,
+    "description": "Fix all 'parserOptions.project' errors by removing or correcting parserOptions.project for non-project files.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 5,
+    "description": "Fix all remaining lint errors and warnings, including invalid regular expressions and any other rule violations.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  }
+]

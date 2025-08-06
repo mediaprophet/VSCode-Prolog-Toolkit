@@ -5,7 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { PlatformUtils } from './utils/platformUtils';
 import { ExecutableFinder } from './utils/executableFinder';
-import { QueryNotificationManager, QueryCallback, QueryNotificationOptions } from './features/queryNotificationManager';
+import {
+  QueryNotificationManager,
+  QueryCallback,
+  QueryNotificationOptions,
+} from './features/queryNotificationManager';
 import { ConcurrencyManager, ResourceQuota, QueryPriority } from './features/concurrencyManager';
 import { QueryHistoryManager, QueryHistoryOptions } from './features/queryHistoryManager';
 import { QueryScheduler, ScheduledQuery } from './features/queryScheduler';
@@ -42,7 +46,10 @@ export class PrologBackend extends EventEmitter {
   private process: ChildProcessWithoutNullStreams | null = null;
   private options: PrologBackendOptions;
   private isReady: boolean = false;
-  private pendingRequests: Map<string, {resolve: (v: any) => void, reject: (e: any) => void, timeout: NodeJS.Timeout}> = new Map();
+  private pendingRequests: Map<
+    string,
+    { resolve: (v: any) => void; reject: (e: any) => void; timeout: NodeJS.Timeout }
+  > = new Map();
   private intentionalStop: boolean = false;
   private _suppressStoppedEvent: boolean = false;
   private port: number;
@@ -53,7 +60,7 @@ export class PrologBackend extends EventEmitter {
   private historyManager: QueryHistoryManager;
   private queryScheduler: QueryScheduler;
   private sessionManager: SessionManager;
-  private runningQueries: Map<string, {cancel: () => void}> = new Map();
+  private runningQueries: Map<string, { cancel: () => void }> = new Map();
   private uiHandler: UIHandler;
 
   // Logging and diagnostics
@@ -69,12 +76,12 @@ export class PrologBackend extends EventEmitter {
     this.maxResultsPerChunk = options.maxResultsPerChunk || 50;
     this.streamingEnabled = options.streamingEnabled ?? true;
     this.uiHandler = options.uiHandler || defaultUIHandler;
-    
+
     // Initialize notification manager
     this.notificationManager = new QueryNotificationManager({
       enableWebSocket: true,
       webSocketPort: (options.port || 3060) + 2, // Use port + 2 for WebSocket
-      ...options.notificationOptions
+      ...options.notificationOptions,
     });
 
     // Initialize concurrency manager
@@ -85,7 +92,7 @@ export class PrologBackend extends EventEmitter {
     // Initialize history manager
     this.historyManager = new QueryHistoryManager({
       storageDir: PlatformUtils.joinPath(process.cwd(), '.prolog-history'),
-      ...options.historyOptions
+      ...options.historyOptions,
     });
 
     // Initialize query scheduler
@@ -98,7 +105,7 @@ export class PrologBackend extends EventEmitter {
     // Initialize session manager
     this.sessionManager = new SessionManager({
       storageDir: PlatformUtils.joinPath(process.cwd(), '.prolog-sessions'),
-      ...options.sessionOptions
+      ...options.sessionOptions,
     });
 
     // Set up integration between managers
@@ -118,50 +125,50 @@ export class PrologBackend extends EventEmitter {
     });
 
     // Concurrency manager events
-    this.concurrencyManager.on('executeQuery', async (event) => {
+    this.concurrencyManager.on('executeQuery', async event => {
       await this.handleConcurrencyManagerExecution(event);
     });
 
-    this.concurrencyManager.on('queryCompleted', (event) => {
+    this.concurrencyManager.on('queryCompleted', event => {
       this.emit('queryCompleted', event);
     });
 
-    this.concurrencyManager.on('resourceUsageUpdated', (usage) => {
+    this.concurrencyManager.on('resourceUsageUpdated', usage => {
       this.emit('resourceUsageUpdated', usage);
     });
 
     // History manager events
-    this.historyManager.on('queryAdded', (entry) => {
+    this.historyManager.on('queryAdded', entry => {
       this.emit('queryHistoryAdded', entry);
     });
 
     // Scheduler events
-    this.queryScheduler.on('queryScheduleCompleted', (query) => {
+    this.queryScheduler.on('queryScheduleCompleted', query => {
       this.emit('queryScheduleCompleted', query);
     });
 
-    this.queryScheduler.on('queryScheduleExecutionStarted', (query) => {
+    this.queryScheduler.on('queryScheduleExecutionStarted', query => {
       this.emit('queryScheduleExecutionStarted', query);
     });
 
     // Session manager events
-    this.sessionManager.on('sessionCreated', (event) => {
+    this.sessionManager.on('sessionCreated', event => {
       this.emit('sessionCreated', event);
     });
 
-    this.sessionManager.on('sessionSwitched', (event) => {
+    this.sessionManager.on('sessionSwitched', event => {
       this.emit('sessionSwitched', event);
     });
 
-    this.sessionManager.on('sessionDeleted', (event) => {
+    this.sessionManager.on('sessionDeleted', event => {
       this.emit('sessionDeleted', event);
     });
 
-    this.sessionManager.on('sessionStateSaved', (event) => {
+    this.sessionManager.on('sessionStateSaved', event => {
       this.emit('sessionStateSaved', event);
     });
 
-    this.sessionManager.on('sessionStateRestored', (event) => {
+    this.sessionManager.on('sessionStateRestored', event => {
       this.emit('sessionStateRestored', event);
     });
   }
@@ -171,7 +178,7 @@ export class PrologBackend extends EventEmitter {
    */
   private async handleConcurrencyManagerExecution(event: any): Promise<void> {
     const { query, resolve, reject } = event;
-    
+
     try {
       // Execute the actual query
       const result = await this.executeQueryDirect(query.cmd, query.params);
@@ -186,7 +193,14 @@ export class PrologBackend extends EventEmitter {
   }
 
   stop(intentional = true) {
-    this.log('[DEBUG] stop() called. this.process=' + !!this.process + ', intentionalStop=' + this.intentionalStop + ', param=' + intentional);
+    this.log(
+      '[DEBUG] stop() called. this.process=' +
+        !!this.process +
+        ', intentionalStop=' +
+        this.intentionalStop +
+        ', param=' +
+        intentional
+    );
     if (this.process) {
       this.intentionalStop = intentional;
       if (intentional) {
@@ -197,13 +211,13 @@ export class PrologBackend extends EventEmitter {
       this.process.kill();
       this.process = null;
       this.isReady = false;
-      
+
       // Cancel all running queries
       this.runningQueries.forEach((query, queryId) => {
         this.notificationManager.cancelQuery(queryId);
       });
       this.runningQueries.clear();
-      
+
       // Close all managers if intentional stop
       if (intentional) {
         this.notificationManager.close();
@@ -212,7 +226,7 @@ export class PrologBackend extends EventEmitter {
         this.queryScheduler.dispose();
         this.sessionManager.dispose();
       }
-      
+
       // Only emit 'stopped' if not in the middle of an automatic restart
       if (!this._suppressStoppedEvent) {
         this.log('[DEBUG] Emitting stopped event');
@@ -243,7 +257,10 @@ export class PrologBackend extends EventEmitter {
     }
   }
 
-  async sendRequest(cmdOrBatch: string | Array<{cmd: string, params?: Record<string, any>, timeoutMs?: number}>, params: Record<string, any> = {}): Promise<any> {
+  async sendRequest(
+    cmdOrBatch: string | Array<{ cmd: string; params?: Record<string, any>; timeoutMs?: number }>,
+    params: Record<string, any> = {}
+  ): Promise<any> {
     if (!this.isReady) {
       throw new Error('Prolog backend not ready');
     }
@@ -252,23 +269,24 @@ export class PrologBackend extends EventEmitter {
       const cmd = cmdOrBatch;
       const id = uuidv4();
       const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : 10000;
-      let paramsWithLimit = { ...params };
+      const paramsWithLimit = { ...params };
       if (typeof paramsWithLimit.time_limit === 'undefined') {
         paramsWithLimit.time_limit = Math.ceil(timeoutMs / 1000);
       }
-      
+
       // Add streaming parameters if enabled
       if (this.streamingEnabled && !paramsWithLimit.disable_streaming) {
-        paramsWithLimit.max_results_per_chunk = paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
+        paramsWithLimit.max_results_per_chunk =
+          paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
         paramsWithLimit.streaming = true;
       }
-      
-      const {timeoutMs: _omit, ...paramsNoTimeout} = paramsWithLimit;
+
+      const { timeoutMs: _omit, ...paramsNoTimeout } = paramsWithLimit;
       const request = {
         id,
         cmd,
         ...paramsNoTimeout,
-        protocol: 1
+        protocol: 1,
       };
       const timeout = setTimeout(() => {
         throw new Error('Prolog request timeout');
@@ -283,29 +301,31 @@ export class PrologBackend extends EventEmitter {
       }
     }
     // Batch request
-    const batch = cmdOrBatch.map((req) => {
+    const batch = cmdOrBatch.map(req => {
       const id = uuidv4();
-      let paramsWithLimit = { ...req.params || {} };
+      const paramsWithLimit = { ...(req.params || {}) };
       if (typeof req.timeoutMs === 'number' && typeof paramsWithLimit.time_limit === 'undefined') {
         paramsWithLimit.time_limit = Math.ceil(req.timeoutMs / 1000);
       }
-      
+
       // Add streaming parameters if enabled
       if (this.streamingEnabled && !paramsWithLimit.disable_streaming) {
-        paramsWithLimit.max_results_per_chunk = paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
+        paramsWithLimit.max_results_per_chunk =
+          paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
         paramsWithLimit.streaming = true;
       }
-      
+
       return {
         id,
         cmd: req.cmd,
         ...paramsWithLimit,
         protocol: 1,
-        timeoutMs: req.timeoutMs
+        timeoutMs: req.timeoutMs,
       };
     });
-    const batchToSend = batch.map(({timeoutMs: _omit, ...toSend}) => toSend);
-    const responses = await Promise.all(batch.map(async (req) => {
+    const batchToSend = batch.map(({ timeoutMs: _omit, ...toSend }) => toSend);
+    const responses = await Promise.all(
+      batch.map(async req => {
         const timeout = setTimeout(() => {
           throw new Error('Prolog request timeout in batch');
         }, req.timeoutMs || 10000);
@@ -317,7 +337,8 @@ export class PrologBackend extends EventEmitter {
           clearTimeout(timeout);
           throw err;
         }
-    }));
+      })
+    );
     return responses;
   }
 
@@ -325,7 +346,7 @@ export class PrologBackend extends EventEmitter {
    * Send request with notification support
    */
   async sendRequestWithNotifications(
-    cmdOrBatch: string | Array<{cmd: string, params?: Record<string, any>, timeoutMs?: number}>,
+    cmdOrBatch: string | Array<{ cmd: string; params?: Record<string, any>; timeoutMs?: number }>,
     params: Record<string, any> = {},
     callback?: QueryCallback
   ): Promise<any> {
@@ -338,33 +359,38 @@ export class PrologBackend extends EventEmitter {
       const cmd = cmdOrBatch;
       const queryId = uuidv4();
       const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : 10000;
-      
+
       // Register query for tracking
       this.notificationManager.registerQuery(queryId, callback);
       this.notificationManager.updateQueryStatus(queryId, { status: 'running' });
 
-      let paramsWithLimit = { ...params };
+      const paramsWithLimit = { ...params };
       if (typeof paramsWithLimit.time_limit === 'undefined') {
         paramsWithLimit.time_limit = Math.ceil(timeoutMs / 1000);
       }
-      
+
       // Add streaming parameters if enabled
       if (this.streamingEnabled && !paramsWithLimit.disable_streaming) {
-        paramsWithLimit.max_results_per_chunk = paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
+        paramsWithLimit.max_results_per_chunk =
+          paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
         paramsWithLimit.streaming = true;
       }
-      
-      const {timeoutMs: _omit, ...paramsNoTimeout} = paramsWithLimit;
+
+      const { timeoutMs: _omit, ...paramsNoTimeout } = paramsWithLimit;
       const request = {
         id: queryId,
         cmd,
         ...paramsNoTimeout,
-        protocol: 1
+        protocol: 1,
       };
 
       // Set up cancellation support
       let cancelled = false;
-      const cancelToken = { cancel: () => { cancelled = true; } };
+      const cancelToken = {
+        cancel: () => {
+          cancelled = true;
+        },
+      };
       this.runningQueries.set(queryId, cancelToken);
 
       const timeout = setTimeout(() => {
@@ -378,7 +404,9 @@ export class PrologBackend extends EventEmitter {
         // Simulate progress updates for long-running queries
         const progressInterval = setInterval(() => {
           if (!cancelled && this.runningQueries.has(queryId)) {
-            const elapsed = Date.now() - (this.notificationManager.getQueryStatus(queryId)?.startTime || Date.now());
+            const elapsed =
+              Date.now() -
+              (this.notificationManager.getQueryStatus(queryId)?.startTime || Date.now());
             const progress = Math.min(90, (elapsed / timeoutMs) * 100);
             this.notificationManager.updateQueryProgress(queryId, progress, 'Processing query...');
           } else {
@@ -387,7 +415,7 @@ export class PrologBackend extends EventEmitter {
         }, 1000);
 
         const response = await axios.post(`http://localhost:${this.port}`, request);
-        
+
         clearTimeout(timeout);
         clearInterval(progressInterval);
         this.runningQueries.delete(queryId);
@@ -400,7 +428,7 @@ export class PrologBackend extends EventEmitter {
       } catch (err) {
         clearTimeout(timeout);
         this.runningQueries.delete(queryId);
-        
+
         if (!cancelled) {
           this.notificationManager.failQuery(queryId, err);
         }
@@ -411,81 +439,94 @@ export class PrologBackend extends EventEmitter {
     // Batch requests with notifications
     const batch = cmdOrBatch.map((req, index) => {
       const queryId = uuidv4();
-      
+
       // Register each batch item for tracking
       this.notificationManager.registerQuery(queryId, callback, true, index, cmdOrBatch.length);
-      
-      let paramsWithLimit = { ...req.params || {} };
+
+      const paramsWithLimit = { ...(req.params || {}) };
       if (typeof req.timeoutMs === 'number' && typeof paramsWithLimit.time_limit === 'undefined') {
         paramsWithLimit.time_limit = Math.ceil(req.timeoutMs / 1000);
       }
-      
+
       // Add streaming parameters if enabled
       if (this.streamingEnabled && !paramsWithLimit.disable_streaming) {
-        paramsWithLimit.max_results_per_chunk = paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
+        paramsWithLimit.max_results_per_chunk =
+          paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
         paramsWithLimit.streaming = true;
       }
-      
+
       return {
         id: queryId,
         cmd: req.cmd,
         ...paramsWithLimit,
         protocol: 1,
-        timeoutMs: req.timeoutMs
+        timeoutMs: req.timeoutMs,
       };
     });
 
     // Execute batch with individual tracking
-    const responses = await Promise.all(batch.map(async (req, index) => {
-      const queryId = req.id;
-      this.notificationManager.updateQueryStatus(queryId, { status: 'running' });
-      
-      // Set up cancellation support
-      let cancelled = false;
-      const cancelToken = { cancel: () => { cancelled = true; } };
-      this.runningQueries.set(queryId, cancelToken);
+    const responses = await Promise.all(
+      batch.map(async (req, index) => {
+        const queryId = req.id;
+        this.notificationManager.updateQueryStatus(queryId, { status: 'running' });
 
-      const timeout = setTimeout(() => {
-        if (!cancelled) {
-          this.notificationManager.updateQueryStatus(queryId, { status: 'timeout' });
-          this.runningQueries.delete(queryId);
-        }
-      }, req.timeoutMs || 10000);
+        // Set up cancellation support
+        let cancelled = false;
+        const cancelToken = {
+          cancel: () => {
+            cancelled = true;
+          },
+        };
+        this.runningQueries.set(queryId, cancelToken);
 
-      try {
-        // Progress simulation for batch items
-        const progressInterval = setInterval(() => {
-          if (!cancelled && this.runningQueries.has(queryId)) {
-            const elapsed = Date.now() - (this.notificationManager.getQueryStatus(queryId)?.startTime || Date.now());
-            const progress = Math.min(90, (elapsed / (req.timeoutMs || 10000)) * 100);
-            this.notificationManager.updateQueryProgress(queryId, progress, `Processing batch item ${index + 1}/${batch.length}...`);
-          } else {
-            clearInterval(progressInterval);
+        const timeout = setTimeout(() => {
+          if (!cancelled) {
+            this.notificationManager.updateQueryStatus(queryId, { status: 'timeout' });
+            this.runningQueries.delete(queryId);
           }
-        }, 1000);
+        }, req.timeoutMs || 10000);
 
-        const {timeoutMs: _omit, ...reqToSend} = req;
-        const response = await axios.post(`http://localhost:${this.port}`, reqToSend);
-        
-        clearTimeout(timeout);
-        clearInterval(progressInterval);
-        this.runningQueries.delete(queryId);
+        try {
+          // Progress simulation for batch items
+          const progressInterval = setInterval(() => {
+            if (!cancelled && this.runningQueries.has(queryId)) {
+              const elapsed =
+                Date.now() -
+                (this.notificationManager.getQueryStatus(queryId)?.startTime || Date.now());
+              const progress = Math.min(90, (elapsed / (req.timeoutMs || 10000)) * 100);
+              this.notificationManager.updateQueryProgress(
+                queryId,
+                progress,
+                `Processing batch item ${index + 1}/${batch.length}...`
+              );
+            } else {
+              clearInterval(progressInterval);
+            }
+          }, 1000);
 
-        if (!cancelled) {
-          this.notificationManager.completeQuery(queryId, response.data);
+          const { timeoutMs: _omit, ...reqToSend } = req;
+          const response = await axios.post(`http://localhost:${this.port}`, reqToSend);
+
+          clearTimeout(timeout);
+          clearInterval(progressInterval);
+          this.runningQueries.delete(queryId);
+
+          if (!cancelled) {
+            this.notificationManager.completeQuery(queryId, response.data);
+          }
+
+          return response.data;
+        } catch (err) {
+          clearTimeout(timeout);
+          this.runningQueries.delete(queryId);
+
+          if (!cancelled) {
+            this.notificationManager.failQuery(queryId, err);
+          }
+          throw err;
         }
-
-        return response.data;
-      } catch (err) {
-        clearTimeout(timeout);
-        this.runningQueries.delete(queryId);
-        
-        if (!cancelled) {
-          this.notificationManager.failQuery(queryId, err);
-        }
-        throw err;
-      }
-    }));
+      })
+    );
 
     return responses;
   }
@@ -505,17 +546,17 @@ export class PrologBackend extends EventEmitter {
     const streamingParams = {
       ...params,
       streaming: true,
-      max_results_per_chunk: params.max_results_per_chunk || this.maxResultsPerChunk
+      max_results_per_chunk: params.max_results_per_chunk || this.maxResultsPerChunk,
     };
 
     // For now, we'll simulate streaming by chunking the response
     // In a full implementation, this would use WebSockets or Server-Sent Events
     const response = await this.sendRequest(cmd, streamingParams);
-    
+
     if (response.status === 'ok' && response.results && Array.isArray(response.results)) {
       const results = response.results;
       const chunkSize = this.maxResultsPerChunk;
-      
+
       if (results.length <= chunkSize) {
         // Small result set, return as single chunk
         if (onChunk) {
@@ -523,14 +564,14 @@ export class PrologBackend extends EventEmitter {
         }
         return response;
       }
-      
+
       // Large result set, chunk it
       const chunks = [];
       for (let i = 0; i < results.length; i += chunkSize) {
         const chunk = results.slice(i, i + chunkSize);
         const isFirst = i === 0;
         const isLast = i + chunkSize >= results.length;
-        
+
         const chunkResponse = {
           ...response,
           results: chunk,
@@ -539,17 +580,17 @@ export class PrologBackend extends EventEmitter {
             chunk_size: chunk.length,
             total_results: results.length,
             is_first: isFirst,
-            is_last: isLast
-          }
+            is_last: isLast,
+          },
         };
-        
+
         chunks.push(chunkResponse);
-        
+
         if (onChunk) {
           onChunk(chunkResponse, isFirst, isLast);
         }
       }
-      
+
       // Return summary response
       return {
         ...response,
@@ -561,11 +602,11 @@ export class PrologBackend extends EventEmitter {
           chunk_size: Math.min(chunkSize, results.length),
           total_results: results.length,
           is_first: true,
-          is_last: chunks.length === 1
-        }
+          is_last: chunks.length === 1,
+        },
       };
     }
-    
+
     return response;
   }
 
@@ -575,7 +616,7 @@ export class PrologBackend extends EventEmitter {
   getStreamingConfig() {
     return {
       enabled: this.streamingEnabled,
-      maxResultsPerChunk: this.maxResultsPerChunk
+      maxResultsPerChunk: this.maxResultsPerChunk,
     };
   }
 
@@ -632,29 +673,30 @@ export class PrologBackend extends EventEmitter {
   private async executeQueryDirect(cmd: string, params: Record<string, any> = {}): Promise<any> {
     const id = uuidv4();
     const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : 10000;
-    let paramsWithLimit = { ...params };
+    const paramsWithLimit = { ...params };
     if (typeof paramsWithLimit.time_limit === 'undefined') {
       paramsWithLimit.time_limit = Math.ceil(timeoutMs / 1000);
     }
-    
+
     // Add streaming parameters if enabled
     if (this.streamingEnabled && !paramsWithLimit.disable_streaming) {
-      paramsWithLimit.max_results_per_chunk = paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
+      paramsWithLimit.max_results_per_chunk =
+        paramsWithLimit.max_results_per_chunk || this.maxResultsPerChunk;
       paramsWithLimit.streaming = true;
     }
-    
-    const {timeoutMs: _omit, ...paramsNoTimeout} = paramsWithLimit;
+
+    const { timeoutMs: _omit, ...paramsNoTimeout } = paramsWithLimit;
     const request = {
       id,
       cmd,
       ...paramsNoTimeout,
-      protocol: 1
+      protocol: 1,
     };
-    
+
     const timeout = setTimeout(() => {
       throw new Error('Prolog request timeout');
     }, timeoutMs);
-    
+
     try {
       const response = await axios.post(`http://localhost:${this.port}`, request);
       clearTimeout(timeout);
@@ -679,7 +721,7 @@ export class PrologBackend extends EventEmitter {
     }
 
     const queryId = uuidv4();
-    
+
     // Queue the query with concurrency control
     return await this.concurrencyManager.queueQuery(
       queryId,
@@ -706,7 +748,7 @@ export class PrologBackend extends EventEmitter {
     }
 
     const queryId = uuidv4();
-    
+
     await this.queryScheduler.scheduleQuery(
       queryId,
       cmd,
@@ -829,14 +871,14 @@ export class PrologBackend extends EventEmitter {
     } = {}
   ): Promise<string> {
     const sessionId = await this.sessionManager.createSession(name, options);
-    
+
     // Also create session in Prolog backend
     try {
       await this.sendRequest('session_create', { name });
     } catch (error) {
       console.warn('[PrologBackend] Failed to create session in Prolog backend:', error);
     }
-    
+
     return sessionId;
   }
 
@@ -845,7 +887,7 @@ export class PrologBackend extends EventEmitter {
    */
   async switchToSession(sessionId: string): Promise<void> {
     await this.sessionManager.switchToSession(sessionId);
-    
+
     // Also switch session in Prolog backend
     try {
       await this.sendRequest('session_switch', { session_id: sessionId });
@@ -885,7 +927,7 @@ export class PrologBackend extends EventEmitter {
    */
   async deleteSession(sessionId: string): Promise<boolean> {
     const result = await this.sessionManager.deleteSession(sessionId);
-    
+
     // Also delete session in Prolog backend
     if (result) {
       try {
@@ -894,7 +936,7 @@ export class PrologBackend extends EventEmitter {
         console.warn('[PrologBackend] Failed to delete session in Prolog backend:', error);
       }
     }
-    
+
     return result;
   }
 
@@ -903,7 +945,7 @@ export class PrologBackend extends EventEmitter {
    */
   async saveCurrentSessionState(): Promise<void> {
     await this.sessionManager.saveCurrentSessionState();
-    
+
     // Also save state in Prolog backend
     try {
       await this.sendRequest('session_save_state', {});
@@ -917,7 +959,7 @@ export class PrologBackend extends EventEmitter {
    */
   async saveSessionState(sessionId: string, state?: any): Promise<void> {
     await this.sessionManager.saveSessionState(sessionId, state);
-    
+
     // Also save state in Prolog backend
     try {
       await this.sendRequest('session_save_state', { session_id: sessionId });
@@ -931,7 +973,7 @@ export class PrologBackend extends EventEmitter {
    */
   async restoreSessionState(sessionId: string, snapshotId?: string): Promise<void> {
     await this.sessionManager.restoreSessionState(sessionId, snapshotId);
-    
+
     // Also restore state in Prolog backend
     try {
       await this.sendRequest('session_restore_state', { session_id: sessionId });
@@ -968,7 +1010,10 @@ export class PrologBackend extends EventEmitter {
   /**
    * Update session resource quota
    */
-  async updateSessionResourceQuota(sessionId: string, quota: Partial<ResourceQuota>): Promise<void> {
+  async updateSessionResourceQuota(
+    sessionId: string,
+    quota: Partial<ResourceQuota>
+  ): Promise<void> {
     await this.sessionManager.updateSessionResourceQuota(sessionId, quota);
   }
 
@@ -986,7 +1031,7 @@ export class PrologBackend extends EventEmitter {
     try {
       await this.sendRequest('session_export', {
         session_id: sessionId,
-        file_path: filePath
+        file_path: filePath,
       });
     } catch (error) {
       console.error('[PrologBackend] Failed to export session state:', error);
@@ -1001,9 +1046,9 @@ export class PrologBackend extends EventEmitter {
     try {
       await this.sendRequest('session_import', {
         session_id: sessionId,
-        file_path: filePath
+        file_path: filePath,
       });
-      
+
       // Refresh session state in TypeScript side
       await this.sessionManager.restoreSessionState(sessionId);
     } catch (error) {
@@ -1020,7 +1065,9 @@ export class PrologBackend extends EventEmitter {
   }
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null) {
-    this.log(`[DEBUG] handleExit() called. code=${code}, signal=${signal}, intentionalStop=${this.intentionalStop}`);
+    this.log(
+      `[DEBUG] handleExit() called. code=${code}, signal=${signal}, intentionalStop=${this.intentionalStop}`
+    );
     this.isReady = false;
     this.emit('exit', code, signal);
     this.log(`Prolog backend exited with code ${code}, signal ${signal}`);
@@ -1051,10 +1098,10 @@ export class PrologBackend extends EventEmitter {
       this.log('Prolog backend already running.');
       return;
     }
-    
+
     // Enhanced executable resolution with permission checking
     let swiplPath = this.options.swiplPath || PlatformUtils.getDefaultExecutablePath();
-    
+
     // Validate the configured path first
     if (swiplPath && swiplPath !== PlatformUtils.getDefaultExecutablePath()) {
       const normalizedPath = PlatformUtils.normalizePath(swiplPath);
@@ -1062,13 +1109,17 @@ export class PrologBackend extends EventEmitter {
         if (await PlatformUtils.isExecutable(normalizedPath)) {
           swiplPath = normalizedPath;
         } else {
-          this.log(`[WARNING] Configured SWI-Prolog path '${normalizedPath}' exists but lacks execute permissions`);
+          this.log(
+            `[WARNING] Configured SWI-Prolog path '${normalizedPath}' exists but lacks execute permissions`
+          );
           // Try to find alternative
           const executableFinder = new ExecutableFinder();
           const detectionResult = await executableFinder.findSwiplExecutable();
           if (detectionResult.found && detectionResult.path) {
             swiplPath = detectionResult.path;
-            this.log(`[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`);
+            this.log(
+              `[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`
+            );
           }
         }
       } else {
@@ -1078,7 +1129,9 @@ export class PrologBackend extends EventEmitter {
         const detectionResult = await executableFinder.findSwiplExecutable();
         if (detectionResult.found && detectionResult.path) {
           swiplPath = detectionResult.path;
-          this.log(`[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`);
+          this.log(
+            `[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`
+          );
         }
       }
     } else {
@@ -1087,8 +1140,10 @@ export class PrologBackend extends EventEmitter {
       const detectionResult = await executableFinder.findSwiplExecutable();
       if (detectionResult.found && detectionResult.path) {
         swiplPath = detectionResult.path;
-        this.log(`[INFO] Found SWI-Prolog at '${swiplPath}' via ${detectionResult.detectionMethod}`);
-        
+        this.log(
+          `[INFO] Found SWI-Prolog at '${swiplPath}' via ${detectionResult.detectionMethod}`
+        );
+
         // Check permissions
         if (!detectionResult.permissions?.executable) {
           this.log(`[WARNING] Found SWI-Prolog at '${swiplPath}' but it lacks execute permissions`);
@@ -1103,11 +1158,17 @@ export class PrologBackend extends EventEmitter {
         this.log(`[WARNING] Could not find SWI-Prolog executable, using fallback: ${swiplPath}`);
       }
     }
-    
+
     const serverPath = PlatformUtils.resolvePath(__dirname, 'prolog_json_server.pl');
     // Use proper escaping for cross-platform paths in Prolog
     const prologPath = serverPath.replace(/\\/g, '/').replace(/'/g, "''");
-    const args = this.options.args || ['-q', '-f', 'none', '-g', `consult('${prologPath}'), main(${this.port})`];
+    const args = this.options.args || [
+      '-q',
+      '-f',
+      'none',
+      '-g',
+      `consult('${prologPath}'), main(${this.port})`,
+    ];
     const cwd = PlatformUtils.normalizePath(this.options.cwd || process.cwd());
 
     this.log('Spawning Prolog with:');
@@ -1117,63 +1178,71 @@ export class PrologBackend extends EventEmitter {
     this.process = spawn(swiplPath, args, {
       cwd,
       detached: false,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.isReady = false;
     this.intentionalStop = false;
 
     if (this.process) {
       this.process.on('exit', (code, signal) => this.handleExit(code, signal));
-      
+
       // Capture stderr for debugging
-      this.process.stderr?.on('data', (data) => {
+      this.process.stderr?.on('data', data => {
         this.log(`[STDERR] ${data.toString()}`);
       });
-      
+
       // Capture stdout for debugging
-      this.process.stdout?.on('data', (data) => {
+      this.process.stdout?.on('data', data => {
         this.log(`[STDOUT] ${data.toString()}`);
       });
 
       this.process.once('spawn', () => {
         // Wait for server to start - increased delay for HTTP server initialization
         setTimeout(() => {
-          this.sendRequest('version').then((output) => {
-            this.isReady = true;
-            this.emit('ready');
-            this.emit('started');
-            this.log('Prolog backend started. Version: ' + output.version);
-          }).catch(async (err) => {
-            this.log('Prolog handshake/version check failed: ' + err.message);
-            
-            // Show enhanced error message for backend startup failures
-            if (err.code === 'ENOENT' || err.message?.includes('not found')) {
-              const action = await this.uiHandler.showErrorMessage(
-                'SWI-Prolog backend failed to start. The Prolog backend requires SWI-Prolog to provide language features.',
-                'Install SWI-Prolog',
-                'Setup Wizard',
-                'Configure Path',
-                'Dismiss'
-              );
-              
-              const installationGuide = InstallationGuide.getInstance();
-              switch (action) {
-                case 'Install SWI-Prolog':
-                  // In LSP context, we can't show the installation guide dialog
-                  // This would need to be handled by the extension
-                  console.log('SWI-Prolog installation required');
-                  break;
-                case 'Setup Wizard':
-                  await this.uiHandler.executeCommand('prolog.setupWizard');
-                  break;
-                case 'Configure Path':
-                  await this.uiHandler.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
-                  break;
+          this.sendRequest('version')
+            .then(output => {
+              this.isReady = true;
+              this.emit('ready');
+              this.emit('started');
+              this.log('Prolog backend started. Version: ' + output.version);
+            })
+            .catch(async err => {
+              this.log('Prolog handshake/version check failed: ' + err.message);
+
+              // Show enhanced error message for backend startup failures
+              if (err.code === 'ENOENT' || err.message?.includes('not found')) {
+                const action = await this.uiHandler.showErrorMessage(
+                  'SWI-Prolog backend failed to start. The Prolog backend requires SWI-Prolog to provide language features.',
+                  'Install SWI-Prolog',
+                  'Setup Wizard',
+                  'Configure Path',
+                  'Dismiss'
+                );
+
+                const installationGuide = InstallationGuide.getInstance();
+                switch (action) {
+                  case 'Install SWI-Prolog': {
+                    // In LSP context, we can't show the installation guide dialog
+                    // This would need to be handled by the extension
+                    console.log('SWI-Prolog installation required');
+                    break;
+                  }
+                  case 'Setup Wizard': {
+                    await this.uiHandler.executeCommand('prolog.setupWizard');
+                    break;
+                  }
+                  case 'Configure Path': {
+                    await this.uiHandler.executeCommand(
+                      'workbench.action.openSettings',
+                      'prolog.executablePath'
+                    );
+                    break;
+                  }
+                }
               }
-            }
-            
-            this.stop();
-          });
+
+              this.stop();
+            });
         }, 2000); // Give more time for HTTP server to start
       });
     }

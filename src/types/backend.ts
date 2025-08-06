@@ -275,37 +275,39 @@ export interface IPrologBackend extends EventEmitter {
   start(): void;
   stop(intentional?: boolean): void;
   restart(): void;
-  
+
   // Basic request methods
   sendRequest(cmd: string, params?: Record<string, any>): Promise<PrologResponse>;
-  sendRequest(batch: Array<{cmd: string, params?: Record<string, any>, timeoutMs?: number}>): Promise<PrologResponse[]>;
-  
+  sendRequest(
+    batch: Array<{ cmd: string; params?: Record<string, any>; timeoutMs?: number }>
+  ): Promise<PrologResponse[]>;
+
   // Advanced request methods
   sendRequestWithNotifications(
-    cmdOrBatch: string | Array<{cmd: string, params?: Record<string, any>, timeoutMs?: number}>,
+    cmdOrBatch: string | Array<{ cmd: string; params?: Record<string, any>; timeoutMs?: number }>,
     params?: Record<string, any>,
     callback?: QueryCallback
   ): Promise<PrologResponse | PrologResponse[]>;
-  
+
   sendStreamingRequest(
     cmd: string,
     params?: Record<string, any>,
     onChunk?: StreamingCallback
   ): Promise<PrologResponse>;
-  
+
   sendRequestWithConcurrency(
     cmd: string,
     params?: Record<string, any>,
     priority?: Partial<QueryPriority>,
     resourceRequirements?: { memoryMB?: number; cpuPercent?: number }
   ): Promise<PrologResponse>;
-  
+
   // Query management
   cancelQuery(queryId: string): boolean;
   getQueryStatus(queryId: string): QueryStatus | undefined;
   getActiveQueries(): QueryStatus[];
   getQueryStatistics(): QueryStatistics;
-  
+
   // Scheduling
   scheduleQuery(
     cmd: string,
@@ -315,23 +317,23 @@ export interface IPrologBackend extends EventEmitter {
     priority?: Partial<QueryPriority>,
     metadata?: any
   ): Promise<string>;
-  
+
   cancelScheduledQuery(queryId: string): Promise<boolean>;
   getScheduledQueries(filter?: any): ScheduledQuery[];
   getSchedulerStatistics(): SchedulerStats;
-  
+
   // History
   getQueryHistory(filter?: any): Promise<any>;
   getQueryHistoryStatistics(): Promise<any>;
   clearQueryHistory(): Promise<void>;
-  
+
   // Sessions
   createSession(name: string, options?: any): Promise<string>;
   switchToSession(sessionId: string): Promise<void>;
   getCurrentSession(): { sessionId: string; config: SessionConfig; state: SessionState } | null;
   listSessions(filter?: any): Array<{ sessionId: string; config: SessionConfig }>;
   deleteSession(sessionId: string): Promise<boolean>;
-  
+
   // Configuration
   getStreamingConfig(): { enabled: boolean; maxResultsPerChunk: number };
   updateStreamingConfig(config: { enabled?: boolean; maxResultsPerChunk?: number }): void;

@@ -29,29 +29,27 @@ export class InstallationGuide {
   /**
    * Show installation not found dialog with platform-specific guidance
    */
-  public async showInstallationNotFoundDialog(options: InstallationGuideOptions = {}): Promise<string | undefined> {
+  public async showInstallationNotFoundDialog(
+    options: InstallationGuideOptions = {}
+  ): Promise<string | undefined> {
     const platform = os.platform();
     const platformName = this.getPlatformDisplayName(platform);
-    
+
     const message = `SWI-Prolog is not installed or not found on your ${platformName} system. The VSCode Prolog Toolkit requires SWI-Prolog to provide language features like syntax checking, debugging, and query execution.`;
-    
+
     const actions = [
       'Install with Package Manager',
       'Installation Guide',
       'Setup Wizard',
-      'Manual Configuration'
+      'Manual Configuration',
     ];
-    
+
     if (options.allowSkip) {
       actions.push('Skip for Now');
     }
-    
-    const choice = await vscode.window.showWarningMessage(
-      message,
-      { modal: true },
-      ...actions
-    );
-    
+
+    const choice = await vscode.window.showWarningMessage(message, { modal: true }, ...actions);
+
     switch (choice) {
       case 'Install with Package Manager':
         await this.packageManager.showInstallationDialog();
@@ -68,8 +66,10 @@ export class InstallationGuide {
       case 'Skip for Now':
         await this.showSkipWarningDialog();
         break;
+      default:
+        break;
     }
-    
+
     return choice;
   }
 
@@ -79,21 +79,21 @@ export class InstallationGuide {
   public async showInstallationGuideDialog(): Promise<void> {
     const platform = os.platform();
     const installInfo = this.getInstallationInfo(platform);
-    
+
     const panel = vscode.window.createWebviewPanel(
       'prologInstallationGuide',
       'SWI-Prolog Installation Guide',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
-    
+
     panel.webview.html = this.getInstallationGuideHtml(installInfo);
-    
+
     // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(async (message) => {
+    panel.webview.onDidReceiveMessage(async message => {
       switch (message.type) {
         case 'openDownloadPage':
           await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(message.url));
@@ -101,11 +101,12 @@ export class InstallationGuide {
         case 'testInstallation':
           await this.testInstallationAndReport(panel);
           break;
-        case 'openTerminal':
+        case 'openTerminal': {
           const terminal = vscode.window.createTerminal('SWI-Prolog Installation');
           terminal.sendText(message.command);
           terminal.show();
           break;
+        }
         case 'configureManually':
           panel.dispose();
           await this.showPathConfigurationDialog();
@@ -124,25 +125,25 @@ export class InstallationGuide {
   public async showPathConfigurationDialog(): Promise<void> {
     const config = vscode.workspace.getConfiguration('prolog');
     const currentPath = config.get<string>('executablePath', 'swipl');
-    
+
     const newPath = await vscode.window.showInputBox({
       title: 'Configure SWI-Prolog Executable Path',
       prompt: 'Enter the full path to your SWI-Prolog executable',
       value: currentPath,
-      validateInput: async (value) => {
+      validateInput: async value => {
         if (!value || value.trim().length === 0) {
           return 'Path cannot be empty';
         }
-        
+
         const isValid = await this.installationChecker.validateSwiplPath(value.trim());
         if (!isValid) {
           return 'Invalid SWI-Prolog executable path. Please check the path and try again.';
         }
-        
+
         return null;
-      }
+      },
     });
-    
+
     if (newPath && newPath !== currentPath) {
       try {
         await config.update('executablePath', newPath, vscode.ConfigurationTarget.Global);
@@ -159,20 +160,22 @@ export class InstallationGuide {
   public async showSuccessDialog(path: string, version?: string): Promise<void> {
     const versionText = version ? ` (version ${version})` : '';
     const message = `✅ SWI-Prolog successfully configured!\n\nExecutable: ${path}${versionText}\n\nYou can now use all Prolog extension features including syntax highlighting, linting, debugging, and query execution.`;
-    
+
     const action = await vscode.window.showInformationMessage(
       message,
       'Test Features',
       'Open Settings',
       'OK'
     );
-    
+
     switch (action) {
       case 'Test Features':
         await this.showFeatureTestDialog();
         break;
       case 'Open Settings':
         await vscode.commands.executeCommand('prolog.openSettings');
+        break;
+      default:
         break;
     }
   }
@@ -187,18 +190,18 @@ export class InstallationGuide {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
-    
+
     // Get current installation status
     const installationStatus = await this.installationChecker.checkSwiplInstallation();
     const systemInfo = this.installationChecker.getSystemInfo();
-    
+
     panel.webview.html = this.getSetupWizardHtml(installationStatus, systemInfo);
-    
+
     // Handle wizard interactions
-    panel.webview.onDidReceiveMessage(async (message) => {
+    panel.webview.onDidReceiveMessage(async message => {
       switch (message.type) {
         case 'autoDetect':
           await this.performAutoDetection(panel);
@@ -229,12 +232,8 @@ export class InstallationGuide {
    */
   private async showSkipWarningDialog(): Promise<void> {
     const message = `⚠️ Skipping SWI-Prolog installation will limit extension functionality.\n\nWithout SWI-Prolog, the following features will not work:\n• Syntax checking and linting\n• Code debugging\n• Query execution\n• Hover documentation\n• Go to definition\n• Code formatting\n\nYou can install SWI-Prolog later and run the setup wizard from the command palette.`;
-    
-    await vscode.window.showWarningMessage(
-      message,
-      { modal: true },
-      'I Understand'
-    );
+
+    await vscode.window.showWarningMessage(message, { modal: true }, 'I Understand');
   }
 
   /**
@@ -244,45 +243,49 @@ export class InstallationGuide {
     const tests = [
       { name: 'Version Check', test: () => this.testVersion() },
       { name: 'Basic Query', test: () => this.testBasicQuery() },
-      { name: 'File Loading', test: () => this.testFileLoading() }
+      { name: 'File Loading', test: () => this.testFileLoading() },
     ];
-    
-    const results: Array<{name: string, success: boolean, message: string}> = [];
-    
-    await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: 'Testing Prolog Features',
-      cancellable: false
-    }, async (progress) => {
-      for (let i = 0; i < tests.length; i++) {
-        const test = tests[i];
-        progress.report({ 
-          increment: (i / tests.length) * 100, 
-          message: `Testing ${test.name}...` 
-        });
-        
-        try {
-          const result = await test.test();
-          results.push({
-            name: test.name,
-            success: result.success,
-            message: result.message
+
+    const results: Array<{ name: string; success: boolean; message: string }> = [];
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Testing Prolog Features',
+        cancellable: false,
+      },
+      async progress => {
+        for (let i = 0; i < tests.length; i++) {
+          const test = tests[i];
+          progress.report({
+            increment: (i / tests.length) * 100,
+            message: `Testing ${test.name}...`,
           });
-        } catch (error) {
-          results.push({
-            name: test.name,
-            success: false,
-            message: `Error: ${error}`
-          });
+
+          try {
+            const result = await test.test();
+            results.push({
+              name: test.name,
+              success: result.success,
+              message: result.message,
+            });
+          } catch (error) {
+            results.push({
+              name: test.name,
+              success: false,
+              message: `Error: ${error}`,
+            });
+          }
         }
       }
-    });
-    
+    );
+
     // Show results
     const successCount = results.filter(r => r.success).length;
-    const resultMessage = `Feature Test Results (${successCount}/${results.length} passed):\n\n` +
+    const resultMessage =
+      `Feature Test Results (${successCount}/${results.length} passed):\n\n` +
       results.map(r => `${r.success ? '✅' : '❌'} ${r.name}: ${r.message}`).join('\n');
-    
+
     if (successCount === results.length) {
       vscode.window.showInformationMessage(resultMessage);
     } else {
@@ -295,10 +298,14 @@ export class InstallationGuide {
    */
   private getPlatformDisplayName(platform: string): string {
     switch (platform) {
-      case 'win32': return 'Windows';
-      case 'darwin': return 'macOS';
-      case 'linux': return 'Linux';
-      default: return 'Unix-like';
+      case 'win32':
+        return 'Windows';
+      case 'darwin':
+        return 'macOS';
+      case 'linux':
+        return 'Linux';
+      default:
+        return 'Unix-like';
     }
   }
 
@@ -315,9 +322,9 @@ export class InstallationGuide {
           'Run the installer as Administrator',
           'Follow the installation wizard',
           'SWI-Prolog will be added to your PATH automatically',
-          'Restart VS Code after installation'
+          'Restart VS Code after installation',
         ],
-        packageManager: null
+        packageManager: null,
       },
       darwin: {
         title: 'macOS Installation',
@@ -326,21 +333,21 @@ export class InstallationGuide {
           'Option 1: Download the DMG file and drag to Applications',
           'Option 2: Use Homebrew (recommended for developers)',
           'For Homebrew: Open Terminal and run the command below',
-          'Restart VS Code after installation'
+          'Restart VS Code after installation',
         ],
         packageManager: {
           name: 'Homebrew',
           command: 'brew install swi-prolog',
-          installUrl: 'https://brew.sh'
-        }
+          installUrl: 'https://brew.sh',
+        },
       },
       linux: {
         title: 'Linux Installation',
         downloadUrl: 'https://www.swi-prolog.org/build/unix.html',
         instructions: [
-          'Use your distribution\'s package manager',
+          "Use your distribution's package manager",
           'Choose the appropriate command for your system',
-          'Restart VS Code after installation'
+          'Restart VS Code after installation',
         ],
         packageManager: {
           name: 'Package Manager',
@@ -349,17 +356,21 @@ export class InstallationGuide {
             'CentOS/RHEL: sudo yum install pl',
             'Fedora: sudo dnf install pl',
             'Arch Linux: sudo pacman -S swi-prolog',
-            'openSUSE: sudo zypper install swi-prolog'
-          ]
-        }
-      }
+            'openSUSE: sudo zypper install swi-prolog',
+          ],
+        },
+      },
     };
-    
+
     switch (platform) {
-      case 'win32': return info.windows;
-      case 'darwin': return info.darwin;
-      case 'linux': 
-      default: return info.linux;
+      case 'win32':
+        return info.windows;
+      case 'darwin':
+        return info.darwin;
+      case 'linux':
+        return info.linux;
+      default:
+        return info.linux;
     }
   }
 
@@ -515,10 +526,14 @@ export class InstallationGuide {
                 </ol>
             </div>
 
-            ${installInfo.packageManager ? `
+            ${
+              installInfo.packageManager
+                ? `
             <div class="section">
                 <h2>💻 ${installInfo.packageManager.name}</h2>
-                ${installInfo.packageManager.command ? `
+                ${
+                  installInfo.packageManager.command
+                    ? `
                     <p>Run this command in your terminal:</p>
                     <div class="command-box">
                         ${installInfo.packageManager.command}
@@ -527,18 +542,30 @@ export class InstallationGuide {
                     <button class="button" onclick="openTerminal('${installInfo.packageManager.command}')">
                         🖥️ Open in Terminal
                     </button>
-                ` : ''}
-                ${installInfo.packageManager.commands ? `
+                `
+                    : ''
+                }
+                ${
+                  installInfo.packageManager.commands
+                    ? `
                     <p>Choose the command for your distribution:</p>
-                    ${installInfo.packageManager.commands.map((cmd: string) => `
+                    ${installInfo.packageManager.commands
+                      .map(
+                        (cmd: string) => `
                         <div class="command-box">
                             ${cmd}
                             <button class="copy-button" onclick="copyCommand('${cmd.split(': ')[1]}')">Copy</button>
                         </div>
-                    `).join('')}
-                ` : ''}
+                    `
+                      )
+                      .join('')}
+                `
+                    : ''
+                }
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <div class="section">
                 <h2>🧪 Test Installation</h2>
@@ -717,21 +744,29 @@ export class InstallationGuide {
                     </span>
                     Installation Status
                 </h3>
-                ${installationStatus.isInstalled ? `
+                ${
+                  installationStatus.isInstalled
+                    ? `
                     <p><strong>✅ SWI-Prolog Found!</strong></p>
                     <p><strong>Path:</strong> ${installationStatus.path}</p>
                     <p><strong>Version:</strong> ${installationStatus.version || 'Unknown'}</p>
-                    ${installationStatus.issues && installationStatus.issues.length > 0 ? `
+                    ${
+                      installationStatus.issues && installationStatus.issues.length > 0
+                        ? `
                         <p><strong>⚠️ Issues:</strong></p>
                         <ul>
                             ${installationStatus.issues.map(issue => `<li>${issue}</li>`).join('')}
                         </ul>
-                    ` : ''}
-                ` : `
+                    `
+                        : ''
+                    }
+                `
+                    : `
                     <p><strong>❌ SWI-Prolog Not Found</strong></p>
                     <p>SWI-Prolog is not installed or not found in the expected locations.</p>
                     <button class="button" onclick="installGuide()">📖 Installation Guide</button>
-                `}
+                `
+                }
             </div>
 
             <div class="step">
@@ -836,18 +871,18 @@ export class InstallationGuide {
         const version = await this.installationChecker.getSwiplVersion(foundPath);
         panel.webview.postMessage({
           type: 'autoDetectResult',
-          html: `<p style="color: green;">✅ Found SWI-Prolog at: ${foundPath}</p><p>Version: ${version}</p>`
+          html: `<p style="color: green;">✅ Found SWI-Prolog at: ${foundPath}</p><p>Version: ${version}</p>`,
         });
       } else {
         panel.webview.postMessage({
           type: 'autoDetectResult',
-          html: `<p style="color: red;">❌ SWI-Prolog not found in common locations</p><p>Please install SWI-Prolog or configure the path manually.</p>`
+          html: `<p style="color: red;">❌ SWI-Prolog not found in common locations</p><p>Please install SWI-Prolog or configure the path manually.</p>`,
         });
       }
     } catch (error) {
       panel.webview.postMessage({
         type: 'autoDetectResult',
-        html: `<p style="color: red;">❌ Error during auto-detection: ${error}</p>`
+        html: `<p style="color: red;">❌ Error during auto-detection: ${error}</p>`,
       });
     }
   }
@@ -859,18 +894,18 @@ export class InstallationGuide {
         const version = await this.installationChecker.getSwiplVersion(path);
         panel.webview.postMessage({
           type: 'pathTestResult',
-          html: `<p style="color: green;">✅ Valid SWI-Prolog executable</p><p>Version: ${version}</p>`
+          html: `<p style="color: green;">✅ Valid SWI-Prolog executable</p><p>Version: ${version}</p>`,
         });
       } else {
         panel.webview.postMessage({
           type: 'pathTestResult',
-          html: `<p style="color: red;">❌ Invalid or inaccessible SWI-Prolog executable</p>`
+          html: `<p style="color: red;">❌ Invalid or inaccessible SWI-Prolog executable</p>`,
         });
       }
     } catch (error) {
       panel.webview.postMessage({
         type: 'pathTestResult',
-        html: `<p style="color: red;">❌ Error testing path: ${error}</p>`
+        html: `<p style="color: red;">❌ Error testing path: ${error}</p>`,
       });
     }
   }
@@ -879,13 +914,15 @@ export class InstallationGuide {
     try {
       const isValid = await this.installationChecker.validateSwiplPath(path);
       if (!isValid) {
-        vscode.window.showErrorMessage('Cannot save invalid SWI-Prolog path. Please test the path first.');
+        vscode.window.showErrorMessage(
+          'Cannot save invalid SWI-Prolog path. Please test the path first.'
+        );
         return;
       }
 
       const config = vscode.workspace.getConfiguration('prolog');
       await config.update('executablePath', path, vscode.ConfigurationTarget.Global);
-      
+
       const version = await this.installationChecker.getSwiplVersion(path);
       panel.dispose();
       await this.showSuccessDialog(path, version);
@@ -897,7 +934,7 @@ export class InstallationGuide {
   private async runDiagnosticsFromWizard(panel: vscode.WebviewPanel): Promise<void> {
     try {
       const diagnostics = await this.installationChecker.performDiagnostics();
-      
+
       let html = '<div style="font-family: monospace; font-size: 12px;">';
       html += `<h4>🔍 Installation Status</h4>`;
       html += `<p><strong>Installed:</strong> ${diagnostics.installation.isInstalled ? '✅ Yes' : '❌ No'}</p>`;
@@ -907,16 +944,16 @@ export class InstallationGuide {
       if (diagnostics.installation.version) {
         html += `<p><strong>Version:</strong> ${diagnostics.installation.version}</p>`;
       }
-      
+
       html += `<h4>🖥️ System Information</h4>`;
       html += `<p><strong>Platform:</strong> ${diagnostics.system.platform}</p>`;
       html += `<p><strong>Architecture:</strong> ${diagnostics.system.arch}</p>`;
       html += `<p><strong>PATH entries:</strong> ${diagnostics.system.pathEnv.length}</p>`;
-      
+
       html += `<h4>⚙️ Configuration</h4>`;
       html += `<p><strong>Current path:</strong> ${diagnostics.configuration.current}</p>`;
       html += `<p><strong>Valid:</strong> ${diagnostics.configuration.valid ? '✅ Yes' : '❌ No'}</p>`;
-      
+
       if (diagnostics.recommendations.length > 0) {
         html += `<h4>💡 Recommendations</h4>`;
         html += '<ul>';
@@ -925,17 +962,17 @@ export class InstallationGuide {
         });
         html += '</ul>';
       }
-      
+
       html += '</div>';
-      
+
       panel.webview.postMessage({
         type: 'diagnosticsResult',
-        html: html
+        html: html,
       });
     } catch (error) {
       panel.webview.postMessage({
         type: 'diagnosticsResult',
-        html: `<p style="color: red;">❌ Error running diagnostics: ${error}</p>`
+        html: `<p style="color: red;">❌ Error running diagnostics: ${error}</p>`,
       });
     }
   }
@@ -943,53 +980,53 @@ export class InstallationGuide {
   private async testInstallationAndReport(panel: vscode.WebviewPanel): Promise<void> {
     try {
       const installationStatus = await this.installationChecker.checkSwiplInstallation();
-      
+
       if (installationStatus.isInstalled) {
         panel.webview.postMessage({
           type: 'testResult',
           success: true,
-          message: `SWI-Prolog found at ${installationStatus.path} (version ${installationStatus.version})`
+          message: `SWI-Prolog found at ${installationStatus.path} (version ${installationStatus.version})`,
         });
       } else {
         panel.webview.postMessage({
           type: 'testResult',
           success: false,
-          message: 'SWI-Prolog not found. Please complete the installation first.'
+          message: 'SWI-Prolog not found. Please complete the installation first.',
         });
       }
     } catch (error) {
       panel.webview.postMessage({
         type: 'testResult',
         success: false,
-        message: `Test failed: ${error}`
+        message: `Test failed: ${error}`,
       });
     }
   }
 
   // Feature test methods
-  private async testVersion(): Promise<{success: boolean, message: string}> {
+  private async testVersion(): Promise<{ success: boolean; message: string }> {
     try {
       const status = await this.installationChecker.checkSwiplInstallation();
       if (status.isInstalled && status.version) {
         return {
           success: true,
-          message: `Version ${status.version} detected`
+          message: `Version ${status.version} detected`,
         };
       } else {
         return {
           success: false,
-          message: 'Could not detect SWI-Prolog version'
+          message: 'Could not detect SWI-Prolog version',
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `Version check failed: ${error}`
+        message: `Version check failed: ${error}`,
       };
     }
   }
 
-  private async testBasicQuery(): Promise<{success: boolean, message: string}> {
+  private async testBasicQuery(): Promise<{ success: boolean; message: string }> {
     try {
       // This would typically test a basic Prolog query
       // For now, we'll just check if the executable responds
@@ -998,23 +1035,23 @@ export class InstallationGuide {
         const isValid = await this.installationChecker.validateSwiplPath(status.path);
         return {
           success: isValid,
-          message: isValid ? 'Basic query execution works' : 'Query execution failed'
+          message: isValid ? 'Basic query execution works' : 'Query execution failed',
         };
       } else {
         return {
           success: false,
-          message: 'SWI-Prolog not available for testing'
+          message: 'SWI-Prolog not available for testing',
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `Query test failed: ${error}`
+        message: `Query test failed: ${error}`,
       };
     }
   }
 
-  private async testFileLoading(): Promise<{success: boolean, message: string}> {
+  private async testFileLoading(): Promise<{ success: boolean; message: string }> {
     try {
       // This would typically test loading a Prolog file
       // For now, we'll simulate the test
@@ -1022,18 +1059,18 @@ export class InstallationGuide {
       if (status.isInstalled) {
         return {
           success: true,
-          message: 'File loading capability available'
+          message: 'File loading capability available',
         };
       } else {
         return {
           success: false,
-          message: 'SWI-Prolog not available for file loading'
+          message: 'SWI-Prolog not available for file loading',
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `File loading test failed: ${error}`
+        message: `File loading test failed: ${error}`,
       };
     }
   }

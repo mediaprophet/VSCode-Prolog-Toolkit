@@ -1,10 +1,8 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as os from 'os';
-import { PlatformUtils } from '../../src/utils/platformUtils';
-import { ExecutableFinder } from '../../src/utils/executableFinder';
-import { PackageManagerIntegration } from '../../src/features/packageManagerIntegration';
+import { PackageManagerIntegration } from '../../src/features/packageManagerIntegration.js';
+import { ExecutableFinder } from '../../src/utils/executableFinder.js';
+import { PlatformUtils } from '../../src/utils/platformUtils.js';
 
 /**
  * macOS-specific platform tests
@@ -12,8 +10,8 @@ import { PackageManagerIntegration } from '../../src/features/packageManagerInte
 suite('macOS Platform Tests', () => {
   // Skip tests if not running on macOS
   const isMacOS = os.platform() === 'darwin';
-  
-  suiteSetup(function() {
+
+  suiteSetup(function () {
     if (!isMacOS) {
       this.skip();
     }
@@ -41,7 +39,7 @@ suite('macOS Platform Tests', () => {
     test('should handle Apple Silicon vs Intel differences', () => {
       const arch = PlatformUtils.getArchitecture();
       const executablePaths = PlatformUtils.getExecutablePaths();
-      
+
       if (arch === 'arm64') {
         // Apple Silicon should include Homebrew paths
         assert.ok(executablePaths.some(path => path.includes('/opt/homebrew')));
@@ -74,7 +72,7 @@ suite('macOS Platform Tests', () => {
       const homeDir = os.homedir();
       const pathWithTilde = '~/Documents/test.pl';
       const normalized = PlatformUtils.normalizePath(pathWithTilde);
-      
+
       assert.ok(normalized.startsWith(homeDir));
       assert.ok(!normalized.includes('~'));
     });
@@ -82,7 +80,7 @@ suite('macOS Platform Tests', () => {
     test('should expand Unix environment variables', () => {
       const pathWithEnvVar = '$HOME/Documents/test.pl';
       const expanded = PlatformUtils.expandEnvironmentVariables(pathWithEnvVar);
-      
+
       if (process.env.HOME) {
         assert.ok(expanded.includes(process.env.HOME));
         assert.ok(!expanded.includes('$HOME'));
@@ -92,7 +90,7 @@ suite('macOS Platform Tests', () => {
     test('should handle macOS application bundle paths', () => {
       const appPath = '/Applications/SWI-Prolog.app/Contents/MacOS/swipl';
       const normalized = PlatformUtils.normalizePath(appPath);
-      
+
       assert.ok(normalized.includes('/Applications/'));
       assert.ok(normalized.includes('.app/Contents/MacOS/'));
     });
@@ -111,18 +109,18 @@ suite('macOS Platform Tests', () => {
       assert.ok(executablePaths.some(path => path.includes('/usr/local/bin') || path.includes('/opt/homebrew/bin')));
     });
 
-    test('should find SWI-Prolog executable on macOS', async function() {
+    test('should find SWI-Prolog executable on macOS', async function () {
       this.timeout(10000); // Increase timeout for executable detection
-      
+
       const finder = new ExecutableFinder();
       const result = await finder.findSwiplExecutable();
-      
+
       // Test should pass whether SWI-Prolog is installed or not
       if (result.found) {
         assert.ok(result.path);
         assert.ok(!result.path.endsWith('.exe'));
         assert.ok(result.detectionMethod);
-        
+
         if (result.permissions) {
           assert.strictEqual(typeof result.permissions.executable, 'boolean');
           assert.strictEqual(typeof result.permissions.readable, 'boolean');
@@ -133,16 +131,16 @@ suite('macOS Platform Tests', () => {
       }
     });
 
-    test('should validate macOS executable paths', async function() {
+    test('should validate macOS executable paths', async function () {
       this.timeout(5000);
-      
+
       const finder = new ExecutableFinder();
-      
+
       // Test with invalid path
       const invalidResult = await finder.validateExecutable('/nonexistent/swipl');
       assert.strictEqual(invalidResult.found, false);
       assert.ok(invalidResult.issues);
-      
+
       // Test with non-executable file (if exists)
       const textFileResult = await finder.validateExecutable('/etc/hosts');
       if (await PlatformUtils.pathExists('/etc/hosts')) {
@@ -151,9 +149,9 @@ suite('macOS Platform Tests', () => {
       }
     });
 
-    test('should handle macOS-specific executable locations', async function() {
+    test('should handle macOS-specific executable locations', async function () {
       this.timeout(5000);
-      
+
       const commonLocations = [
         '/usr/local/bin/swipl',
         '/opt/homebrew/bin/swipl',
@@ -162,7 +160,7 @@ suite('macOS Platform Tests', () => {
       ];
 
       const finder = new ExecutableFinder();
-      
+
       for (const location of commonLocations) {
         const result = await finder.validateExecutable(location);
         // Should not throw errors, regardless of whether file exists
@@ -172,12 +170,12 @@ suite('macOS Platform Tests', () => {
   });
 
   suite('Package Manager Integration', () => {
-    test('should detect macOS package managers', async function() {
+    test('should detect macOS package managers', async function () {
       this.timeout(15000); // Package manager detection can be slow
-      
+
       const packageManager = PackageManagerIntegration.getInstance();
       const availableManagers = await packageManager.detectAvailableManagers();
-      
+
       // Should detect available macOS package managers
       availableManagers.forEach(manager => {
         assert.ok(['homebrew', 'macports'].includes(manager.name));
@@ -186,12 +184,12 @@ suite('macOS Platform Tests', () => {
       });
     });
 
-    test('should provide macOS installation suggestions', async function() {
+    test('should provide macOS installation suggestions', async function () {
       this.timeout(5000);
-      
+
       const packageManager = PackageManagerIntegration.getInstance();
       const suggestions = await packageManager.getInstallationSuggestions();
-      
+
       assert.ok(suggestions.length > 0);
       assert.ok(suggestions.some(s => s.includes('macOS')));
       assert.ok(suggestions.some(s => s.includes('brew') || s.includes('port')));
@@ -200,16 +198,16 @@ suite('macOS Platform Tests', () => {
     test('should get macOS-specific recommendations', () => {
       const packageManager = PackageManagerIntegration.getInstance();
       const recommendations = packageManager.getRecommendedManagers();
-      
+
       assert.deepStrictEqual(recommendations, ['homebrew', 'macports']);
     });
 
-    test('should handle Apple Silicon vs Intel package managers', async function() {
+    test('should handle Apple Silicon vs Intel package managers', async function () {
       this.timeout(10000);
-      
+
       const packageManager = PackageManagerIntegration.getInstance();
       const availableManagers = await packageManager.detectAvailableManagers();
-      
+
       const homebrewManager = availableManagers.find(m => m.name === 'homebrew');
       if (homebrewManager) {
         const arch = PlatformUtils.getArchitecture();
@@ -227,7 +225,7 @@ suite('macOS Platform Tests', () => {
   suite('Environment Variables', () => {
     test('should handle Unix environment variables', () => {
       const envVars = PlatformUtils.getEnvironmentVariables();
-      
+
       assert.ok(envVars.crossPlatform.includes('PATH'));
       assert.ok(envVars.platformSpecific.includes('HOME'));
       assert.ok(envVars.platformSpecific.includes('XDG_CONFIG_HOME'));
@@ -344,7 +342,7 @@ suite('macOS Platform Tests', () => {
   suite('Platform Info', () => {
     test('should provide comprehensive macOS platform info', () => {
       const info = PlatformUtils.getPlatformInfo();
-      
+
       assert.strictEqual(info.platform, 'macos');
       assert.ok(['x64', 'arm64'].includes(info.architecture));
       assert.ok(info.osVersion.length > 0);
@@ -381,11 +379,11 @@ suite('macOS Platform Tests', () => {
       // macOS can have either case-sensitive or case-insensitive filesystems
       const testPath = '/tmp/CaseSensitiveTest';
       const lowerPath = '/tmp/casesensitivetest';
-      
+
       // This test just ensures our path operations work regardless of case sensitivity
       const normalizedUpper = PlatformUtils.normalizePath(testPath);
       const normalizedLower = PlatformUtils.normalizePath(lowerPath);
-      
+
       assert.ok(normalizedUpper.length > 0);
       assert.ok(normalizedLower.length > 0);
     });
@@ -419,7 +417,7 @@ suite('macOS Platform Tests', () => {
       for (const invalidPath of invalidPaths) {
         const exists = await PlatformUtils.pathExists(invalidPath);
         assert.strictEqual(exists, false);
-        
+
         const isExecutable = await PlatformUtils.isExecutable(invalidPath);
         assert.strictEqual(isExecutable, false);
       }
@@ -436,7 +434,7 @@ suite('macOS Platform Tests', () => {
         // These operations should not throw errors, just return false
         const exists = await PlatformUtils.pathExists(file);
         const isExecutable = await PlatformUtils.isExecutable(file);
-        
+
         // Results may vary based on permissions, but should not throw
         assert.strictEqual(typeof exists, 'boolean');
         assert.strictEqual(typeof isExecutable, 'boolean');

@@ -417,16 +417,14 @@ export interface EventMap {
   notification: (message: WebSocketMessage) => void;
 }
 
-// Export all types as a namespace for convenience
-export namespace PrologAPI {
-  export type Query = QueryResult;
-  export type Batch = BatchResult;
-  export type SessionType = Session;
-  export type CLP = CLPResult;
-  export type Probabilistic = ProbabilisticResult;
-  export type N3 = N3Result;
-  export type History = QueryHistoryEntry;
-  export type Status = SystemStatus;
-  export type Auth = AuthConfig;
-  export type WebSocket = WebSocketMessage;
-}
+// Export all types with PrologAPI prefix for convenience
+export type PrologAPIQuery = QueryResult;
+export type PrologAPIBatch = BatchResult;
+export type PrologAPISessionType = Session;
+export type PrologAPICLP = CLPResult;
+export type PrologAPIProbabilistic = ProbabilisticResult;
+export type PrologAPIN3 = N3Result;
+export type PrologAPIHistory = QueryHistoryEntry;
+export type PrologAPIStatus = SystemStatus;
+export type PrologAPIAuth = AuthConfig;
+export type PrologAPIWebSocket = WebSocketMessage;

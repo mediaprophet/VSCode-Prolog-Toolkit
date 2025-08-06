@@ -1,20 +1,20 @@
-import { EventEmitter } from "events";
-import * as fs from "fs";
-import { spawn } from "process-promises";
-import { DebugProtocol } from "@vscode/debugprotocol";
-import { PrologDebugSession } from "./prologDebugSession";
+import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import { spawn } from 'process-promises';
+import { DebugProtocol } from '@vscode/debugprotocol';
+import { PrologDebugSession } from './prologDebugSession';
 import {
   StoppedEvent,
   StackFrame,
   Source,
   OutputEvent,
-  TerminatedEvent
-} from "@vscode/debugadapter";
-import { basename, resolve } from "path";
-import jsesc from "jsesc";
-import { InstallationGuide } from "./installationGuide";
-import { commands, window } from "vscode";
-import { PlatformUtils } from "../utils/platformUtils";
+  TerminatedEvent,
+} from '@vscode/debugadapter';
+import { basename, resolve } from 'path';
+import jsesc from 'jsesc';
+import { InstallationGuide } from './installationGuide';
+import { commands, window } from 'vscode';
+import { PlatformUtils } from '../utils/platformUtils';
 
 export interface ITraceCmds {
   continue: string[2];
@@ -22,8 +22,7 @@ export interface ITraceCmds {
   stepinto: string[2];
   stepout: string[2];
 }
-export interface LaunchRequestArguments
-  extends DebugProtocol.LaunchRequestArguments {
+export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   program?: string;
   args?: string[];
   cwd: string;
@@ -65,10 +64,7 @@ export class PrologDebugger extends EventEmitter {
 
   // private _client: Net.Socket = null;
 
-  constructor(
-    launchRequestArguments: LaunchRequestArguments,
-    debugSession: PrologDebugSession
-  ) {
+  constructor(launchRequestArguments: LaunchRequestArguments, debugSession: PrologDebugSession) {
     super();
     this._launchRequestArguments = launchRequestArguments;
     this._debugSession = debugSession;
@@ -76,7 +72,7 @@ export class PrologDebugger extends EventEmitter {
     // this._client = client || null;
     this.createPrologProc();
 
-    console.log("prolog debugger constructed");
+    console.log('prolog debugger constructed');
   }
 
   // Helper function to retrieve source line locations
@@ -86,32 +82,34 @@ export class PrologDebugger extends EventEmitter {
       return;
     }
     // Read the content of the source file and split it into lines
-    let lines = fs
-      .readFileSync(source)
-      .toString()
-      .split("\n");
+    const lines = fs.readFileSync(source).toString().split('\n');
     // Calculate the length of each line (including the newline character)
-    let lengths = lines.map(line => {
+    const lengths = lines.map(line => {
       return line.length + 1;
     });
-    lengths.unshift(0);// Add a starting index of 0 to the lengths array
+    lengths.unshift(0); // Add a starting index of 0 to the lengths array
     // Accumulate the lengths to get the character position for each line
     for (let i = 1; i < lengths.length; i++) {
       lengths[i] += lengths[i - 1];
     }
-    this._soureLineLocations[source] = lengths;// Cache the line locations for the source file
+    this._soureLineLocations[source] = lengths; // Cache the line locations for the source file
   }
 
   // Helper function to convert startChar to line and column
   private fromStartCharToLineChar(source: string, startChar: number) {
-    this.getSourceLineLocations(source);// Ensure that line locations for the source file are available
+    this.getSourceLineLocations(source); // Ensure that line locations for the source file are available
     let i = 0;
-    for (; this._soureLineLocations[source]?.[i] !== undefined && this._soureLineLocations[source][i] < startChar; i++);// Find the line index where the given character position is located
+    for (
+      ;
+      this._soureLineLocations[source]?.[i] !== undefined &&
+      this._soureLineLocations[source][i] < startChar;
+      i++
+    ); // Find the line index where the given character position is located
     // Calculate the line number and column offset for the character position
     return {
       file: source,
       line: i + 1,
-      startChar: startChar - (this._soureLineLocations[source]?.[i] ?? 0)
+      startChar: startChar - (this._soureLineLocations[source]?.[i] ?? 0),
     };
   }
   //Handles the output received from the Prolog debugger, parsing and processing relevant information.
@@ -121,47 +119,48 @@ export class PrologDebugger extends EventEmitter {
       // Attempt to parse the output data as JSON
       resObj = JSON.parse(data);
       // Check if the parsed object has a "response" key
-      if (Object.keys(resObj)[0] !== "response") {
+      if (Object.keys(resObj)[0] !== 'response') {
         return;
       }
     } catch (error: unknown) {
-      return;// Exit if there is an error during JSON parsing
+      return; // Exit if there is an error during JSON parsing
     }
     // Determine the type of response based on the first key in the "response" object
     switch (Object.keys(resObj.response)[0]) {
       // Process breakpoints response
-      case "breakpoints":
+      case 'breakpoints':
         if (this._bpResponse) {
           this._bpResponse.body = {
             breakpoints: resObj.response.breakpoints.map((b: any) => {
               b.source = { path: b.source };
               return b;
-            })
+            }),
           };
-          this.emit("responseBreakpoints", this._bpResponse);
+          this.emit('responseBreakpoints', this._bpResponse);
         }
         return;
       // Process function breakpoints response
-      case "functionbps":
+      case 'functionbps':
         if (this._fbpResponse) {
           this._fbpResponse.body = {
-            breakpoints: resObj.response.functionbps
+            breakpoints: resObj.response.functionbps,
           };
-          this.emit("responseFunctionBreakpoints", this._fbpResponse);
+          this.emit('responseFunctionBreakpoints', this._fbpResponse);
         }
         return;
       // Process frame response
-      case "frame":
-        let frame = resObj.response.frame;
+      case 'frame': {
+        const frame = resObj.response.frame;
         if (frame) {
           this._debugSession.addStackFrame(frame);
           this._debugSession.sendEvent(
-            new StoppedEvent(frame.name || "unknown", PrologDebugSession.THREAD_ID)
+            new StoppedEvent(frame.name || 'unknown', PrologDebugSession.THREAD_ID)
           );
         }
         return;
+      }
       // Process variables response
-      case "variables":
+      case 'variables':
         this._debugSession.setCurrentVariables(resObj.response.variables);
         return;
 
@@ -174,14 +173,14 @@ export class PrologDebugger extends EventEmitter {
   public query(goal: string) {
     // Check if the goal is not an empty line
     if (!/^\n$/.test(goal)) {
-      goal = goal.replace(/\n+/g, "\n");// Replace multiple consecutive newlines with a single newline
-      let from = goal.indexOf(":");// Find the index of the colon in the goal
+      goal = goal.replace(/\n+/g, '\n'); // Replace multiple consecutive newlines with a single newline
+      const from = goal.indexOf(':'); // Find the index of the colon in the goal
       // If no colon is found, exit the function
       if (from < 0) {
         return;
       }
       // Write the Prolog query (substring after the colon) to the Prolog process stdin
-      if (this._prologProc && this._prologProc.stdin) {
+      if (this._prologProc?.stdin) {
         this._prologProc.stdin.write(goal.substring(from + 1));
       }
     }
@@ -198,18 +197,18 @@ export class PrologDebugger extends EventEmitter {
   private filterOffOutput(data: string): boolean {
     // Predefined regular expressions to filter off specific types of output
     const regs = [
-      /^$/,                 // Empty line
+      /^$/, // Empty line
       /^TermToBeEvaluated/, // Output indicating a term to be evaluated
-      /^EvalTermAtom/,      // Output indicating evaluation of a term atom
-      /^EvalVarNames/,      // Output indicating evaluation of variable names
-      /^E =/,               // Output indicating an assignment
-      /^true\./             // Output indicating truth value 'true'
+      /^EvalTermAtom/, // Output indicating evaluation of a term atom
+      /^EvalVarNames/, // Output indicating evaluation of variable names
+      /^E =/, // Output indicating an assignment
+      /^true\./, // Output indicating truth value 'true'
     ];
     // Iterate through the predefined regular expressions
     for (let i = 0; i < regs.length; i++) {
       // Test if the data matches any of the regular expressions
       if (regs[i].test(data)) {
-        return true;// Return true if a match is found (filter off)
+        return true; // Return true if a match is found (filter off)
       }
     }
     // Return false if no match is found (do not filter off)
@@ -224,68 +223,71 @@ export class PrologDebugger extends EventEmitter {
   // Initialize Prolog debugger
   public initPrologDebugger() {
     // Obtain the directory path for the 'debugger' module and escape special characters
-    let dbg = jsesc(PlatformUtils.resolvePath(__dirname, "debugger"));
+    const dbg = jsesc(PlatformUtils.resolvePath(__dirname, 'debugger'));
     console.log(dbg);
     // Write Prolog commands to the process stdin for initialization
-    if (this._prologProc && this._prologProc.stdin) {
+    if (this._prologProc?.stdin) {
       this._prologProc.stdin.write(`
             use_module('${dbg}').\n
             prolog_debugger:load_source_file('${jsesc(
-          PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
-        )}').
+              PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
+            )}').
               `);
     }
   }
 
   // Create Prolog process
   private async createPrologProc() {
-    console.log("path:" + this._launchRequestArguments.runtimeExecutable);
-    this.killPrologProc();// Kill the existing Prolog process, if any
+    console.log('path:' + this._launchRequestArguments.runtimeExecutable);
+    this.killPrologProc(); // Kill the existing Prolog process, if any
     // Use 'spawn' to create a new Prolog process
-    let pp = await spawn(
+    const pp = await spawn(
       PlatformUtils.normalizePath(this._launchRequestArguments.runtimeExecutable || 'swipl'),
-      (this._launchRequestArguments.runtimeArgs || []).concat("-q"),
+      (this._launchRequestArguments.runtimeArgs || []).concat('-q'),
       { cwd: PlatformUtils.normalizePath(this._launchRequestArguments.cwd) }
     )
-      .on("process", (proc: any) => {
+      .on('process', (proc: any) => {
         // If the process has a valid PID, set it to the _prologProc and initialize the debugger
-        if (proc && proc.pid) {
+        if (proc?.pid) {
           this._prologProc = proc;
           this.initPrologDebugger();
         }
       })
-      .on("stdout", (data: string) => {
+      .on('stdout', (data: string) => {
         //this._debugSession.debugOutput("\n" + data);
         // Check if the data contains a "response" indicating debugger information
         if (/"response":/.test(data)) {
           this.handleOutput(data);
         } else if (!this.filterOffOutput(data)) {
           // If not a "response", output to the debug session (excluding filtered data)
-          this._debugSession.debugOutput("\n" + data);
+          this._debugSession.debugOutput('\n' + data);
         }
       })
-      .on("stderr", (err: string) => {
+      .on('stderr', (err: string) => {
         // Output stderr data to the debug session
-        this._debugSession.sendEvent(new OutputEvent(err + "\n", "stderr"));
+        this._debugSession.sendEvent(new OutputEvent(err + '\n', 'stderr'));
       })
-      .on("exit", () => {
+      .on('exit', () => {
         // Send termination event when the process exits
         this._debugSession.sendEvent(new TerminatedEvent());
       })
       .then(result => {
         // Log the exit code of the Prolog process
-        this._debugSession.debugOutput(
-          "\nProlog process exit with code:" + result.exitCode
-        );
+        this._debugSession.debugOutput('\nProlog process exit with code:' + result.exitCode);
       })
       .catch(async (error: unknown) => {
         // Handle errors during process creation or execution
         let message: string = '';
-        if (error && typeof error === 'object' && 'code' in error && (error as any).code === "ENOENT") {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          (error as any).code === 'ENOENT'
+        ) {
           message = `Cannot debug the prolog file. The Prolog executable '${
             this._launchRequestArguments.runtimeExecutable || ''
-            }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
-          
+          }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
+
           // Show enhanced error message with installation guidance
           const action = await window.showErrorMessage(
             'SWI-Prolog executable not found. The debugger requires SWI-Prolog to debug your Prolog programs.',
@@ -294,7 +296,7 @@ export class PrologDebugger extends EventEmitter {
             'Configure Path',
             'Dismiss'
           );
-          
+
           const installationGuide = InstallationGuide.getInstance();
           switch (action) {
             case 'Install SWI-Prolog':
@@ -304,27 +306,36 @@ export class PrologDebugger extends EventEmitter {
               await commands.executeCommand('prolog.setupWizard');
               break;
             case 'Configure Path':
-              await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
+              await commands.executeCommand(
+                'workbench.action.openSettings',
+                'prolog.executablePath'
+              );
+              break;
+            default:
               break;
           }
         } else {
-          message = error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-            ? (error as any).message
-            : `Failed to run swipl using path: ${
-            this._launchRequestArguments.runtimeExecutable || ''
-            }. Reason is unknown.`;
+          message =
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as any).message === 'string'
+              ? (error as any).message
+              : `Failed to run swipl using path: ${
+                  this._launchRequestArguments.runtimeExecutable || ''
+                }. Reason is unknown.`;
         }
         // Output the error message to the debug session and throw an error
-        this._debugSession.debugOutput("\n" + message);
+        this._debugSession.debugOutput('\n' + message);
         throw new Error(String(error));
       });
   }
   //Sends Prolog consult command to the Prolog process.
   private consult() {
-    let fileName = this._launchRequestArguments.program;// Get the file name from launch request arguments
-    let goals = "['" + (fileName || '') + "'].\n";// Prepare Prolog goals for consulting the specified file
-    if (this._prologProc && this._prologProc.stdin) {
-      this._prologProc.stdin.write(goals);// Write the goals to the Prolog process stdin
+    const fileName = this._launchRequestArguments.program; // Get the file name from launch request arguments
+    const goals = "['" + (fileName || '') + "'].\n"; // Prepare Prolog goals for consulting the specified file
+    if (this._prologProc?.stdin) {
+      this._prologProc.stdin.write(goals); // Write the goals to the Prolog process stdin
     }
   }
 
@@ -333,20 +344,20 @@ export class PrologDebugger extends EventEmitter {
     breakpoints: DebugProtocol.SetBreakpointsArguments,
     bpResponse: DebugProtocol.SetBreakpointsResponse
   ) {
-    this._bpResponse = bpResponse;// Set the breakpoint response to be populated with results
-    let path = jsesc(PlatformUtils.toAbsolute(breakpoints.source?.path || ''));// Escape and resolve the path of the source file
+    this._bpResponse = bpResponse; // Set the breakpoint response to be populated with results
+    const path = jsesc(PlatformUtils.toAbsolute(breakpoints.source?.path || '')); // Escape and resolve the path of the source file
     // Map breakpoints to a serialized format for Prolog debugger
-    let bps = (breakpoints.breakpoints || []).map(bp => {
+    const bps = (breakpoints.breakpoints || []).map(bp => {
       return JSON.stringify({
         line: bp.line,
         column: bp.column,
         condition: bp.condition,
-        hitCondition: bp.hitCondition
+        hitCondition: bp.hitCondition,
       });
     });
     // Construct Prolog debugger command to set breakpoints
-    let cmd = `cmd:prolog_debugger:set_breakpoints('${path}', ${JSON.stringify(
-      bps.join(";")
+    const cmd = `cmd:prolog_debugger:set_breakpoints('${path}', ${JSON.stringify(
+      bps.join(';')
     )}).\n`;
     // Send the command to the Prolog process
     this.query(cmd);
@@ -358,17 +369,17 @@ export class PrologDebugger extends EventEmitter {
     response: DebugProtocol.SetFunctionBreakpointsResponse
   ) {
     // Extract predicate names from the function breakpoint arguments
-    let preds = (args.breakpoints || []).map(bp => {
+    const preds = (args.breakpoints || []).map(bp => {
       return bp.name;
     });
-    this._fbpResponse = response;// Set the function breakpoint response to be populated with results
-    let cmd = `cmd:prolog_debugger:spy_predicates([${preds}]).\n`;// Construct Prolog debugger command to spy on predicates
-    this.query(cmd);// Send the command to the Prolog process
+    this._fbpResponse = response; // Set the function breakpoint response to be populated with results
+    const cmd = `cmd:prolog_debugger:spy_predicates([${preds}]).\n`; // Construct Prolog debugger command to spy on predicates
+    this.query(cmd); // Send the command to the Prolog process
   }
 
   //Initiates the Prolog debugger startup with the specified goal
   public startup(goal: string) {
-    let cmd = `cmd:prolog_debugger:startup(${goal}).\n`;// Construct Prolog debugger command for startup with the specified goal
+    const cmd = `cmd:prolog_debugger:startup(${goal}).\n`; // Construct Prolog debugger command for startup with the specified goal
     this.query(cmd); // Send the command to the Prolog process
   }
 
@@ -376,5 +387,4 @@ export class PrologDebugger extends EventEmitter {
   public dispose(): void {
     this.killPrologProc();
   }
-  
 }

@@ -1,10 +1,8 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as os from 'os';
-import { PlatformUtils } from '../../src/utils/platformUtils';
-import { ExecutableFinder } from '../../src/utils/executableFinder';
-import { PackageManagerIntegration } from '../../src/features/packageManagerIntegration';
+import { PackageManagerIntegration } from '../../src/features/packageManagerIntegration.js';
+import { ExecutableFinder } from '../../src/utils/executableFinder.js';
+import { PlatformUtils } from '../../src/utils/platformUtils.js';
 
 /**
  * Windows-specific platform tests
@@ -12,8 +10,8 @@ import { PackageManagerIntegration } from '../../src/features/packageManagerInte
 suite('Windows Platform Tests', () => {
   // Skip tests if not running on Windows
   const isWindows = os.platform() === 'win32';
-  
-  suiteSetup(function() {
+
+  suiteSetup(function () {
     if (!isWindows) {
       this.skip();
     }
@@ -64,7 +62,7 @@ suite('Windows Platform Tests', () => {
     test('should expand Windows environment variables', () => {
       const pathWithEnvVar = '%PROGRAMFILES%\\swipl\\bin\\swipl.exe';
       const expanded = PlatformUtils.expandEnvironmentVariables(pathWithEnvVar);
-      
+
       if (process.env.PROGRAMFILES) {
         assert.ok(expanded.includes(process.env.PROGRAMFILES));
         assert.ok(!expanded.includes('%PROGRAMFILES%'));
@@ -73,7 +71,7 @@ suite('Windows Platform Tests', () => {
 
     test('should handle Windows drive letters', () => {
       const drivePaths = ['C:\\test', 'D:\\test', 'E:\\test'];
-      
+
       drivePaths.forEach(drivePath => {
         const normalized = PlatformUtils.normalizePath(drivePath);
         assert.ok(normalized.match(/^[A-Z]:\\/));
@@ -95,18 +93,18 @@ suite('Windows Platform Tests', () => {
       assert.ok(executablePaths.some(path => path.includes('Program Files')));
     });
 
-    test('should find SWI-Prolog executable on Windows', async function() {
+    test('should find SWI-Prolog executable on Windows', async function () {
       this.timeout(10000); // Increase timeout for executable detection
-      
+
       const finder = new ExecutableFinder();
       const result = await finder.findSwiplExecutable();
-      
+
       // Test should pass whether SWI-Prolog is installed or not
       if (result.found) {
         assert.ok(result.path);
         assert.ok(result.path.endsWith('.exe'));
         assert.ok(result.detectionMethod);
-        
+
         if (result.permissions) {
           // On Windows, executable permission is usually true if file exists
           assert.strictEqual(typeof result.permissions.executable, 'boolean');
@@ -117,16 +115,16 @@ suite('Windows Platform Tests', () => {
       }
     });
 
-    test('should validate Windows executable paths', async function() {
+    test('should validate Windows executable paths', async function () {
       this.timeout(5000);
-      
+
       const finder = new ExecutableFinder();
-      
+
       // Test with invalid path
       const invalidResult = await finder.validateExecutable('C:\\nonexistent\\swipl.exe');
       assert.strictEqual(invalidResult.found, false);
       assert.ok(invalidResult.issues);
-      
+
       // Test with non-executable file (if exists)
       const textFileResult = await finder.validateExecutable('C:\\Windows\\System32\\drivers\\etc\\hosts');
       if (await PlatformUtils.pathExists('C:\\Windows\\System32\\drivers\\etc\\hosts')) {
@@ -137,12 +135,12 @@ suite('Windows Platform Tests', () => {
   });
 
   suite('Package Manager Integration', () => {
-    test('should detect Windows package managers', async function() {
+    test('should detect Windows package managers', async function () {
       this.timeout(15000); // Package manager detection can be slow
-      
+
       const packageManager = PackageManagerIntegration.getInstance();
       const availableManagers = await packageManager.detectAvailableManagers();
-      
+
       // Should detect at least one Windows package manager or none
       availableManagers.forEach(manager => {
         assert.ok(['winget', 'chocolatey', 'scoop'].includes(manager.name));
@@ -151,12 +149,12 @@ suite('Windows Platform Tests', () => {
       });
     });
 
-    test('should provide Windows installation suggestions', async function() {
+    test('should provide Windows installation suggestions', async function () {
       this.timeout(5000);
-      
+
       const packageManager = PackageManagerIntegration.getInstance();
       const suggestions = await packageManager.getInstallationSuggestions();
-      
+
       assert.ok(suggestions.length > 0);
       assert.ok(suggestions.some(s => s.includes('Windows')));
       assert.ok(suggestions.some(s => s.includes('choco') || s.includes('winget') || s.includes('scoop')));
@@ -165,7 +163,7 @@ suite('Windows Platform Tests', () => {
     test('should get Windows-specific recommendations', () => {
       const packageManager = PackageManagerIntegration.getInstance();
       const recommendations = packageManager.getRecommendedManagers();
-      
+
       assert.deepStrictEqual(recommendations, ['winget', 'chocolatey', 'scoop']);
     });
   });
@@ -173,7 +171,7 @@ suite('Windows Platform Tests', () => {
   suite('Environment Variables', () => {
     test('should handle Windows environment variables', () => {
       const envVars = PlatformUtils.getEnvironmentVariables();
-      
+
       assert.ok(envVars.crossPlatform.includes('PATH'));
       assert.ok(envVars.platformSpecific.includes('PROGRAMFILES'));
       assert.ok(envVars.platformSpecific.includes('APPDATA'));
@@ -268,7 +266,7 @@ suite('Windows Platform Tests', () => {
   suite('Platform Info', () => {
     test('should provide comprehensive Windows platform info', () => {
       const info = PlatformUtils.getPlatformInfo();
-      
+
       assert.strictEqual(info.platform, 'windows');
       assert.ok(['x64', 'arm64', 'x86'].includes(info.architecture));
       assert.ok(info.osVersion.length > 0);
@@ -292,7 +290,7 @@ suite('Windows Platform Tests', () => {
       for (const invalidPath of invalidPaths) {
         const exists = await PlatformUtils.pathExists(invalidPath);
         assert.strictEqual(exists, false);
-        
+
         const isExecutable = await PlatformUtils.isExecutable(invalidPath);
         assert.strictEqual(isExecutable, false);
       }
@@ -309,7 +307,7 @@ suite('Windows Platform Tests', () => {
         // These operations should not throw errors, just return false
         const exists = await PlatformUtils.pathExists(file);
         const isExecutable = await PlatformUtils.isExecutable(file);
-        
+
         // Results may vary based on permissions, but should not throw
         assert.strictEqual(typeof exists, 'boolean');
         assert.strictEqual(typeof isExecutable, 'boolean');

@@ -1,4 +1,4 @@
-import { MarkdownString } from 'vscode';
+// import { MarkdownString } from 'vscode';
 
 export interface PrologResult {
   type: 'success' | 'failure' | 'error' | 'multiple';
@@ -30,7 +30,7 @@ export class OutputFormatter {
       showLineNumbers: options.showLineNumbers ?? false,
       highlightVariables: options.highlightVariables ?? true,
       compactMode: options.compactMode ?? false,
-      locale: options.locale ?? 'en'
+      locale: options.locale ?? 'en',
     };
   }
 
@@ -77,7 +77,7 @@ export class OutputFormatter {
     }
 
     let result = '✅ **Query succeeded:**\n\n';
-    
+
     if (this.options.useCodeBlocks) {
       result += '```prolog\n';
     }
@@ -151,12 +151,14 @@ export class OutputFormatter {
     for (let i = 0; i < bindings.length; i++) {
       const binding = bindings[i];
       if (binding) {
-        const row = variables.map(variable => {
-          const value = binding[variable];
-          const formatted = value !== undefined ? this.formatValue(value) : '-';
-          return formatted.substring(0, 12).padEnd(12);
-        }).join(' | ');
-        
+        const row = variables
+          .map(variable => {
+            const value = binding[variable];
+            const formatted = value !== undefined ? this.formatValue(value) : '-';
+            return formatted.substring(0, 12).padEnd(12);
+          })
+          .join(' | ');
+
         result += `| ${row} |\n`;
       }
     }
@@ -178,7 +180,7 @@ export class OutputFormatter {
       const binding = bindings[i];
       if (binding) {
         result += `**Solution ${i + 1}:**\n`;
-        
+
         if (this.options.useCodeBlocks) {
           result += '```prolog\n';
         }
@@ -194,7 +196,7 @@ export class OutputFormatter {
         if (this.options.useCodeBlocks) {
           result += '```\n';
         }
-        
+
         result += '\n';
       }
     }
@@ -236,7 +238,7 @@ export class OutputFormatter {
         const args = value.args.map((arg: any) => this.formatValue(arg)).join(', ');
         return `${value.functor}(${args})`;
       }
-      
+
       // Handle other objects
       return JSON.stringify(value);
     }
@@ -251,7 +253,7 @@ export class OutputFormatter {
     if (result.bindings && result.bindings.length > 0) {
       return this.formatVariableBindings(result.bindings);
     }
-    
+
     return '✅ **Query succeeded**\n' + (result.message ? `\n${result.message}\n` : '');
   }
 
@@ -267,7 +269,7 @@ export class OutputFormatter {
    */
   private formatErrorResult(result: PrologResult): string {
     let output = '🚫 **Query error**\n\n';
-    
+
     if (result.error) {
       if (this.options.useCodeBlocks) {
         output += '```\n';
@@ -277,11 +279,11 @@ export class OutputFormatter {
         output += result.error + '\n';
       }
     }
-    
+
     if (result.message) {
       output += '\n' + result.message + '\n';
     }
-    
+
     return output;
   }
 
@@ -292,7 +294,7 @@ export class OutputFormatter {
     if (result.bindings) {
       return this.formatVariableBindings(result.bindings);
     }
-    
+
     return `✅ **Query succeeded** (${result.count || 0} results)\n`;
   }
 
@@ -308,11 +310,11 @@ export class OutputFormatter {
    */
   formatPrologCode(code: string, title?: string): string {
     let result = '';
-    
+
     if (title) {
       result += `**${title}:**\n\n`;
     }
-    
+
     if (this.options.useCodeBlocks) {
       result += '```prolog\n';
       result += code;
@@ -323,7 +325,7 @@ export class OutputFormatter {
     } else {
       result += code + '\n';
     }
-    
+
     return result;
   }
 
@@ -332,16 +334,20 @@ export class OutputFormatter {
    */
   formatHelpText(predicate: string, documentation: string): string {
     let result = `📖 **Help for \`${predicate}\`:**\n\n`;
-    
+
     // Parse and format the documentation
     const lines = documentation.split('\n');
     let inCodeBlock = false;
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
-      
+
       // Detect code examples
-      if (trimmed.startsWith('?-') || trimmed.includes(':-') || trimmed.match(/^[a-z][a-zA-Z0-9_]*\(/)) {
+      if (
+        trimmed.startsWith('?-') ||
+        trimmed.includes(':-') ||
+        trimmed.match(/^[a-z][a-zA-Z0-9_]*\(/)
+      ) {
         if (!inCodeBlock && this.options.useCodeBlocks) {
           result += '```prolog\n';
           inCodeBlock = true;
@@ -355,53 +361,59 @@ export class OutputFormatter {
         result += line + '\n';
       }
     }
-    
+
     if (inCodeBlock && this.options.useCodeBlocks) {
       result += '```\n';
     }
-    
+
     return result;
   }
 
   /**
    * Format streaming output for large results
    */
-  formatStreamingOutput(chunk: any[], isFirst: boolean, isLast: boolean, totalCount?: number, chunkIndex?: number): string {
+  formatStreamingOutput(
+    chunk: any[],
+    isFirst: boolean,
+    isLast: boolean,
+    totalCount?: number,
+    chunkIndex?: number
+  ): string {
     let result = '';
-    
+
     if (isFirst && totalCount !== undefined) {
       result += `📊 **Streaming results** (${totalCount} total):\n\n`;
     }
-    
+
     if (chunk.length > 0) {
       // Add chunk header for multi-chunk results
       if (!isFirst && chunkIndex !== undefined) {
         result += `\n**Chunk ${chunkIndex + 1}:**\n`;
       }
-      
+
       // Format this chunk with streaming-optimized settings
       const chunkResult: PrologResult = {
         type: 'multiple',
         bindings: chunk,
-        count: chunk.length
+        count: chunk.length,
       };
-      
+
       // Use compact mode for streaming to reduce visual clutter
       const originalCompactMode = this.options.compactMode;
       this.options.compactMode = totalCount ? totalCount > 50 : chunk.length > 20;
-      
+
       result += this.formatQueryResult(chunkResult);
-      
+
       // Restore original compact mode setting
       this.options.compactMode = originalCompactMode;
     }
-    
+
     if (isLast) {
       result += '\n✅ **Streaming complete**\n';
     } else {
       result += '\n⏳ *Loading more results...*\n';
     }
-    
+
     return result;
   }
 
@@ -419,16 +431,16 @@ export class OutputFormatter {
     }
   ): string {
     let result = '';
-    
+
     const { total_count, offset, limit, has_more, next_offset } = pagination;
     const endIndex = offset + results.length;
-    
+
     result += `📄 **Page Results** (${offset + 1}-${endIndex} of ${total_count}):\n\n`;
-    
+
     if (results.length > 0) {
       // Use appropriate formatting based on result size
       const useCompactFormat = results.length > 15 || total_count > 100;
-      
+
       if (useCompactFormat) {
         result += '```\n';
         results.forEach((item, index) => {
@@ -455,7 +467,7 @@ export class OutputFormatter {
         });
       }
     }
-    
+
     // Add navigation info
     result += `\n**Navigation:**\n`;
     result += `- Current: ${offset + 1}-${endIndex} of ${total_count}\n`;
@@ -466,30 +478,30 @@ export class OutputFormatter {
       const prevOffset = Math.max(0, offset - limit);
       result += `- Previous page: Use \`--offset ${prevOffset} --limit ${limit}\`\n`;
     }
-    
+
     return result;
   }
 
   /**
    * Format large result set with performance optimizations
    */
-  formatLargeResultSet(results: any[], totalCount?: number, chunkSize?: number): string {
+  formatLargeResultSet(results: any[], totalCount?: number, _chunkSize?: number): string {
     const displayCount = results.length;
     const actualTotal = totalCount || displayCount;
-    
+
     let result = '';
-    
+
     if (actualTotal > displayCount) {
       result += `📊 **Large Result Set** (showing first ${displayCount} of ${actualTotal}):\n\n`;
       result += `*💡 Performance tip: Results are automatically chunked for better performance*\n\n`;
     } else {
       result += `📊 **Results** (${displayCount} total):\n\n`;
     }
-    
+
     // Use performance-optimized formatting
     const useUltraCompact = displayCount > 100;
     const useCompact = displayCount > 30;
-    
+
     if (useUltraCompact) {
       // Ultra-compact format for very large results
       result += '```\n';
@@ -512,11 +524,11 @@ export class OutputFormatter {
       const resultObj: PrologResult = {
         type: 'multiple',
         bindings: results,
-        count: displayCount
+        count: displayCount,
       };
       result += this.formatQueryResult(resultObj);
     }
-    
+
     return result;
   }
 
@@ -546,11 +558,11 @@ export class OutputFormatter {
     if (output.length <= maxLength) {
       return output;
     }
-    
+
     const truncated = output.substring(0, maxLength - 50);
     const lastNewline = truncated.lastIndexOf('\n');
     const cutPoint = lastNewline > maxLength - 200 ? lastNewline : truncated.length;
-    
+
     return truncated.substring(0, cutPoint) + '\n\n*... (output truncated)*\n';
   }
 
@@ -580,7 +592,7 @@ export const defaultFormatter = new OutputFormatter();
 export const compactFormatter = new OutputFormatter({
   compactMode: true,
   maxResults: 10,
-  useCodeBlocks: false
+  useCodeBlocks: false,
 });
 
 /**
@@ -591,5 +603,5 @@ export const detailedFormatter = new OutputFormatter({
   maxResults: 100,
   useCodeBlocks: true,
   showLineNumbers: true,
-  highlightVariables: true
+  highlightVariables: true,
 });

@@ -74,8 +74,8 @@ export class SessionManager extends EventEmitter {
   private sessionsFile: string;
   private statesDir: string;
   private snapshotsDir: string;
-  private cleanupInterval?: NodeJS.Timeout;
-  private autoSaveInterval?: NodeJS.Timeout;
+  private cleanupInterval?: ReturnType<typeof setInterval>;
+  private autoSaveInterval?: ReturnType<typeof setInterval>;
   private isInitialized: boolean = false;
 
   // Integration with existing managers
@@ -86,7 +86,7 @@ export class SessionManager extends EventEmitter {
 
   constructor(options: Partial<SessionManagerOptions> = {}) {
     super();
-    
+
     this.options = {
       storageDir: path.join(process.cwd(), '.prolog-sessions'),
       maxSessions: 50,
@@ -95,7 +95,7 @@ export class SessionManager extends EventEmitter {
         maxMemoryUsageMB: 256,
         maxCpuUsagePercent: 50,
         maxQueryDurationMs: 30000,
-        maxQueueSize: 50
+        maxQueueSize: 50,
       },
       autoCleanupInterval: 60 * 60 * 1000, // 1 hour
       maxIdleTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -103,7 +103,7 @@ export class SessionManager extends EventEmitter {
       enableAutoSave: true,
       autoSaveInterval: 5 * 60 * 1000, // 5 minutes
       compressionEnabled: true,
-      ...options
+      ...options,
     };
 
     this.storageDir = this.options.storageDir;
@@ -197,7 +197,7 @@ export class SessionManager extends EventEmitter {
       resourceQuota: { ...this.options.defaultResourceQuota, ...options.resourceQuota },
       persistenceEnabled: options.persistenceEnabled ?? this.options.enablePersistence,
       autoSave: options.autoSave ?? this.options.enableAutoSave,
-      maxIdleTime: this.options.maxIdleTime
+      maxIdleTime: this.options.maxIdleTime,
     };
 
     // Initialize session state
@@ -210,7 +210,7 @@ export class SessionManager extends EventEmitter {
       rdfTriples: [],
       variables: {},
       customPredicates: [],
-      timestamp: now
+      timestamp: now,
     };
 
     // Store session and state
@@ -227,7 +227,7 @@ export class SessionManager extends EventEmitter {
       const sessionHistoryManager = new QueryHistoryManager({
         storageDir: path.join(this.statesDir, sessionId, 'history'),
         maxHistorySize: 1000,
-        retentionDays: 7
+        retentionDays: 7,
       });
       this.sessionHistoryManagers.set(sessionId, sessionHistoryManager);
     }
@@ -263,7 +263,7 @@ export class SessionManager extends EventEmitter {
       if (currentSession) {
         currentSession.isActive = false;
         currentSession.lastAccessedAt = Date.now();
-        
+
         // Auto-save current session state if enabled
         if (currentSession.autoSave) {
           await this.saveSessionState(this.activeSession);
@@ -279,12 +279,12 @@ export class SessionManager extends EventEmitter {
     // Load session state
     await this.loadSessionState(sessionId);
 
-    this.emit('sessionSwitched', { 
-      previousSessionId: this.activeSession, 
+    this.emit('sessionSwitched', {
+      previousSessionId: this.activeSession,
       currentSessionId: sessionId,
-      sessionConfig: session
+      sessionConfig: session,
     });
-    
+
     console.log(`[SessionManager] Switched to session ${sessionId} (${session.name})`);
   }
 
@@ -306,7 +306,7 @@ export class SessionManager extends EventEmitter {
     return {
       sessionId: this.activeSession,
       config,
-      state
+      state,
     };
   }
 
@@ -449,7 +449,9 @@ export class SessionManager extends EventEmitter {
       // Restore from specific snapshot
       const snapshot = await this.loadSnapshot(snapshotId);
       if (!snapshot || snapshot.sessionId !== sessionId) {
-        throw new Error(`Snapshot ${snapshotId} not found or doesn't belong to session ${sessionId}`);
+        throw new Error(
+          `Snapshot ${snapshotId} not found or doesn't belong to session ${sessionId}`
+        );
       }
       state = snapshot.state;
     } else {
@@ -460,17 +462,15 @@ export class SessionManager extends EventEmitter {
     this.sessionStates.set(sessionId, state);
 
     this.emit('sessionStateRestored', { sessionId, state });
-    console.log(`[SessionManager] Restored state for session ${sessionId}${snapshotId ? ` from snapshot ${snapshotId}` : ''}`);
+    console.log(
+      `[SessionManager] Restored state for session ${sessionId}${snapshotId ? ` from snapshot ${snapshotId}` : ''}`
+    );
   }
 
   /**
    * Create a snapshot of session state
    */
-  async createSnapshot(
-    sessionId: string, 
-    name: string, 
-    description?: string
-  ): Promise<string> {
+  async createSnapshot(sessionId: string, name: string, description?: string): Promise<string> {
     const session = this.sessions.get(sessionId);
     const state = this.sessionStates.get(sessionId);
 
@@ -485,7 +485,7 @@ export class SessionManager extends EventEmitter {
       description,
       state: { ...state, timestamp: Date.now() },
       createdAt: Date.now(),
-      metadata: { ...session.metadata }
+      metadata: { ...session.metadata },
     };
 
     // Save snapshot to disk
@@ -516,7 +516,10 @@ export class SessionManager extends EventEmitter {
   /**
    * Update session resource quota
    */
-  async updateSessionResourceQuota(sessionId: string, quota: Partial<ResourceQuota>): Promise<void> {
+  async updateSessionResourceQuota(
+    sessionId: string,
+    quota: Partial<ResourceQuota>
+  ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
@@ -566,9 +569,9 @@ export class SessionManager extends EventEmitter {
       config: session,
       state,
       concurrencyStats: concurrencyManager?.getStatus(),
-      historyStats: historyManager ? (await historyManager.getStatistics()) : undefined,
+      historyStats: historyManager ? await historyManager.getStatistics() : undefined,
       uptime: now - session.createdAt,
-      idleTime: now - session.lastAccessedAt
+      idleTime: now - session.lastAccessedAt,
     };
   }
 
@@ -585,7 +588,7 @@ export class SessionManager extends EventEmitter {
 
       for (const [sessionId, config] of Object.entries(sessionsData)) {
         this.sessions.set(sessionId, config as SessionConfig);
-        
+
         // Load session state
         try {
           const state = await this.loadSessionStateFromDisk(sessionId);
@@ -630,7 +633,7 @@ export class SessionManager extends EventEmitter {
 
   private async loadSessionStateFromDisk(sessionId: string): Promise<SessionState> {
     const stateFile = path.join(this.statesDir, `${sessionId}.json`);
-    
+
     if (!fs.existsSync(stateFile)) {
       throw new Error(`State file not found for session ${sessionId}`);
     }
@@ -641,7 +644,7 @@ export class SessionManager extends EventEmitter {
 
   private async saveSessionStateToDisk(sessionId: string, state: SessionState): Promise<void> {
     const stateFile = path.join(this.statesDir, `${sessionId}.json`);
-    
+
     try {
       fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf8');
     } catch (error: unknown) {
@@ -672,7 +675,7 @@ export class SessionManager extends EventEmitter {
 
   private async saveSnapshot(snapshotId: string, snapshot: SessionSnapshot): Promise<void> {
     const snapshotFile = path.join(this.snapshotsDir, `${snapshotId}.json`);
-    
+
     try {
       fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2), 'utf8');
     } catch (error: unknown) {
@@ -682,7 +685,7 @@ export class SessionManager extends EventEmitter {
 
   private async loadSnapshot(snapshotId: string): Promise<SessionSnapshot | null> {
     const snapshotFile = path.join(this.snapshotsDir, `${snapshotId}.json`);
-    
+
     if (!fs.existsSync(snapshotFile)) {
       return null;
     }
@@ -714,7 +717,7 @@ export class SessionManager extends EventEmitter {
 
     for (const [sessionId, session] of this.sessions.entries()) {
       const idleTime = now - session.lastAccessedAt;
-      
+
       if (!session.isActive && session.maxIdleTime && idleTime > session.maxIdleTime) {
         sessionsToCleanup.push(sessionId);
       }

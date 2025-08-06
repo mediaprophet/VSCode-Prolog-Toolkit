@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events';
-import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
 export interface QueryStatus {
@@ -47,7 +46,7 @@ export class QueryNotificationManager extends EventEmitter {
       progressInterval: 1000,
       enableWebSocket: false,
       webSocketPort: 3062,
-      ...options
+      ...options,
     };
 
     if (this.options.enableWebSocket) {
@@ -60,9 +59,9 @@ export class QueryNotificationManager extends EventEmitter {
    */
   private initializeWebSocketServer(): void {
     try {
-      this.wsServer = new WebSocket.Server({ 
+      this.wsServer = new WebSocket.Server({
         port: this.options.webSocketPort!,
-        perMessageDeflate: false
+        perMessageDeflate: false,
       });
 
       this.wsServer.on('connection', (ws: WebSocket) => {
@@ -72,10 +71,12 @@ export class QueryNotificationManager extends EventEmitter {
         // Send current query statuses to new client
         const currentQueries = Array.from(this.queries.values());
         if (currentQueries.length > 0) {
-          ws.send(JSON.stringify({
-            type: 'query_status_batch',
-            queries: currentQueries
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'query_status_batch',
+              queries: currentQueries,
+            })
+          );
         }
 
         ws.on('close', () => {
@@ -83,13 +84,13 @@ export class QueryNotificationManager extends EventEmitter {
           this.wsClients.delete(ws);
         });
 
-        ws.on('error', (error) => {
+        ws.on('error', error => {
           console.error('[QueryNotificationManager] WebSocket error:', error);
           this.wsClients.delete(ws);
         });
 
         // Handle client messages (e.g., cancel requests)
-        ws.on('message', (data) => {
+        ws.on('message', data => {
           try {
             const message = JSON.parse(data.toString());
             this.handleWebSocketMessage(message, ws);
@@ -99,11 +100,13 @@ export class QueryNotificationManager extends EventEmitter {
         });
       });
 
-      this.wsServer.on('error', (error) => {
+      this.wsServer.on('error', error => {
         console.error('[QueryNotificationManager] WebSocket server error:', error);
       });
 
-      console.log(`[QueryNotificationManager] WebSocket server started on port ${this.options.webSocketPort}`);
+      console.log(
+        `[QueryNotificationManager] WebSocket server started on port ${this.options.webSocketPort}`
+      );
     } catch (error: unknown) {
       console.error('[QueryNotificationManager] Failed to start WebSocket server:', error);
     }
@@ -114,29 +117,36 @@ export class QueryNotificationManager extends EventEmitter {
    */
   private handleWebSocketMessage(message: { type: string; queryId?: string }, ws: WebSocket): void {
     switch (message.type) {
-      case 'cancel_query':
+      case 'cancel_query': {
         if (message.queryId) {
           this.cancelQuery(message.queryId);
         }
         break;
-      case 'get_query_status':
+      }
+      case 'get_query_status': {
         if (message.queryId) {
           const status = this.getQueryStatus(message.queryId);
           if (status) {
-            ws.send(JSON.stringify({
-              type: 'query_status',
-              query: status
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'query_status',
+                query: status,
+              })
+            );
           }
         }
         break;
-      case 'get_all_queries':
+      }
+      case 'get_all_queries': {
         const allQueries = Array.from(this.queries.values());
-        ws.send(JSON.stringify({
-          type: 'query_status_batch',
-          queries: allQueries
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'query_status_batch',
+            queries: allQueries,
+          })
+        );
         break;
+      }
     }
   }
 
@@ -163,7 +173,7 @@ export class QueryNotificationManager extends EventEmitter {
    * Register a new query for tracking
    */
   registerQuery(
-    queryId: string, 
+    queryId: string,
     callback?: QueryCallback,
     isBatch: boolean = false,
     batchIndex?: number,
@@ -175,11 +185,11 @@ export class QueryNotificationManager extends EventEmitter {
       startTime: Date.now(),
       isBatch,
       batchIndex,
-      totalBatchSize
+      totalBatchSize,
     };
 
     this.queries.set(queryId, status);
-    
+
     if (callback) {
       this.callbacks.set(queryId, callback);
     }
@@ -190,7 +200,7 @@ export class QueryNotificationManager extends EventEmitter {
     // Broadcast to WebSocket clients
     this.broadcastNotification({
       type: 'query_registered',
-      query: status
+      query: status,
     });
 
     console.log(`[QueryNotificationManager] Registered query ${queryId}`);
@@ -199,10 +209,7 @@ export class QueryNotificationManager extends EventEmitter {
   /**
    * Update query status
    */
-  updateQueryStatus(
-    queryId: string, 
-    updates: Partial<QueryStatus>
-  ): void {
+  updateQueryStatus(queryId: string, updates: Partial<QueryStatus>): void {
     const status = this.queries.get(queryId);
     if (!status) {
       console.warn(`[QueryNotificationManager] Query ${queryId} not found`);
@@ -223,26 +230,30 @@ export class QueryNotificationManager extends EventEmitter {
     const callback = this.callbacks.get(queryId);
     if (callback) {
       switch (status.status) {
-        case 'running':
+        case 'running': {
           if (callback.onProgress) {
             callback.onProgress(status);
           }
           break;
-        case 'completed':
+        }
+        case 'completed': {
           if (callback.onComplete) {
             callback.onComplete(status);
           }
           break;
-        case 'error':
+        }
+        case 'error': {
           if (callback.onError) {
             callback.onError(status);
           }
           break;
-        case 'cancelled':
+        }
+        case 'cancelled': {
           if (callback.onCancel) {
             callback.onCancel(status);
           }
           break;
+        }
       }
     }
 
@@ -253,7 +264,7 @@ export class QueryNotificationManager extends EventEmitter {
     // Broadcast to WebSocket clients
     this.broadcastNotification({
       type: 'query_status_updated',
-      query: status
+      query: status,
     });
 
     console.log(`[QueryNotificationManager] Updated query ${queryId} status to ${status.status}`);
@@ -273,7 +284,7 @@ export class QueryNotificationManager extends EventEmitter {
     this.updateQueryStatus(queryId, {
       status: 'running',
       progress: Math.max(0, Math.min(100, progress)),
-      message
+      message,
     });
   }
 
@@ -284,7 +295,7 @@ export class QueryNotificationManager extends EventEmitter {
     this.updateQueryStatus(queryId, {
       status: 'completed',
       results,
-      progress: 100
+      progress: 100,
     });
   }
 
@@ -294,7 +305,7 @@ export class QueryNotificationManager extends EventEmitter {
   failQuery(queryId: string, error: unknown): void {
     this.updateQueryStatus(queryId, {
       status: 'error',
-      error
+      error,
     });
   }
 
@@ -312,7 +323,7 @@ export class QueryNotificationManager extends EventEmitter {
     }
 
     this.updateQueryStatus(queryId, {
-      status: 'cancelled'
+      status: 'cancelled',
     });
 
     // Emit cancellation event for external handlers
@@ -332,8 +343,9 @@ export class QueryNotificationManager extends EventEmitter {
    * Get all active queries
    */
   getActiveQueries(): QueryStatus[] {
-    return Array.from(this.queries.values())
-      .filter(q => !['completed', 'error', 'cancelled', 'timeout'].includes(q.status));
+    return Array.from(this.queries.values()).filter(
+      q => !['completed', 'error', 'cancelled', 'timeout'].includes(q.status)
+    );
   }
 
   /**
@@ -349,12 +361,12 @@ export class QueryNotificationManager extends EventEmitter {
   private cleanupQuery(queryId: string): void {
     this.queries.delete(queryId);
     this.callbacks.delete(queryId);
-    
+
     this.emit('queryCleanedUp', queryId);
-    
+
     this.broadcastNotification({
       type: 'query_cleaned_up',
-      queryId
+      queryId,
     });
 
     console.log(`[QueryNotificationManager] Cleaned up query ${queryId}`);
@@ -365,7 +377,9 @@ export class QueryNotificationManager extends EventEmitter {
    */
   cleanupCompletedQueries(): void {
     const completedQueries = Array.from(this.queries.entries())
-      .filter(([_, status]) => ['completed', 'error', 'cancelled', 'timeout'].includes(status.status))
+      .filter(([_, status]) =>
+        ['completed', 'error', 'cancelled', 'timeout'].includes(status.status)
+      )
       .map(([id, _]) => id);
 
     completedQueries.forEach(id => this.cleanupQuery(id));
@@ -391,7 +405,7 @@ export class QueryNotificationManager extends EventEmitter {
       completed: queries.filter(q => q.status === 'completed').length,
       error: queries.filter(q => q.status === 'error').length,
       cancelled: queries.filter(q => q.status === 'cancelled').length,
-      timeout: queries.filter(q => q.status === 'timeout').length
+      timeout: queries.filter(q => q.status === 'timeout').length,
     };
   }
 

@@ -70,7 +70,7 @@ export function standardizeError(error: unknown): StandardError {
     message: getErrorMessage(error),
     code: getErrorCode(error),
     stack: getErrorStack(error),
-    originalError: error
+    originalError: error,
   };
 }
 
@@ -118,9 +118,7 @@ export interface SafeResult<T, E = StandardError> {
 /**
  * Wrap a function to return a SafeResult
  */
-export async function wrapWithResult<T>(
-  fn: () => Promise<T>
-): Promise<SafeResult<T>> {
+export async function wrapWithResult<T>(fn: () => Promise<T>): Promise<SafeResult<T>> {
   try {
     const data = await fn();
     return { success: true, data };
@@ -132,9 +130,7 @@ export async function wrapWithResult<T>(
 /**
  * Wrap a synchronous function to return a SafeResult
  */
-export function wrapWithResultSync<T>(
-  fn: () => T
-): SafeResult<T> {
+export function wrapWithResultSync<T>(fn: () => T): SafeResult<T> {
   try {
     const data = fn();
     return { success: true, data };
@@ -158,10 +154,7 @@ export function assertNotNull<T>(
 /**
  * Assert that a condition is true
  */
-export function assert(
-  condition: unknown,
-  message = 'Assertion failed'
-): asserts condition {
+export function assert(condition: unknown, message = 'Assertion failed'): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
@@ -185,21 +178,33 @@ export class TypedError<T extends string = string> extends Error {
  * Create specific error types
  */
 export class ValidationError extends TypedError<'validation'> {
-  constructor(message: string, public readonly field?: string, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    public readonly field?: string,
+    details?: Record<string, unknown>
+  ) {
     super('validation', message, details);
     this.name = 'ValidationError';
   }
 }
 
 export class NetworkError extends TypedError<'network'> {
-  constructor(message: string, public readonly statusCode?: number, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    public readonly statusCode?: number,
+    details?: Record<string, unknown>
+  ) {
     super('network', message, details);
     this.name = 'NetworkError';
   }
 }
 
 export class TimeoutError extends TypedError<'timeout'> {
-  constructor(message: string, public readonly timeoutMs?: number, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    public readonly timeoutMs?: number,
+    details?: Record<string, unknown>
+  ) {
     super('timeout', message, details);
     this.name = 'TimeoutError';
   }
@@ -215,21 +220,21 @@ export async function retryWithBackoff<T>(
   maxDelayMs = 10000
 ): Promise<T> {
   let lastError: unknown;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxRetries) {
         throw error;
       }
-      
+
       const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError;
 }

@@ -1,469 +1,664 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { InstallationChecker, InstallationStatus } from './installationChecker';
 import { InstallationGuide } from './installationGuide';
 import { PlatformUtils } from '../utils/platformUtils';
 
 export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'prologSettings';
-    private _view?: vscode.WebviewView;
-    private installationChecker: InstallationChecker;
-    private installationGuide: InstallationGuide;
+  public static readonly viewType = 'prologSettings';
+  private _view?: vscode.WebviewView;
+  private installationChecker: InstallationChecker;
+  private installationGuide: InstallationGuide;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {
-        this.installationChecker = InstallationChecker.getInstance();
-        this.installationGuide = InstallationGuide.getInstance();
+  constructor(private readonly _extensionUri: vscode.Uri) {
+    this.installationChecker = InstallationChecker.getInstance();
+    this.installationGuide = InstallationGuide.getInstance();
+  }
+
+  public resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken
+  ) {
+    this._view = webviewView;
+
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this._extensionUri],
+    };
+
+    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+    // Handle messages from the webview
+    webviewView.webview.onDidReceiveMessage(
+      async message => {
+        switch (message.type) {
+          case 'updateSetting': {
+            this._updateSetting(message.key, message.value);
+            break;
+          }
+          case 'resetSettings': {
+            this._resetSettings();
+            break;
+          }
+          case 'exportSettings': {
+            this._exportSettings();
+            break;
+          }
+          case 'importSettings': {
+            this._importSettings();
+            break;
+          }
+          case 'validateSetting': {
+            this._validateSetting(message.key, message.value);
+            break;
+          }
+          case 'getSettings': {
+            this._sendCurrentSettings();
+            break;
+          }
+          case 'checkInstallation': {
+            this._checkInstallation();
+            break;
+          }
+          case 'autoDetectPath': {
+            this._autoDetectPath();
+            break;
+          }
+          case 'testInstallation': {
+            this._testInstallation();
+            break;
+          }
+          case 'runSetupWizard': {
+            await this.installationGuide.runSetupWizard();
+            break;
+          }
+          case 'showInstallationGuide': {
+            await this.installationGuide.showInstallationGuideDialog();
+            break;
+          }
+        }
+      },
+      undefined,
+      []
+    );
+
+    // Send initial settings
+    this._sendCurrentSettings();
+  }
+
+  private _updateSetting(key: string, value: any) {
+    const config = vscode.workspace.getConfiguration('prolog');
+    config.update(key, value, vscode.ConfigurationTarget.Global).then(
+      () => {
+        vscode.window.showInformationMessage(`Setting '${key}' updated successfully`);
+        this._sendCurrentSettings(); // Refresh the UI
+      },
+      error => {
+        vscode.window.showErrorMessage(`Failed to update setting '${key}': ${error}`);
+      }
+    );
+  }
+
+  private _resetSettings() {
+    vscode.window
+      .showWarningMessage(
+        'Are you sure you want to reset all Prolog settings to their default values?',
+        'Yes',
+        'No'
+      )
+      .then(selection => {
+        if (selection === 'Yes') {
+          const config = vscode.workspace.getConfiguration('prolog');
+          const settingsToReset = [
+            'executablePath',
+            'dialect',
+            'linter.run',
+            'format.addSpace',
+            'linter.delay',
+            'linter.enableMsgInOutput',
+            'terminal.runtimeArgs',
+            'telemetry.enabled',
+            'apiServer.enabled',
+            'apiServer.port',
+            'apiServer.host',
+            'apiServer.corsOrigins',
+            'apiServer.maxConnections',
+            'apiServer.requestTimeout',
+            'apiServer.rateLimiting.enabled',
+            'apiServer.rateLimiting.requestsPerMinute',
+            'apiServer.rateLimiting.burstLimit',
+            'apiServer.auth.method',
+            'apiServer.auth.apiKeys',
+            'apiServer.auth.jwtSecret',
+            'apiServer.auth.jwtExpiration',
+            'webSocketServer.enabled',
+            'webSocketServer.port',
+            'webSocketServer.maxConnections',
+            'webSocketServer.heartbeatInterval',
+          ];
+
+          Promise.all(
+            settingsToReset.map(key =>
+              config.update(key, undefined, vscode.ConfigurationTarget.Global)
+            )
+          ).then(() => {
+            vscode.window.showInformationMessage('All Prolog settings have been reset to defaults');
+            this._sendCurrentSettings();
+          });
+        }
+      });
+  }
+
+  private async _exportSettings() {
+    const config = vscode.workspace.getConfiguration('prolog');
+    const settings = {
+      executablePath: config.get('executablePath'),
+      dialect: config.get('dialect'),
+      linter: {
+        run: config.get('linter.run'),
+        delay: config.get('linter.delay'),
+        enableMsgInOutput: config.get('linter.enableMsgInOutput'),
+      },
+      format: {
+        addSpace: config.get('format.addSpace'),
+      },
+      terminal: {
+        runtimeArgs: config.get('terminal.runtimeArgs'),
+      },
+      telemetry: {
+        enabled: config.get('telemetry.enabled'),
+      },
+      apiServer: {
+        enabled: config.get('apiServer.enabled'),
+        port: config.get('apiServer.port'),
+        host: config.get('apiServer.host'),
+        corsOrigins: config.get('apiServer.corsOrigins'),
+        maxConnections: config.get('apiServer.maxConnections'),
+        requestTimeout: config.get('apiServer.requestTimeout'),
+        rateLimiting: {
+          enabled: config.get('apiServer.rateLimiting.enabled'),
+          requestsPerMinute: config.get('apiServer.rateLimiting.requestsPerMinute'),
+          burstLimit: config.get('apiServer.rateLimiting.burstLimit'),
+        },
+        auth: {
+          method: config.get('apiServer.auth.method'),
+          jwtExpiration: config.get('apiServer.auth.jwtExpiration'),
+        },
+      },
+      webSocketServer: {
+        enabled: config.get('webSocketServer.enabled'),
+        port: config.get('webSocketServer.port'),
+        maxConnections: config.get('webSocketServer.maxConnections'),
+        heartbeatInterval: config.get('webSocketServer.heartbeatInterval'),
+      },
+    };
+
+    const uri = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file('prolog-settings.json'),
+      filters: {
+        'JSON files': ['json'],
+      },
+    });
+
+    if (uri) {
+      const normalizedPath = PlatformUtils.normalizePath(uri.fsPath);
+      fs.writeFileSync(normalizedPath, JSON.stringify(settings, null, 2));
+      vscode.window.showInformationMessage(`Settings exported to ${normalizedPath}`);
     }
+  }
 
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken,
-    ) {
-        this._view = webviewView;
+  private async _importSettings() {
+    const uri = await vscode.window.showOpenDialog({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        'JSON files': ['json'],
+      },
+    });
 
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [this._extensionUri]
-        };
+    if (uri?.[0]) {
+      try {
+        const normalizedPath = PlatformUtils.normalizePath(uri[0].fsPath);
+        const settingsJson = fs.readFileSync(normalizedPath, 'utf8');
+        const settings = JSON.parse(settingsJson);
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+        const config = vscode.workspace.getConfiguration('prolog');
 
-        // Handle messages from the webview
-        webviewView.webview.onDidReceiveMessage(
-            async message => {
-                switch (message.type) {
-                    case 'updateSetting':
-                        this._updateSetting(message.key, message.value);
-                        break;
-                    case 'resetSettings':
-                        this._resetSettings();
-                        break;
-                    case 'exportSettings':
-                        this._exportSettings();
-                        break;
-                    case 'importSettings':
-                        this._importSettings();
-                        break;
-                    case 'validateSetting':
-                        this._validateSetting(message.key, message.value);
-                        break;
-                    case 'getSettings':
-                        this._sendCurrentSettings();
-                        break;
-                    case 'checkInstallation':
-                        this._checkInstallation();
-                        break;
-                    case 'autoDetectPath':
-                        this._autoDetectPath();
-                        break;
-                    case 'testInstallation':
-                        this._testInstallation();
-                        break;
-                    case 'runSetupWizard':
-                        await this.installationGuide.runSetupWizard();
-                        break;
-                    case 'showInstallationGuide':
-                        await this.installationGuide.showInstallationGuideDialog();
-                        break;
-                }
-            },
-            undefined,
-            []
-        );
+        // Apply imported settings
+        const promises = [];
+        if (settings.executablePath)
+          promises.push(
+            config.update(
+              'executablePath',
+              settings.executablePath,
+              vscode.ConfigurationTarget.Global
+            )
+          );
+        if (settings.dialect)
+          promises.push(
+            config.update('dialect', settings.dialect, vscode.ConfigurationTarget.Global)
+          );
+        if (settings.linter?.run)
+          promises.push(
+            config.update('linter.run', settings.linter.run, vscode.ConfigurationTarget.Global)
+          );
+        if (settings.linter?.delay)
+          promises.push(
+            config.update('linter.delay', settings.linter.delay, vscode.ConfigurationTarget.Global)
+          );
+        if (settings.linter?.enableMsgInOutput !== undefined)
+          promises.push(
+            config.update(
+              'linter.enableMsgInOutput',
+              settings.linter.enableMsgInOutput,
+              vscode.ConfigurationTarget.Global
+            )
+          );
+        if (settings.format?.addSpace !== undefined)
+          promises.push(
+            config.update(
+              'format.addSpace',
+              settings.format.addSpace,
+              vscode.ConfigurationTarget.Global
+            )
+          );
+        if (settings.terminal?.runtimeArgs)
+          promises.push(
+            config.update(
+              'terminal.runtimeArgs',
+              settings.terminal.runtimeArgs,
+              vscode.ConfigurationTarget.Global
+            )
+          );
+        if (settings.telemetry?.enabled !== undefined)
+          promises.push(
+            config.update(
+              'telemetry.enabled',
+              settings.telemetry.enabled,
+              vscode.ConfigurationTarget.Global
+            )
+          );
 
-        // Send initial settings
+        // API Server settings
+        if (settings.apiServer) {
+          if (settings.apiServer.enabled !== undefined)
+            promises.push(
+              config.update(
+                'apiServer.enabled',
+                settings.apiServer.enabled,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.apiServer.port)
+            promises.push(
+              config.update(
+                'apiServer.port',
+                settings.apiServer.port,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.apiServer.host)
+            promises.push(
+              config.update(
+                'apiServer.host',
+                settings.apiServer.host,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.apiServer.corsOrigins)
+            promises.push(
+              config.update(
+                'apiServer.corsOrigins',
+                settings.apiServer.corsOrigins,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.apiServer.maxConnections)
+            promises.push(
+              config.update(
+                'apiServer.maxConnections',
+                settings.apiServer.maxConnections,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.apiServer.requestTimeout)
+            promises.push(
+              config.update(
+                'apiServer.requestTimeout',
+                settings.apiServer.requestTimeout,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+
+          if (settings.apiServer.rateLimiting) {
+            if (settings.apiServer.rateLimiting.enabled !== undefined)
+              promises.push(
+                config.update(
+                  'apiServer.rateLimiting.enabled',
+                  settings.apiServer.rateLimiting.enabled,
+                  vscode.ConfigurationTarget.Global
+                )
+              );
+            if (settings.apiServer.rateLimiting.requestsPerMinute)
+              promises.push(
+                config.update(
+                  'apiServer.rateLimiting.requestsPerMinute',
+                  settings.apiServer.rateLimiting.requestsPerMinute,
+                  vscode.ConfigurationTarget.Global
+                )
+              );
+            if (settings.apiServer.rateLimiting.burstLimit)
+              promises.push(
+                config.update(
+                  'apiServer.rateLimiting.burstLimit',
+                  settings.apiServer.rateLimiting.burstLimit,
+                  vscode.ConfigurationTarget.Global
+                )
+              );
+          }
+
+          if (settings.apiServer.auth) {
+            if (settings.apiServer.auth.method)
+              promises.push(
+                config.update(
+                  'apiServer.auth.method',
+                  settings.apiServer.auth.method,
+                  vscode.ConfigurationTarget.Global
+                )
+              );
+            if (settings.apiServer.auth.jwtExpiration)
+              promises.push(
+                config.update(
+                  'apiServer.auth.jwtExpiration',
+                  settings.apiServer.auth.jwtExpiration,
+                  vscode.ConfigurationTarget.Global
+                )
+              );
+          }
+        }
+
+        // WebSocket Server settings
+        if (settings.webSocketServer) {
+          if (settings.webSocketServer.enabled !== undefined)
+            promises.push(
+              config.update(
+                'webSocketServer.enabled',
+                settings.webSocketServer.enabled,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.webSocketServer.port)
+            promises.push(
+              config.update(
+                'webSocketServer.port',
+                settings.webSocketServer.port,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.webSocketServer.maxConnections)
+            promises.push(
+              config.update(
+                'webSocketServer.maxConnections',
+                settings.webSocketServer.maxConnections,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+          if (settings.webSocketServer.heartbeatInterval)
+            promises.push(
+              config.update(
+                'webSocketServer.heartbeatInterval',
+                settings.webSocketServer.heartbeatInterval,
+                vscode.ConfigurationTarget.Global
+              )
+            );
+        }
+
+        await Promise.all(promises);
+        vscode.window.showInformationMessage('Settings imported successfully');
         this._sendCurrentSettings();
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to import settings: ${error}`);
+      }
+    }
+  }
+
+  private _validateSetting(key: string, value: any): boolean {
+    let isValid = true;
+    let errorMessage = '';
+
+    switch (key) {
+      case 'apiServer.port':
+      case 'webSocketServer.port': {
+        if (typeof value !== 'number' || value < 1024 || value > 65535) {
+          isValid = false;
+          errorMessage = 'Port must be a number between 1024 and 65535';
+        }
+        break;
+      }
+      case 'linter.delay': {
+        if (typeof value !== 'number' || value < 0) {
+          isValid = false;
+          errorMessage = 'Delay must be a positive number';
+        }
+        break;
+      }
+      case 'apiServer.maxConnections':
+      case 'webSocketServer.maxConnections': {
+        if (typeof value !== 'number' || value < 1 || value > 1000) {
+          isValid = false;
+          errorMessage = 'Max connections must be between 1 and 1000';
+        }
+        break;
+      }
+      case 'apiServer.requestTimeout': {
+        if (typeof value !== 'number' || value < 1000 || value > 300000) {
+          isValid = false;
+          errorMessage = 'Request timeout must be between 1000 and 300000 milliseconds';
+        }
+        break;
+      }
+      case 'apiServer.rateLimiting.requestsPerMinute': {
+        if (typeof value !== 'number' || value < 1 || value > 1000) {
+          isValid = false;
+          errorMessage = 'Requests per minute must be between 1 and 1000';
+        }
+        break;
+      }
+      case 'apiServer.rateLimiting.burstLimit': {
+        if (typeof value !== 'number' || value < 1 || value > 100) {
+          isValid = false;
+          errorMessage = 'Burst limit must be between 1 and 100';
+        }
+        break;
+      }
+      case 'webSocketServer.heartbeatInterval': {
+        if (typeof value !== 'number' || value < 10 || value > 300) {
+          isValid = false;
+          errorMessage = 'Heartbeat interval must be between 10 and 300 seconds';
+        }
+        break;
+      }
     }
 
-    private _updateSetting(key: string, value: any) {
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: 'validationResult',
+        key: key,
+        isValid: isValid,
+        errorMessage: errorMessage,
+      });
+    }
+
+    return isValid;
+  }
+
+  private async _sendCurrentSettings() {
+    if (!this._view) {
+      return;
+    }
+
+    const config = vscode.workspace.getConfiguration('prolog');
+
+    // Check installation status
+    const installationStatus = await this.installationChecker.checkSwiplInstallation();
+
+    const settings = {
+      executablePath: config.get('executablePath', '/usr/bin/swipl'),
+      dialect: config.get('dialect', 'swi'),
+      linter: {
+        run: config.get('linter.run', 'onType'),
+        delay: config.get('linter.delay', 500),
+        enableMsgInOutput: config.get('linter.enableMsgInOutput', false),
+      },
+      format: {
+        addSpace: config.get('format.addSpace', true),
+      },
+      terminal: {
+        runtimeArgs: config.get('terminal.runtimeArgs', []),
+      },
+      telemetry: {
+        enabled: config.get('telemetry.enabled', false),
+      },
+      apiServer: {
+        enabled: config.get('apiServer.enabled', false),
+        port: config.get('apiServer.port', 8080),
+        host: config.get('apiServer.host', 'localhost'),
+        corsOrigins: config.get('apiServer.corsOrigins', ['http://localhost:*']),
+        maxConnections: config.get('apiServer.maxConnections', 100),
+        requestTimeout: config.get('apiServer.requestTimeout', 60000),
+        rateLimiting: {
+          enabled: config.get('apiServer.rateLimiting.enabled', true),
+          requestsPerMinute: config.get('apiServer.rateLimiting.requestsPerMinute', 60),
+          burstLimit: config.get('apiServer.rateLimiting.burstLimit', 10),
+        },
+        auth: {
+          method: config.get('apiServer.auth.method', 'local_only'),
+          apiKeys: config.get('apiServer.auth.apiKeys', {}),
+          jwtSecret: config.get('apiServer.auth.jwtSecret', ''),
+          jwtExpiration: config.get('apiServer.auth.jwtExpiration', '1h'),
+        },
+      },
+      webSocketServer: {
+        enabled: config.get('webSocketServer.enabled', true),
+        port: config.get('webSocketServer.port', 8081),
+        maxConnections: config.get('webSocketServer.maxConnections', 50),
+        heartbeatInterval: config.get('webSocketServer.heartbeatInterval', 30),
+      },
+      installation: installationStatus,
+    };
+
+    this._view.webview.postMessage({
+      type: 'settingsData',
+      settings: settings,
+    });
+  }
+
+  private async _checkInstallation() {
+    if (!this._view) {
+      return;
+    }
+
+    try {
+      const installationStatus = await this.installationChecker.checkSwiplInstallation();
+      this._view.webview.postMessage({
+        type: 'installationStatus',
+        status: installationStatus,
+      });
+    } catch (error) {
+      this._view.webview.postMessage({
+        type: 'installationStatus',
+        status: {
+          isInstalled: false,
+          issues: [`Error checking installation: ${error}`],
+        },
+      });
+    }
+  }
+
+  private async _autoDetectPath() {
+    if (!this._view) {
+      return;
+    }
+
+    try {
+      const foundPath = await this.installationChecker.findSwiplExecutable();
+      if (foundPath) {
+        const version = await this.installationChecker.getSwiplVersion(foundPath);
+
+        // Update configuration
         const config = vscode.workspace.getConfiguration('prolog');
-        config.update(key, value, vscode.ConfigurationTarget.Global).then(() => {
-            vscode.window.showInformationMessage(`Setting '${key}' updated successfully`);
-            this._sendCurrentSettings(); // Refresh the UI
-        }, (error) => {
-            vscode.window.showErrorMessage(`Failed to update setting '${key}': ${error}`);
-        });
-    }
-
-    private _resetSettings() {
-        vscode.window.showWarningMessage(
-            'Are you sure you want to reset all Prolog settings to their default values?',
-            'Yes', 'No'
-        ).then(selection => {
-            if (selection === 'Yes') {
-                const config = vscode.workspace.getConfiguration('prolog');
-                const settingsToReset = [
-                    'executablePath', 'dialect', 'linter.run', 'format.addSpace', 'linter.delay',
-                    'linter.enableMsgInOutput', 'terminal.runtimeArgs', 'telemetry.enabled',
-                    'apiServer.enabled', 'apiServer.port', 'apiServer.host', 'apiServer.corsOrigins',
-                    'apiServer.maxConnections', 'apiServer.requestTimeout', 'apiServer.rateLimiting.enabled',
-                    'apiServer.rateLimiting.requestsPerMinute', 'apiServer.rateLimiting.burstLimit',
-                    'apiServer.auth.method', 'apiServer.auth.apiKeys', 'apiServer.auth.jwtSecret',
-                    'apiServer.auth.jwtExpiration', 'webSocketServer.enabled', 'webSocketServer.port',
-                    'webSocketServer.maxConnections', 'webSocketServer.heartbeatInterval'
-                ];
-
-                Promise.all(settingsToReset.map(key => 
-                    config.update(key, undefined, vscode.ConfigurationTarget.Global)
-                )).then(() => {
-                    vscode.window.showInformationMessage('All Prolog settings have been reset to defaults');
-                    this._sendCurrentSettings();
-                });
-            }
-        });
-    }
-
-    private async _exportSettings() {
-        const config = vscode.workspace.getConfiguration('prolog');
-        const settings = {
-            executablePath: config.get('executablePath'),
-            dialect: config.get('dialect'),
-            linter: {
-                run: config.get('linter.run'),
-                delay: config.get('linter.delay'),
-                enableMsgInOutput: config.get('linter.enableMsgInOutput')
-            },
-            format: {
-                addSpace: config.get('format.addSpace')
-            },
-            terminal: {
-                runtimeArgs: config.get('terminal.runtimeArgs')
-            },
-            telemetry: {
-                enabled: config.get('telemetry.enabled')
-            },
-            apiServer: {
-                enabled: config.get('apiServer.enabled'),
-                port: config.get('apiServer.port'),
-                host: config.get('apiServer.host'),
-                corsOrigins: config.get('apiServer.corsOrigins'),
-                maxConnections: config.get('apiServer.maxConnections'),
-                requestTimeout: config.get('apiServer.requestTimeout'),
-                rateLimiting: {
-                    enabled: config.get('apiServer.rateLimiting.enabled'),
-                    requestsPerMinute: config.get('apiServer.rateLimiting.requestsPerMinute'),
-                    burstLimit: config.get('apiServer.rateLimiting.burstLimit')
-                },
-                auth: {
-                    method: config.get('apiServer.auth.method'),
-                    jwtExpiration: config.get('apiServer.auth.jwtExpiration')
-                }
-            },
-            webSocketServer: {
-                enabled: config.get('webSocketServer.enabled'),
-                port: config.get('webSocketServer.port'),
-                maxConnections: config.get('webSocketServer.maxConnections'),
-                heartbeatInterval: config.get('webSocketServer.heartbeatInterval')
-            }
-        };
-
-        const uri = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file('prolog-settings.json'),
-            filters: {
-                'JSON files': ['json']
-            }
-        });
-
-        if (uri) {
-            const fs = require('fs');
-            const normalizedPath = PlatformUtils.normalizePath(uri.fsPath);
-            fs.writeFileSync(normalizedPath, JSON.stringify(settings, null, 2));
-            vscode.window.showInformationMessage(`Settings exported to ${normalizedPath}`);
-        }
-    }
-
-    private async _importSettings() {
-        const uri = await vscode.window.showOpenDialog({
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-            filters: {
-                'JSON files': ['json']
-            }
-        });
-
-        if (uri && uri[0]) {
-            try {
-                const fs = require('fs');
-                const normalizedPath = PlatformUtils.normalizePath(uri[0].fsPath);
-                const settingsJson = fs.readFileSync(normalizedPath, 'utf8');
-                const settings = JSON.parse(settingsJson);
-                
-                const config = vscode.workspace.getConfiguration('prolog');
-                
-                // Apply imported settings
-                const promises = [];
-                if (settings.executablePath) promises.push(config.update('executablePath', settings.executablePath, vscode.ConfigurationTarget.Global));
-                if (settings.dialect) promises.push(config.update('dialect', settings.dialect, vscode.ConfigurationTarget.Global));
-                if (settings.linter?.run) promises.push(config.update('linter.run', settings.linter.run, vscode.ConfigurationTarget.Global));
-                if (settings.linter?.delay) promises.push(config.update('linter.delay', settings.linter.delay, vscode.ConfigurationTarget.Global));
-                if (settings.linter?.enableMsgInOutput !== undefined) promises.push(config.update('linter.enableMsgInOutput', settings.linter.enableMsgInOutput, vscode.ConfigurationTarget.Global));
-                if (settings.format?.addSpace !== undefined) promises.push(config.update('format.addSpace', settings.format.addSpace, vscode.ConfigurationTarget.Global));
-                if (settings.terminal?.runtimeArgs) promises.push(config.update('terminal.runtimeArgs', settings.terminal.runtimeArgs, vscode.ConfigurationTarget.Global));
-                if (settings.telemetry?.enabled !== undefined) promises.push(config.update('telemetry.enabled', settings.telemetry.enabled, vscode.ConfigurationTarget.Global));
-                
-                // API Server settings
-                if (settings.apiServer) {
-                    if (settings.apiServer.enabled !== undefined) promises.push(config.update('apiServer.enabled', settings.apiServer.enabled, vscode.ConfigurationTarget.Global));
-                    if (settings.apiServer.port) promises.push(config.update('apiServer.port', settings.apiServer.port, vscode.ConfigurationTarget.Global));
-                    if (settings.apiServer.host) promises.push(config.update('apiServer.host', settings.apiServer.host, vscode.ConfigurationTarget.Global));
-                    if (settings.apiServer.corsOrigins) promises.push(config.update('apiServer.corsOrigins', settings.apiServer.corsOrigins, vscode.ConfigurationTarget.Global));
-                    if (settings.apiServer.maxConnections) promises.push(config.update('apiServer.maxConnections', settings.apiServer.maxConnections, vscode.ConfigurationTarget.Global));
-                    if (settings.apiServer.requestTimeout) promises.push(config.update('apiServer.requestTimeout', settings.apiServer.requestTimeout, vscode.ConfigurationTarget.Global));
-                    
-                    if (settings.apiServer.rateLimiting) {
-                        if (settings.apiServer.rateLimiting.enabled !== undefined) promises.push(config.update('apiServer.rateLimiting.enabled', settings.apiServer.rateLimiting.enabled, vscode.ConfigurationTarget.Global));
-                        if (settings.apiServer.rateLimiting.requestsPerMinute) promises.push(config.update('apiServer.rateLimiting.requestsPerMinute', settings.apiServer.rateLimiting.requestsPerMinute, vscode.ConfigurationTarget.Global));
-                        if (settings.apiServer.rateLimiting.burstLimit) promises.push(config.update('apiServer.rateLimiting.burstLimit', settings.apiServer.rateLimiting.burstLimit, vscode.ConfigurationTarget.Global));
-                    }
-                    
-                    if (settings.apiServer.auth) {
-                        if (settings.apiServer.auth.method) promises.push(config.update('apiServer.auth.method', settings.apiServer.auth.method, vscode.ConfigurationTarget.Global));
-                        if (settings.apiServer.auth.jwtExpiration) promises.push(config.update('apiServer.auth.jwtExpiration', settings.apiServer.auth.jwtExpiration, vscode.ConfigurationTarget.Global));
-                    }
-                }
-                
-                // WebSocket Server settings
-                if (settings.webSocketServer) {
-                    if (settings.webSocketServer.enabled !== undefined) promises.push(config.update('webSocketServer.enabled', settings.webSocketServer.enabled, vscode.ConfigurationTarget.Global));
-                    if (settings.webSocketServer.port) promises.push(config.update('webSocketServer.port', settings.webSocketServer.port, vscode.ConfigurationTarget.Global));
-                    if (settings.webSocketServer.maxConnections) promises.push(config.update('webSocketServer.maxConnections', settings.webSocketServer.maxConnections, vscode.ConfigurationTarget.Global));
-                    if (settings.webSocketServer.heartbeatInterval) promises.push(config.update('webSocketServer.heartbeatInterval', settings.webSocketServer.heartbeatInterval, vscode.ConfigurationTarget.Global));
-                }
-
-                await Promise.all(promises);
-                vscode.window.showInformationMessage('Settings imported successfully');
-                this._sendCurrentSettings();
-            } catch (error) {
-                vscode.window.showErrorMessage(`Failed to import settings: ${error}`);
-            }
-        }
-    }
-
-    private _validateSetting(key: string, value: any): boolean {
-        let isValid = true;
-        let errorMessage = '';
-
-        switch (key) {
-            case 'apiServer.port':
-            case 'webSocketServer.port':
-                if (typeof value !== 'number' || value < 1024 || value > 65535) {
-                    isValid = false;
-                    errorMessage = 'Port must be a number between 1024 and 65535';
-                }
-                break;
-            case 'linter.delay':
-                if (typeof value !== 'number' || value < 0) {
-                    isValid = false;
-                    errorMessage = 'Delay must be a positive number';
-                }
-                break;
-            case 'apiServer.maxConnections':
-            case 'webSocketServer.maxConnections':
-                if (typeof value !== 'number' || value < 1 || value > 1000) {
-                    isValid = false;
-                    errorMessage = 'Max connections must be between 1 and 1000';
-                }
-                break;
-            case 'apiServer.requestTimeout':
-                if (typeof value !== 'number' || value < 1000 || value > 300000) {
-                    isValid = false;
-                    errorMessage = 'Request timeout must be between 1000 and 300000 milliseconds';
-                }
-                break;
-            case 'apiServer.rateLimiting.requestsPerMinute':
-                if (typeof value !== 'number' || value < 1 || value > 1000) {
-                    isValid = false;
-                    errorMessage = 'Requests per minute must be between 1 and 1000';
-                }
-                break;
-            case 'apiServer.rateLimiting.burstLimit':
-                if (typeof value !== 'number' || value < 1 || value > 100) {
-                    isValid = false;
-                    errorMessage = 'Burst limit must be between 1 and 100';
-                }
-                break;
-            case 'webSocketServer.heartbeatInterval':
-                if (typeof value !== 'number' || value < 10 || value > 300) {
-                    isValid = false;
-                    errorMessage = 'Heartbeat interval must be between 10 and 300 seconds';
-                }
-                break;
-        }
-
-        if (this._view) {
-            this._view.webview.postMessage({
-                type: 'validationResult',
-                key: key,
-                isValid: isValid,
-                errorMessage: errorMessage
-            });
-        }
-
-        return isValid;
-    }
-
-    private async _sendCurrentSettings() {
-        if (!this._view) {
-            return;
-        }
-
-        const config = vscode.workspace.getConfiguration('prolog');
-        
-        // Check installation status
-        const installationStatus = await this.installationChecker.checkSwiplInstallation();
-        
-        const settings = {
-            executablePath: config.get('executablePath', '/usr/bin/swipl'),
-            dialect: config.get('dialect', 'swi'),
-            linter: {
-                run: config.get('linter.run', 'onType'),
-                delay: config.get('linter.delay', 500),
-                enableMsgInOutput: config.get('linter.enableMsgInOutput', false)
-            },
-            format: {
-                addSpace: config.get('format.addSpace', true)
-            },
-            terminal: {
-                runtimeArgs: config.get('terminal.runtimeArgs', [])
-            },
-            telemetry: {
-                enabled: config.get('telemetry.enabled', false)
-            },
-            apiServer: {
-                enabled: config.get('apiServer.enabled', false),
-                port: config.get('apiServer.port', 8080),
-                host: config.get('apiServer.host', 'localhost'),
-                corsOrigins: config.get('apiServer.corsOrigins', ['http://localhost:*']),
-                maxConnections: config.get('apiServer.maxConnections', 100),
-                requestTimeout: config.get('apiServer.requestTimeout', 60000),
-                rateLimiting: {
-                    enabled: config.get('apiServer.rateLimiting.enabled', true),
-                    requestsPerMinute: config.get('apiServer.rateLimiting.requestsPerMinute', 60),
-                    burstLimit: config.get('apiServer.rateLimiting.burstLimit', 10)
-                },
-                auth: {
-                    method: config.get('apiServer.auth.method', 'local_only'),
-                    apiKeys: config.get('apiServer.auth.apiKeys', {}),
-                    jwtSecret: config.get('apiServer.auth.jwtSecret', ''),
-                    jwtExpiration: config.get('apiServer.auth.jwtExpiration', '1h')
-                }
-            },
-            webSocketServer: {
-                enabled: config.get('webSocketServer.enabled', true),
-                port: config.get('webSocketServer.port', 8081),
-                maxConnections: config.get('webSocketServer.maxConnections', 50),
-                heartbeatInterval: config.get('webSocketServer.heartbeatInterval', 30)
-            },
-            installation: installationStatus
-        };
+        await config.update('executablePath', foundPath, vscode.ConfigurationTarget.Global);
 
         this._view.webview.postMessage({
-            type: 'settingsData',
-            settings: settings
+          type: 'autoDetectResult',
+          success: true,
+          path: foundPath,
+          version: version,
         });
+
+        // Refresh settings
+        await this._sendCurrentSettings();
+      } else {
+        this._view.webview.postMessage({
+          type: 'autoDetectResult',
+          success: false,
+          message: 'SWI-Prolog not found in common locations',
+        });
+      }
+    } catch (error) {
+      this._view.webview.postMessage({
+        type: 'autoDetectResult',
+        success: false,
+        message: `Auto-detection failed: ${error}`,
+      });
+    }
+  }
+
+  private async _testInstallation() {
+    if (!this._view) {
+      return;
     }
 
-    private async _checkInstallation() {
-        if (!this._view) {
-            return;
-        }
+    try {
+      const config = vscode.workspace.getConfiguration('prolog');
+      const executablePath = config.get<string>('executablePath', 'swipl');
 
-        try {
-            const installationStatus = await this.installationChecker.checkSwiplInstallation();
-            this._view.webview.postMessage({
-                type: 'installationStatus',
-                status: installationStatus
-            });
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'installationStatus',
-                status: {
-                    isInstalled: false,
-                    issues: [`Error checking installation: ${error}`]
-                }
-            });
-        }
+      const isValid = await this.installationChecker.validateSwiplPath(executablePath);
+      if (isValid) {
+        const version = await this.installationChecker.getSwiplVersion(executablePath);
+        this._view.webview.postMessage({
+          type: 'testResult',
+          success: true,
+          message: `SWI-Prolog is working correctly (version ${version})`,
+        });
+      } else {
+        this._view.webview.postMessage({
+          type: 'testResult',
+          success: false,
+          message: 'SWI-Prolog executable is not valid or not accessible',
+        });
+      }
+    } catch (error) {
+      this._view.webview.postMessage({
+        type: 'testResult',
+        success: false,
+        message: `Test failed: ${error}`,
+      });
     }
+  }
 
-    private async _autoDetectPath() {
-        if (!this._view) {
-            return;
-        }
+  private _getHtmlForWebview(webview: vscode.Webview): string {
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.js')
+    );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.css')
+    );
 
-        try {
-            const foundPath = await this.installationChecker.findSwiplExecutable();
-            if (foundPath) {
-                const version = await this.installationChecker.getSwiplVersion(foundPath);
-                
-                // Update configuration
-                const config = vscode.workspace.getConfiguration('prolog');
-                await config.update('executablePath', foundPath, vscode.ConfigurationTarget.Global);
-                
-                this._view.webview.postMessage({
-                    type: 'autoDetectResult',
-                    success: true,
-                    path: foundPath,
-                    version: version
-                });
-                
-                // Refresh settings
-                await this._sendCurrentSettings();
-            } else {
-                this._view.webview.postMessage({
-                    type: 'autoDetectResult',
-                    success: false,
-                    message: 'SWI-Prolog not found in common locations'
-                });
-            }
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'autoDetectResult',
-                success: false,
-                message: `Auto-detection failed: ${error}`
-            });
-        }
-    }
-
-    private async _testInstallation() {
-        if (!this._view) {
-            return;
-        }
-
-        try {
-            const config = vscode.workspace.getConfiguration('prolog');
-            const executablePath = config.get<string>('executablePath', 'swipl');
-            
-            const isValid = await this.installationChecker.validateSwiplPath(executablePath);
-            if (isValid) {
-                const version = await this.installationChecker.getSwiplVersion(executablePath);
-                this._view.webview.postMessage({
-                    type: 'testResult',
-                    success: true,
-                    message: `SWI-Prolog is working correctly (version ${version})`
-                });
-            } else {
-                this._view.webview.postMessage({
-                    type: 'testResult',
-                    success: false,
-                    message: 'SWI-Prolog executable is not valid or not accessible'
-                });
-            }
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'testResult',
-                success: false,
-                message: `Test failed: ${error}`
-            });
-        }
-    }
-
-    private _getHtmlForWebview(webview: vscode.Webview): string {
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.js'));
-        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.css'));
-
-        return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -784,5 +979,5 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
             <script src="${scriptUri}"></script>
         </body>
         </html>`;
-    }
+  }
 }

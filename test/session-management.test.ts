@@ -1,12 +1,12 @@
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SessionManager } from '../src/features/sessionManager';
-import { ConcurrencyManager } from '../src/features/concurrencyManager';
-import { QueryHistoryManager } from '../src/features/queryHistoryManager';
-import { PrologBackend } from '../src/prologBackend';
+import { ConcurrencyManager } from '../src/features/concurrencyManager.js';
+import { QueryHistoryManager } from '../src/features/queryHistoryManager.js';
+import { SessionManager } from '../src/features/sessionManager.js';
+import { PrologBackend } from '../src/prologBackend.js';
 
-describe('Session Management System', function() {
+describe('Session Management System', function () {
   this.timeout(30000);
 
   let sessionManager: SessionManager;
@@ -15,16 +15,16 @@ describe('Session Management System', function() {
   let prologBackend: PrologBackend;
   let testStorageDir: string;
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Create temporary storage directory
     testStorageDir = path.join(__dirname, 'temp-sessions-' + Date.now());
-    
+
     // Initialize managers
     concurrencyManager = new ConcurrencyManager();
     historyManager = new QueryHistoryManager({
       storageDir: path.join(testStorageDir, 'history')
     });
-    
+
     sessionManager = new SessionManager({
       storageDir: testStorageDir,
       maxSessions: 10,
@@ -45,7 +45,7 @@ describe('Session Management System', function() {
     });
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     // Clean up
     if (sessionManager) {
       sessionManager.dispose();
@@ -66,8 +66,8 @@ describe('Session Management System', function() {
     }
   });
 
-  describe('Session Creation and Management', function() {
-    it('should create a new session', async function() {
+  describe('Session Creation and Management', function () {
+    it('should create a new session', async function () {
       const sessionId = await sessionManager.createSession('Test Session', {
         description: 'A test session',
         userId: 'user123',
@@ -85,31 +85,31 @@ describe('Session Management System', function() {
       expect(session!.config.metadata).to.deep.equal({ test: true });
     });
 
-    it('should list sessions', async function() {
+    it('should list sessions', async function () {
       const sessionId1 = await sessionManager.createSession('Session 1', { userId: 'user1' });
       const sessionId2 = await sessionManager.createSession('Session 2', { userId: 'user2' });
 
       const sessions = sessionManager.listSessions();
       expect(sessions).to.have.length(2);
-      
+
       const sessionIds = sessions.map(s => s.sessionId);
       expect(sessionIds).to.include(sessionId1);
       expect(sessionIds).to.include(sessionId2);
     });
 
-    it('should filter sessions by user', async function() {
+    it('should filter sessions by user', async function () {
       await sessionManager.createSession('Session 1', { userId: 'user1' });
       await sessionManager.createSession('Session 2', { userId: 'user2' });
       await sessionManager.createSession('Session 3', { userId: 'user1' });
 
       const user1Sessions = sessionManager.listSessions({ userId: 'user1' });
       expect(user1Sessions).to.have.length(2);
-      
+
       const user2Sessions = sessionManager.listSessions({ userId: 'user2' });
       expect(user2Sessions).to.have.length(1);
     });
 
-    it('should switch between sessions', async function() {
+    it('should switch between sessions', async function () {
       const sessionId1 = await sessionManager.createSession('Session 1');
       const sessionId2 = await sessionManager.createSession('Session 2');
 
@@ -132,9 +132,9 @@ describe('Session Management System', function() {
       expect(session1!.config.isActive).to.be.false;
     });
 
-    it('should delete a session', async function() {
+    it('should delete a session', async function () {
       const sessionId = await sessionManager.createSession('Test Session');
-      
+
       // Verify session exists
       let session = sessionManager.getSession(sessionId);
       expect(session).to.not.be.null;
@@ -148,7 +148,7 @@ describe('Session Management System', function() {
       expect(session).to.be.null;
     });
 
-    it('should not delete active session', async function() {
+    it('should not delete active session', async function () {
       const sessionId = await sessionManager.createSession('Active Session');
       await sessionManager.switchToSession(sessionId);
 
@@ -160,7 +160,7 @@ describe('Session Management System', function() {
       }
     });
 
-    it('should enforce session limit', async function() {
+    it('should enforce session limit', async function () {
       // Create sessions up to the limit
       for (let i = 0; i < 10; i++) {
         await sessionManager.createSession(`Session ${i}`);
@@ -176,15 +176,15 @@ describe('Session Management System', function() {
     });
   });
 
-  describe('Session State Management', function() {
+  describe('Session State Management', function () {
     let sessionId: string;
 
-    beforeEach(async function() {
+    beforeEach(async function () {
       sessionId = await sessionManager.createSession('State Test Session');
       await sessionManager.switchToSession(sessionId);
     });
 
-    it('should save and restore session state', async function() {
+    it('should save and restore session state', async function () {
       // Create some test state
       const testState = {
         prologFacts: ['fact(a)', 'fact(b)'],
@@ -209,7 +209,7 @@ describe('Session Management System', function() {
       expect(session!.state.rdfTriples).to.deep.equal(testState.rdfTriples);
     });
 
-    it('should create and restore from snapshots', async function() {
+    it('should create and restore from snapshots', async function () {
       // Create initial state
       const initialState = {
         prologFacts: ['initial_fact(1)'],
@@ -219,8 +219,8 @@ describe('Session Management System', function() {
 
       // Create snapshot
       const snapshotId = await sessionManager.createSnapshot(
-        sessionId, 
-        'Initial State', 
+        sessionId,
+        'Initial State',
         'Snapshot of initial state'
       );
       expect(snapshotId).to.be.a('string');
@@ -241,7 +241,7 @@ describe('Session Management System', function() {
       expect(session!.state.variables).to.deep.equal(initialState.variables);
     });
 
-    it('should persist state to disk', async function() {
+    it('should persist state to disk', async function () {
       const testState = {
         prologFacts: ['persistent_fact(test)'],
         timestamp: Date.now()
@@ -272,10 +272,10 @@ describe('Session Management System', function() {
     });
   });
 
-  describe('Resource Management Integration', function() {
+  describe('Resource Management Integration', function () {
     let sessionId: string;
 
-    beforeEach(async function() {
+    beforeEach(async function () {
       sessionId = await sessionManager.createSession('Resource Test Session', {
         resourceQuota: {
           maxConcurrentQueries: 3,
@@ -284,19 +284,19 @@ describe('Session Management System', function() {
       });
     });
 
-    it('should create session-specific concurrency manager', async function() {
+    it('should create session-specific concurrency manager', async function () {
       const sessionConcurrencyManager = sessionManager.getSessionConcurrencyManager(sessionId);
       expect(sessionConcurrencyManager).to.not.be.undefined;
-      
+
       const status = sessionConcurrencyManager!.getStatus();
       expect(status.resourceQuota.maxConcurrentQueries).to.equal(3);
       expect(status.resourceQuota.maxMemoryUsageMB).to.equal(128);
     });
 
-    it('should create session-specific history manager', async function() {
+    it('should create session-specific history manager', async function () {
       const sessionHistoryManager = sessionManager.getSessionHistoryManager(sessionId);
       expect(sessionHistoryManager).to.not.be.undefined;
-      
+
       // Test adding a query to session history
       await sessionHistoryManager!.addQuery({
         id: 'test-query-1',
@@ -312,7 +312,7 @@ describe('Session Management System', function() {
       expect(history.entries[0].id).to.equal('test-query-1');
     });
 
-    it('should update session resource quota', async function() {
+    it('should update session resource quota', async function () {
       await sessionManager.updateSessionResourceQuota(sessionId, {
         maxConcurrentQueries: 5,
         maxMemoryUsageMB: 256
@@ -328,9 +328,9 @@ describe('Session Management System', function() {
       expect(status.resourceQuota.maxMemoryUsageMB).to.equal(256);
     });
 
-    it('should get session statistics', async function() {
+    it('should get session statistics', async function () {
       await sessionManager.switchToSession(sessionId);
-      
+
       // Add some test data
       const sessionHistoryManager = sessionManager.getSessionHistoryManager(sessionId);
       await sessionHistoryManager!.addQuery({
@@ -350,8 +350,8 @@ describe('Session Management System', function() {
     });
   });
 
-  describe('PrologBackend Integration', function() {
-    beforeEach(async function() {
+  describe('PrologBackend Integration', function () {
+    beforeEach(async function () {
       // Initialize PrologBackend with session support
       prologBackend = new PrologBackend({
         port: 3061, // Use different port for testing
@@ -363,7 +363,7 @@ describe('Session Management System', function() {
 
       // Start the backend
       prologBackend.start();
-      
+
       // Wait for backend to be ready
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -377,7 +377,7 @@ describe('Session Management System', function() {
       });
     });
 
-    it('should create session through PrologBackend', async function() {
+    it('should create session through PrologBackend', async function () {
       const sessionId = await prologBackend.createSession('Backend Test Session', {
         description: 'Session created through PrologBackend',
         userId: 'backend-user'
@@ -390,7 +390,7 @@ describe('Session Management System', function() {
       expect(session!.config.name).to.equal('Backend Test Session');
     });
 
-    it('should switch sessions through PrologBackend', async function() {
+    it('should switch sessions through PrologBackend', async function () {
       const sessionId1 = await prologBackend.createSession('Backend Session 1');
       const sessionId2 = await prologBackend.createSession('Backend Session 2');
 
@@ -403,7 +403,7 @@ describe('Session Management System', function() {
       expect(currentSession!.sessionId).to.equal(sessionId2);
     });
 
-    it('should save and restore session state through PrologBackend', async function() {
+    it('should save and restore session state through PrologBackend', async function () {
       const sessionId = await prologBackend.createSession('State Backend Session');
       await prologBackend.switchToSession(sessionId);
 
@@ -412,8 +412,8 @@ describe('Session Management System', function() {
 
       // Create snapshot
       const snapshotId = await prologBackend.createSessionSnapshot(
-        sessionId, 
-        'Backend Snapshot', 
+        sessionId,
+        'Backend Snapshot',
         'Snapshot created through backend'
       );
 
@@ -423,7 +423,7 @@ describe('Session Management System', function() {
       await prologBackend.restoreSessionState(sessionId, snapshotId);
     });
 
-    it('should handle session events', async function() {
+    it('should handle session events', async function () {
       let sessionCreatedEvent: any = null;
       let sessionSwitchedEvent: any = null;
 
@@ -449,10 +449,10 @@ describe('Session Management System', function() {
     });
   });
 
-  describe('Multi-Session Scenarios', function() {
-    it('should handle multiple concurrent sessions', async function() {
+  describe('Multi-Session Scenarios', function () {
+    it('should handle multiple concurrent sessions', async function () {
       const sessions: string[] = [];
-      
+
       // Create multiple sessions
       for (let i = 0; i < 5; i++) {
         const sessionId = await sessionManager.createSession(`Concurrent Session ${i}`, {
@@ -480,13 +480,13 @@ describe('Session Management System', function() {
       for (const sessionId of sessions) {
         const concurrencyManager = sessionManager.getSessionConcurrencyManager(sessionId);
         const historyManager = sessionManager.getSessionHistoryManager(sessionId);
-        
+
         expect(concurrencyManager).to.not.be.undefined;
         expect(historyManager).to.not.be.undefined;
       }
     });
 
-    it('should maintain session state isolation', async function() {
+    it('should maintain session state isolation', async function () {
       const sessionId1 = await sessionManager.createSession('Isolation Session 1');
       const sessionId2 = await sessionManager.createSession('Isolation Session 2');
 
@@ -512,7 +512,7 @@ describe('Session Management System', function() {
       expect(session2!.state.variables.sessionId).to.equal(2);
     });
 
-    it('should handle session cleanup', async function() {
+    it('should handle session cleanup', async function () {
       // Create sessions with short idle time
       const sessionManager2 = new SessionManager({
         storageDir: path.join(testStorageDir, 'cleanup-test'),
@@ -530,7 +530,7 @@ describe('Session Management System', function() {
       });
 
       const sessionId = await sessionManager2.createSession('Cleanup Test Session');
-      
+
       // Verify session exists
       let session = sessionManager2.getSession(sessionId);
       expect(session).to.not.be.null;
@@ -546,8 +546,8 @@ describe('Session Management System', function() {
     });
   });
 
-  describe('Error Handling', function() {
-    it('should handle non-existent session operations', async function() {
+  describe('Error Handling', function () {
+    it('should handle non-existent session operations', async function () {
       const nonExistentId = 'non-existent-session-id';
 
       try {
@@ -568,7 +568,7 @@ describe('Session Management System', function() {
       expect(deleted).to.be.false;
     });
 
-    it('should handle storage errors gracefully', async function() {
+    it('should handle storage errors gracefully', async function () {
       // Create session manager with invalid storage directory
       const invalidSessionManager = new SessionManager({
         storageDir: '/invalid/path/that/does/not/exist',

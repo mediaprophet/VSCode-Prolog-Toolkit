@@ -23,7 +23,7 @@ export class StreamingHandler<T> extends EventEmitter {
   private buffer: T[] = [];
   private totalProcessed: number = 0;
   private isStreaming: boolean = false;
-  private bufferTimer?: NodeJS.Timeout;
+  private bufferTimer?: ReturnType<typeof setTimeout>;
 
   constructor(options: StreamingOptions = {}) {
     super();
@@ -32,7 +32,7 @@ export class StreamingHandler<T> extends EventEmitter {
       maxTotalResults: options.maxTotalResults ?? 1000,
       progressTitle: options.progressTitle ?? 'Processing results',
       showProgress: options.showProgress ?? true,
-      bufferTimeout: options.bufferTimeout ?? 100
+      bufferTimeout: options.bufferTimeout ?? 100,
     };
   }
 
@@ -76,9 +76,12 @@ export class StreamingHandler<T> extends EventEmitter {
       {
         location: ProgressLocation.Notification,
         title: this.options.progressTitle,
-        cancellable: true
+        cancellable: true,
       },
-      async (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => {
+      async (
+        progress: Progress<{ message?: string; increment?: number }>,
+        token: CancellationToken
+      ) => {
         const effectiveToken = cancellationToken || token;
         await this.processStream(dataSource, processor, progress, effectiveToken);
       }
@@ -112,8 +115,11 @@ export class StreamingHandler<T> extends EventEmitter {
     // Handle array data source
     if (Array.isArray(dataSource)) {
       totalCount = Math.min(dataSource.length, this.options.maxTotalResults);
-      const chunks = this.chunkArray(dataSource.slice(0, this.options.maxTotalResults), this.options.chunkSize);
-      
+      const chunks = this.chunkArray(
+        dataSource.slice(0, this.options.maxTotalResults),
+        this.options.chunkSize
+      );
+
       for (const chunk of chunks) {
         if (cancellationToken?.isCancellationRequested) {
           break;
@@ -126,11 +132,11 @@ export class StreamingHandler<T> extends EventEmitter {
           isFirst,
           isLast,
           totalCount,
-          hasMore: !isLast
+          hasMore: !isLast,
         };
 
         await processor(streamChunk);
-        
+
         this.totalProcessed += chunk.length;
         chunkIndex++;
         isFirst = false;
@@ -139,7 +145,7 @@ export class StreamingHandler<T> extends EventEmitter {
           const percentage = (this.totalProcessed / totalCount) * 100;
           progress.report({
             message: `Processed ${this.totalProcessed} of ${totalCount} results`,
-            increment: percentage / chunks.length
+            increment: percentage / chunks.length,
           });
         }
 
@@ -208,7 +214,7 @@ export class StreamingHandler<T> extends EventEmitter {
       isFirst,
       isLast,
       totalCount: undefined,
-      hasMore: !isLast
+      hasMore: !isLast,
     };
 
     await processor(streamChunk);
@@ -216,7 +222,7 @@ export class StreamingHandler<T> extends EventEmitter {
     if (progress) {
       progress.report({
         message: `Processed ${this.totalProcessed} results`,
-        increment: 10 // Arbitrary increment for unknown totals
+        increment: 10, // Arbitrary increment for unknown totals
       });
     }
 
@@ -230,7 +236,7 @@ export class StreamingHandler<T> extends EventEmitter {
     if (this.bufferTimer) {
       clearTimeout(this.bufferTimer);
     }
-    
+
     this.bufferTimer = setTimeout(callback, this.options.bufferTimeout);
   }
 
@@ -297,7 +303,7 @@ export function createPrologResultStreamer(options?: StreamingOptions): Streamin
     progressTitle: 'Processing Prolog results',
     showProgress: true,
     bufferTimeout: 100,
-    ...options
+    ...options,
   });
 }
 
@@ -311,7 +317,7 @@ export function createFileStreamer(options?: StreamingOptions): StreamingHandler
     progressTitle: 'Processing file',
     showProgress: true,
     bufferTimeout: 50,
-    ...options
+    ...options,
   });
 }
 
@@ -331,7 +337,10 @@ export class PaginatedStreamer<T> {
    * Process paginated data
    */
   async processPaginated(
-    fetcher: (page: number, pageSize: number) => Promise<{ data: T[]; totalCount?: number; hasMore: boolean }>,
+    fetcher: (
+      page: number,
+      pageSize: number
+    ) => Promise<{ data: T[]; totalCount?: number; hasMore: boolean }>,
     processor: (chunk: StreamChunk<T>) => Promise<void> | void,
     cancellationToken?: CancellationToken
   ): Promise<void> {
@@ -345,21 +354,21 @@ export class PaginatedStreamer<T> {
       }
 
       const result = await fetcher(this.currentPage, this.pageSize);
-      
+
       if (result.totalCount !== undefined && totalCount === undefined) {
         totalCount = result.totalCount;
         this.totalPages = Math.ceil(totalCount / this.pageSize);
       }
 
       const isLast = !result.hasMore || result.data.length < this.pageSize;
-      
+
       const streamChunk: StreamChunk<T> = {
         data: result.data,
         index: this.currentPage,
         isFirst,
         isLast,
         totalCount,
-        hasMore: result.hasMore
+        hasMore: result.hasMore,
       };
 
       await processor(streamChunk);
@@ -407,13 +416,10 @@ export async function streamQueryResults(
   const streamer = createPrologResultStreamer(options);
   const formattedChunks: string[] = [];
 
-  await streamer.startStreaming(
-    results,
-    async (chunk) => {
-      const formatted = formatter(chunk.data, chunk);
-      formattedChunks.push(formatted);
-    }
-  );
+  await streamer.startStreaming(results, async chunk => {
+    const formatted = formatter(chunk.data, chunk);
+    formattedChunks.push(formatted);
+  });
 
   return formattedChunks;
 }
@@ -428,7 +434,7 @@ export function createChatStreamer(options?: StreamingOptions): StreamingHandler
     progressTitle: 'Processing chat response',
     showProgress: false, // Chat has its own progress indicators
     bufferTimeout: 50,
-    ...options
+    ...options,
   });
 }
 
@@ -448,17 +454,14 @@ export async function streamToChatResponse(
   }
 
   const streamer = createChatStreamer(options);
-  let totalCount = results.length;
+  const totalCount = results.length;
 
-  await streamer.startStreaming(
-    results,
-    async (chunk) => {
-      formatter(chunk.data, chunk.isFirst, chunk.isLast, totalCount);
-      
-      // Add small delay between chunks for better UX
-      if (!chunk.isLast) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+  await streamer.startStreaming(results, async chunk => {
+    formatter(chunk.data, chunk.isFirst, chunk.isLast, totalCount);
+
+    // Add small delay between chunks for better UX
+    if (!chunk.isLast) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
-  );
+  });
 }

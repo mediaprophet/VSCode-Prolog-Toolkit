@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { InstallationChecker } from './installationChecker';
+import { InstallationChecker } from './installationChecker.js';
 
 export interface MigrationResult {
   migrated: boolean;
@@ -36,48 +36,48 @@ export class ConfigurationMigration {
   public async performMigration(): Promise<MigrationResult> {
     const config = vscode.workspace.getConfiguration('prolog');
     const currentPath = config.get<string>('executablePath', 'swipl');
-    
+
     // Check if current path is valid
     const isCurrentValid = await this.installationChecker.validateSwiplPath(currentPath);
-    
+
     if (isCurrentValid) {
       return {
         migrated: false,
-        issues: []
+        issues: [],
       };
     }
 
     // Current path is invalid, try to find a valid one
     const foundPath = await this.installationChecker.findSwiplExecutable();
-    
+
     if (!foundPath) {
       return {
         migrated: false,
         oldPath: currentPath,
-        issues: ['No valid SWI-Prolog installation found for migration']
+        issues: ['No valid SWI-Prolog installation found for migration'],
       };
     }
 
     // Create backup before migration
     const backupResult = await this.createConfigurationBackup('automatic_migration');
-    
+
     try {
       // Update configuration
       await config.update('executablePath', foundPath, vscode.ConfigurationTarget.Global);
-      
+
       return {
         migrated: true,
         oldPath: currentPath,
         newPath: foundPath,
         backupCreated: backupResult,
-        issues: []
+        issues: [],
       };
     } catch (error) {
       return {
         migrated: false,
         oldPath: currentPath,
         backupCreated: backupResult,
-        issues: [`Failed to update configuration: ${error}`]
+        issues: [`Failed to update configuration: ${error}`],
       };
     }
   }
@@ -88,12 +88,12 @@ export class ConfigurationMigration {
   public async detectOutdatedPaths(): Promise<{
     hasOutdatedPaths: boolean;
     invalidPaths: string[];
-    suggestions: Array<{path: string, version?: string}>;
+    suggestions: Array<{ path: string; version?: string }>;
   }> {
     const config = vscode.workspace.getConfiguration('prolog');
     const currentPath = config.get<string>('executablePath', 'swipl');
     const invalidPaths: string[] = [];
-    const suggestions: Array<{path: string, version?: string}> = [];
+    const suggestions: Array<{ path: string; version?: string }> = [];
 
     // Check current executable path
     const isCurrentValid = await this.installationChecker.validateSwiplPath(currentPath);
@@ -112,30 +112,44 @@ export class ConfigurationMigration {
 
     // Find valid alternatives
     const foundPath = await this.installationChecker.findSwiplExecutable();
-    if (foundPath) {
+    if (typeof foundPath === 'string' && foundPath !== null) {
       const version = await this.installationChecker.getSwiplVersion(foundPath);
-      suggestions.push({ path: foundPath, version });
+      if (foundPath !== null) {
+        if (typeof version === 'string') {
+          suggestions.push({ path: foundPath as string, version });
+        } else {
+          suggestions.push({ path: foundPath as string });
+        }
+      }
     }
 
     return {
       hasOutdatedPaths: invalidPaths.length > 0,
       invalidPaths,
-      suggestions
+      suggestions,
     };
   }
 
   /**
    * Attempt to find new valid paths for invalid configurations
    */
-  public async findNewValidPaths(): Promise<Array<{path: string, version?: string}>> {
-    const validPaths: Array<{path: string, version?: string}> = [];
-    const commonPaths = this.installationChecker.detectCommonInstallPaths();
+  public async findNewValidPaths(): Promise<Array<{ path: string; version?: string }>> {
+    const validPaths: Array<{ path: string; version?: string }> = [];
+    const commonPaths = InstallationChecker.detectCommonInstallPaths();
 
     for (const path of commonPaths) {
-      const isValid = await this.installationChecker.validateSwiplPath(path);
-      if (isValid) {
-        const version = await this.installationChecker.getSwiplVersion(path);
-        validPaths.push({ path, version });
+      if (typeof path === 'string' && path !== null) {
+        const isValid = await this.installationChecker.validateSwiplPath(path);
+        if (isValid) {
+          const version = await this.installationChecker.getSwiplVersion(path);
+          if (path !== null) {
+            if (typeof version === 'string') {
+              validPaths.push({ path: path as string, version });
+            } else {
+              validPaths.push({ path: path as string });
+            }
+          }
+        }
       }
     }
 
@@ -159,25 +173,25 @@ export class ConfigurationMigration {
           'linter.enableMsgInOutput': config.get('linter.enableMsgInOutput'),
           'format.addSpace': config.get('format.addSpace'),
           'terminal.runtimeArgs': config.get('terminal.runtimeArgs'),
-          'telemetry.enabled': config.get('telemetry.enabled')
-        }
+          'telemetry.enabled': config.get('telemetry.enabled'),
+        },
       };
 
       // Store backup in global state (VS Code's storage)
       const context = this.getExtensionContext();
       if (context) {
-        const existingBackups = context.globalState.get<ConfigurationBackup[]>('prologConfigBackups', []);
+        let existingBackups = context.globalState.get<ConfigurationBackup[]>('prologConfigBackups', []);
+        if (!existingBackups) {
+          existingBackups = [];
+        }
         existingBackups.push(backup);
-        
         // Keep only last 10 backups
         if (existingBackups.length > 10) {
           existingBackups.splice(0, existingBackups.length - 10);
         }
-        
         await context.globalState.update('prologConfigBackups', existingBackups);
         return true;
       }
-      
       return false;
     } catch (error) {
       console.error('Failed to create configuration backup:', error);
@@ -204,9 +218,11 @@ export class ConfigurationMigration {
       const config = vscode.workspace.getConfiguration('prolog');
 
       // Restore each configuration value
-      for (const [key, value] of Object.entries(backup.configuration)) {
-        if (value !== undefined) {
-          await config.update(key, value, vscode.ConfigurationTarget.Global);
+      if (backup && backup.configuration) {
+        for (const [key, value] of Object.entries(backup.configuration)) {
+          if (value !== undefined) {
+            await config.update(key, value, vscode.ConfigurationTarget.Global);
+          }
         }
       }
 
@@ -232,7 +248,10 @@ export class ConfigurationMigration {
   /**
    * Handle migration of different SWI-Prolog versions
    */
-  public async handleVersionMigration(oldVersion: string, newVersion: string): Promise<{
+  public async handleVersionMigration(
+    oldVersion: string,
+    newVersion: string
+  ): Promise<{
     compatibilityIssues: string[];
     recommendations: string[];
   }> {
@@ -245,27 +264,38 @@ export class ConfigurationMigration {
 
       // Check for major version changes
       if (oldVersionParts[0] !== newVersionParts[0]) {
-        compatibilityIssues.push(`Major version change from ${oldVersionParts[0]} to ${newVersionParts[0]} may affect compatibility`);
-        recommendations.push('Review your Prolog code for compatibility with the new major version');
+        compatibilityIssues.push(
+          `Major version change from ${oldVersionParts[0]} to ${newVersionParts[0]} may affect compatibility`
+        );
+        recommendations.push(
+          'Review your Prolog code for compatibility with the new major version'
+        );
       }
 
       // Check for specific version-related issues
-      if (oldVersionParts[0] < 8 && newVersionParts[0] >= 8) {
-        recommendations.push('SWI-Prolog 8.x introduced new features and some syntax changes');
-        recommendations.push('Consider updating your code to use new string syntax if applicable');
+      if (
+        Array.isArray(oldVersionParts) &&
+        Array.isArray(newVersionParts) &&
+        oldVersionParts.length > 0 &&
+        newVersionParts.length > 0 &&
+        typeof oldVersionParts[0] === 'number' &&
+        typeof newVersionParts[0] === 'number'
+      ) {
+        if (oldVersionParts[0] < 8 && newVersionParts[0] >= 8) {
+          recommendations.push('SWI-Prolog 8.x introduced new features and some syntax changes');
+          recommendations.push('Consider updating your code to use new string syntax if applicable');
+        }
+        if (oldVersionParts[0] < 9 && newVersionParts[0] >= 9) {
+          recommendations.push('SWI-Prolog 9.x has improved performance and new built-in predicates');
+        }
       }
-
-      if (oldVersionParts[0] < 9 && newVersionParts[0] >= 9) {
-        recommendations.push('SWI-Prolog 9.x has improved performance and new built-in predicates');
-      }
-
-    } catch (error) {
+    } catch (_error) {
       compatibilityIssues.push('Unable to parse version numbers for compatibility check');
     }
 
     return {
       compatibilityIssues,
-      recommendations
+      recommendations,
     };
   }
 
@@ -281,7 +311,7 @@ export class ConfigurationMigration {
 
     try {
       const config = vscode.workspace.getConfiguration('prolog');
-      
+
       // List of settings to preserve (non-path related)
       const settingsToPreserve = [
         'dialect',
@@ -290,7 +320,7 @@ export class ConfigurationMigration {
         'linter.enableMsgInOutput',
         'format.addSpace',
         'terminal.runtimeArgs',
-        'telemetry.enabled'
+        'telemetry.enabled',
       ];
 
       for (const setting of settingsToPreserve) {
@@ -299,14 +329,13 @@ export class ConfigurationMigration {
           preserved.push(`${setting}: ${JSON.stringify(value)}`);
         }
       }
-
     } catch (error) {
       issues.push(`Failed to preserve customizations: ${error}`);
     }
 
     return {
       preserved,
-      issues
+      issues,
     };
   }
 
@@ -343,10 +372,10 @@ export class ConfigurationMigration {
    */
   private getCommonOutdatedPaths(): string[] {
     return [
-      '/usr/local/bin/pl',  // Old SWI-Prolog executable name
-      '/usr/bin/pl',        // Old SWI-Prolog executable name
+      '/usr/local/bin/pl', // Old SWI-Prolog executable name
+      '/usr/bin/pl', // Old SWI-Prolog executable name
       'C:\\pl\\bin\\pl.exe', // Old Windows path
-      '/opt/pl/',           // Old installation directory
+      '/opt/pl/', // Old installation directory
     ];
   }
 
@@ -372,7 +401,7 @@ export class ConfigurationMigration {
     try {
       // Check for outdated paths
       const outdatedCheck = await this.detectOutdatedPaths();
-      
+
       if (outdatedCheck.hasOutdatedPaths) {
         const action = await vscode.window.showWarningMessage(
           `Outdated SWI-Prolog configuration detected.\n\nInvalid paths: ${outdatedCheck.invalidPaths.join(', ')}\n\nWould you like to automatically migrate to a valid installation?`,
@@ -382,11 +411,12 @@ export class ConfigurationMigration {
         );
 
         switch (action) {
-          case 'Migrate Now':
+          case 'Migrate Now': {
             const migrationResult = await this.performMigration();
             await this.showMigrationDialog(migrationResult);
             break;
-            
+          }
+
           case 'Show Suggestions':
             await this.showSuggestionsDialog(outdatedCheck.suggestions);
             break;
@@ -401,7 +431,9 @@ export class ConfigurationMigration {
   /**
    * Show suggestions dialog for manual path selection
    */
-  private async showSuggestionsDialog(suggestions: Array<{path: string, version?: string}>): Promise<void> {
+  private async showSuggestionsDialog(
+    suggestions: Array<{ path: string; version?: string }>
+  ): Promise<void> {
     if (suggestions.length === 0) {
       vscode.window.showWarningMessage('No valid SWI-Prolog installations found for migration.');
       return;
@@ -410,12 +442,12 @@ export class ConfigurationMigration {
     const items = suggestions.map(suggestion => ({
       label: suggestion.path,
       description: suggestion.version ? `Version ${suggestion.version}` : 'Version unknown',
-      path: suggestion.path
+      path: suggestion.path,
     }));
 
     const selected = await vscode.window.showQuickPick(items, {
       placeHolder: 'Select a SWI-Prolog installation to use',
-      ignoreFocusOut: true
+      ignoreFocusOut: true,
     });
 
     if (selected) {

@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-import { Utils } from "../utils/utils";
+import { Utils } from '../utils/utils';
 import {
   Terminal,
   window,
@@ -9,14 +9,14 @@ import {
   Disposable,
   OutputChannel,
   TextEditor,
-  commands
-} from "vscode";
-import jsesc from "jsesc";
-import { InstallationGuide } from "./installationGuide";
-import { PlatformUtils, PlatformType } from "../utils/platformUtils";
-import { ExecutableFinder } from "../utils/executableFinder";
-import { spawn } from "child_process";
-import * as os from "os";
+  commands,
+} from 'vscode';
+import jsesc from 'jsesc';
+import { InstallationGuide } from './installationGuide';
+import { PlatformUtils, PlatformType } from '../utils/platformUtils';
+import { ExecutableFinder } from '../utils/executableFinder';
+import { spawn } from 'child_process';
+import * as os from 'os';
 
 /**
  * Shell information interface
@@ -46,14 +46,16 @@ export default class PrologTerminal {
   private static _platform: PlatformType;
   private static _shellInfo: ShellInfo | null = null;
 
-  constructor() {}
+  constructor() {
+    // Static terminal class - no instance initialization needed
+  }
   // Initialize the Prolog terminal
   public static init(): Disposable {
     PrologTerminal._platform = PlatformUtils.getPlatform();
     return (<any>window).onDidCloseTerminal((terminal: any) => {
-        PrologTerminal._terminal = null as any;
-        terminal.dispose();
-      });
+      PrologTerminal._terminal = null as any;
+      terminal.dispose();
+    });
   }
 
   /**
@@ -67,15 +69,18 @@ export default class PrologTerminal {
     let shellInfo: ShellInfo;
 
     switch (PrologTerminal._platform) {
-      case 'windows':
+      case 'windows': {
         shellInfo = await PrologTerminal.detectWindowsShell();
         break;
-      case 'macos':
+      }
+      case 'macos': {
         shellInfo = await PrologTerminal.detectMacOSShell();
         break;
-      case 'linux':
+      }
+      case 'linux': {
         shellInfo = await PrologTerminal.detectLinuxShell();
         break;
+      }
       default:
         // Fallback to basic shell
         shellInfo = {
@@ -83,8 +88,9 @@ export default class PrologTerminal {
           path: '/bin/sh',
           args: [],
           supportsColors: false,
-          requiresQuoting: true
+          requiresQuoting: true,
         };
+        break;
     }
 
     PrologTerminal._shellInfo = shellInfo;
@@ -103,9 +109,11 @@ export default class PrologTerminal {
         path: 'pwsh',
         args: ['-NoLogo'],
         supportsColors: true,
-        requiresQuoting: true
+        requiresQuoting: true,
       };
-    } catch {}
+    } catch (_error) {
+      // Ignore shell detection failure
+    }
 
     // Check for Windows PowerShell
     try {
@@ -115,9 +123,11 @@ export default class PrologTerminal {
         path: 'powershell',
         args: ['-NoLogo'],
         supportsColors: true,
-        requiresQuoting: true
+        requiresQuoting: true,
       };
-    } catch {}
+    } catch (_error) {
+      // Ignore shell detection failure
+    }
 
     // Check for WSL
     try {
@@ -127,9 +137,11 @@ export default class PrologTerminal {
         path: 'wsl',
         args: [],
         supportsColors: true,
-        requiresQuoting: true
+        requiresQuoting: true,
       };
-    } catch {}
+    } catch (_error) {
+      // Ignore bash detection failure
+    }
 
     // Fallback to Command Prompt
     return {
@@ -137,7 +149,7 @@ export default class PrologTerminal {
       path: 'cmd',
       args: ['/K'],
       supportsColors: false,
-      requiresQuoting: true
+      requiresQuoting: true,
     };
   }
 
@@ -153,9 +165,11 @@ export default class PrologTerminal {
         path: '/bin/zsh',
         args: [],
         supportsColors: true,
-        requiresQuoting: true
+        requiresQuoting: true,
       };
-    } catch {}
+    } catch (_error) {
+      // Ignore zsh detection failure
+    }
 
     // Check for bash
     try {
@@ -165,9 +179,11 @@ export default class PrologTerminal {
         path: '/bin/bash',
         args: [],
         supportsColors: true,
-        requiresQuoting: true
+        requiresQuoting: true,
       };
-    } catch {}
+    } catch (_error) {
+      // Ignore WSL detection failure
+    }
 
     // Fallback to sh
     return {
@@ -175,7 +191,7 @@ export default class PrologTerminal {
       path: '/bin/sh',
       args: [],
       supportsColors: false,
-      requiresQuoting: true
+      requiresQuoting: true,
     };
   }
 
@@ -194,9 +210,11 @@ export default class PrologTerminal {
           path: userShell,
           args: [],
           supportsColors: true,
-          requiresQuoting: true
+          requiresQuoting: true,
         };
-      } catch {}
+      } catch (_error) {
+        // Ignore Windows PowerShell detection failure
+      }
     }
 
     // Check for common shells
@@ -204,7 +222,7 @@ export default class PrologTerminal {
       { name: 'bash', path: '/bin/bash' },
       { name: 'zsh', path: '/bin/zsh' },
       { name: 'fish', path: '/usr/bin/fish' },
-      { name: 'dash', path: '/bin/dash' }
+      { name: 'dash', path: '/bin/dash' },
     ];
 
     for (const shell of shells) {
@@ -215,9 +233,11 @@ export default class PrologTerminal {
           path: shell.path,
           args: [],
           supportsColors: shell.name !== 'dash',
-          requiresQuoting: true
+          requiresQuoting: true,
         };
-      } catch {}
+      } catch (_error) {
+        // Ignore PowerShell Core detection failure
+      }
     }
 
     // Fallback to sh
@@ -226,7 +246,7 @@ export default class PrologTerminal {
       path: '/bin/sh',
       args: [],
       supportsColors: false,
-      requiresQuoting: true
+      requiresQuoting: true,
     };
   }
 
@@ -234,13 +254,13 @@ export default class PrologTerminal {
    * Test if a command is available
    */
   private static async testCommand(command: string, args: string[]): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const process = spawn(command, args, {
         stdio: ['ignore', 'ignore', 'ignore'],
-        timeout: 3000
+        timeout: 3000,
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         resolve(code === 0);
       });
 
@@ -259,11 +279,17 @@ export default class PrologTerminal {
    * Get platform-specific terminal configuration
    */
   private static async getTerminalConfig(): Promise<TerminalConfig> {
-    const section = workspace.getConfiguration("prolog");
-    let executable = section.get<string>("executablePath", PlatformUtils.getDefaultExecutablePath());
-    
+    const section = workspace.getConfiguration('prolog');
+    let executable = section.get<string>(
+      'executablePath',
+      PlatformUtils.getDefaultExecutablePath()
+    );
+
     // Enhanced executable resolution
-    if (!await PlatformUtils.pathExists(executable) || !await PlatformUtils.isExecutable(executable)) {
+    if (
+      !(await PlatformUtils.pathExists(executable)) ||
+      !(await PlatformUtils.isExecutable(executable))
+    ) {
       const executableFinder = new ExecutableFinder();
       const detectionResult = await executableFinder.findSwiplExecutable();
       if (detectionResult.found && detectionResult.path) {
@@ -272,31 +298,35 @@ export default class PrologTerminal {
     }
 
     executable = PlatformUtils.normalizePath(executable);
-    
+
     // Get platform-specific runtime arguments
-    let args = section.get<string[]>("terminal.runtimeArgs") || PlatformUtils.getDefaultRuntimeArgs();
-    
+    const args =
+      section.get<string[]>('terminal.runtimeArgs') || PlatformUtils.getDefaultRuntimeArgs();
+
     // Detect shell for better integration
     const shell = await PrologTerminal.detectShell();
-    
+
     // Platform-specific environment variables
     const env: Record<string, string> = {};
-    
+
     switch (PrologTerminal._platform) {
-      case 'windows':
+      case 'windows': {
         // Windows-specific environment setup
         env.TERM = 'xterm-256color';
         break;
-      case 'macos':
+      }
+      case 'macos': {
         // macOS-specific environment setup
         env.TERM = 'xterm-256color';
         env.LANG = process.env.LANG || 'en_US.UTF-8';
         break;
-      case 'linux':
+      }
+      case 'linux': {
         // Linux-specific environment setup
         env.TERM = 'xterm-256color';
         env.LANG = process.env.LANG || 'en_US.UTF-8';
         break;
+      }
     }
 
     return {
@@ -304,7 +334,7 @@ export default class PrologTerminal {
       args,
       shell,
       env,
-      cwd: workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd()
+      cwd: workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd(),
     };
   }
 
@@ -317,7 +347,7 @@ export default class PrologTerminal {
     }
 
     switch (PrologTerminal._platform) {
-      case 'windows':
+      case 'windows': {
         // Windows shell escaping
         if (shell.name.includes('PowerShell')) {
           // PowerShell escaping
@@ -326,13 +356,15 @@ export default class PrologTerminal {
           // Command Prompt escaping
           return `"${text.replace(/"/g, '""')}"`;
         }
+      }
       case 'macos':
-      case 'linux':
+      case 'linux': {
         // Unix shell escaping
         if (text.includes(' ') || text.includes('"') || text.includes("'")) {
           return `'${text.replace(/'/g, "'\"'\"'")}'`;
         }
         return text;
+      }
       default:
         return text;
     }
@@ -346,14 +378,14 @@ export default class PrologTerminal {
 
     try {
       const config = await PrologTerminal.getTerminalConfig();
-      const title = "Prolog";
+      const title = 'Prolog';
 
       // Validate executable exists and has proper permissions
-      if (!await PlatformUtils.pathExists(config.executable)) {
+      if (!(await PlatformUtils.pathExists(config.executable))) {
         throw new Error(`Executable not found: ${config.executable}`);
       }
 
-      if (!await PlatformUtils.isExecutable(config.executable)) {
+      if (!(await PlatformUtils.isExecutable(config.executable))) {
         const platform = PlatformUtils.getPlatform();
         let permissionError = `Executable lacks execute permissions: ${config.executable}`;
         if (platform !== 'windows') {
@@ -370,24 +402,27 @@ export default class PrologTerminal {
         cwd: config.cwd,
         env: {
           ...process.env,
-          ...config.env
-        }
+          ...config.env,
+        },
       };
 
       // Add platform-specific terminal options
       switch (PrologTerminal._platform) {
-        case 'windows':
+        case 'windows': {
           // Windows-specific terminal options
           terminalOptions.hideFromUser = false;
           break;
-        case 'macos':
+        }
+        case 'macos': {
           // macOS-specific terminal options
           terminalOptions.strictEnv = false;
           break;
-        case 'linux':
+        }
+        case 'linux': {
           // Linux-specific terminal options
           terminalOptions.strictEnv = false;
           break;
+        }
       }
 
       PrologTerminal._terminal = window.createTerminal(terminalOptions);
@@ -396,7 +431,6 @@ export default class PrologTerminal {
       setTimeout(async () => {
         await PrologTerminal.sendInitialSetupCommands(config);
       }, 1000);
-
     } catch (error: any) {
       await PrologTerminal.handleTerminalCreationError(error);
       throw error;
@@ -416,7 +450,7 @@ export default class PrologTerminal {
     const setupCommands: string[] = [];
 
     switch (PrologTerminal._platform) {
-      case 'windows':
+      case 'windows': {
         if (shell.name.includes('PowerShell')) {
           setupCommands.push('$Host.UI.RawUI.WindowTitle = "Prolog Terminal"');
           if (shell.supportsColors) {
@@ -426,14 +460,16 @@ export default class PrologTerminal {
           setupCommands.push('title Prolog Terminal');
         }
         break;
+      }
       case 'macos':
-      case 'linux':
+      case 'linux': {
         if (shell.supportsColors) {
           setupCommands.push('export TERM=xterm-256color');
         }
         // Set terminal title
         setupCommands.push('echo -ne "\\033]0;Prolog Terminal\\007"');
         break;
+      }
     }
 
     // Send setup commands
@@ -449,10 +485,11 @@ export default class PrologTerminal {
     let errorMessage = 'Failed to create Prolog terminal';
     let isExecutableError = false;
 
-    if (error.code === "ENOENT" || error.message?.includes("not found")) {
-      errorMessage = 'SWI-Prolog executable not found. The terminal requires SWI-Prolog to run interactive Prolog sessions.';
+    if (error.code === 'ENOENT' || error.message?.includes('not found')) {
+      errorMessage =
+        'SWI-Prolog executable not found. The terminal requires SWI-Prolog to run interactive Prolog sessions.';
       isExecutableError = true;
-    } else if (error.message?.includes("permission")) {
+    } else if (error.message?.includes('permission')) {
       errorMessage = `Permission error: ${error.message}`;
       isExecutableError = true;
     } else {
@@ -468,23 +505,27 @@ export default class PrologTerminal {
         'Configure Path',
         'Dismiss'
       );
-      
+
       const installationGuide = InstallationGuide.getInstance();
       switch (action) {
-        case 'Install with Package Manager':
+        case 'Install with Package Manager': {
           const { PackageManagerIntegration } = await import('./packageManagerIntegration');
           const packageManager = PackageManagerIntegration.getInstance();
           await packageManager.showInstallationDialog();
           break;
-        case 'Installation Guide':
+        }
+        case 'Installation Guide': {
           await installationGuide.showInstallationGuideDialog();
           break;
-        case 'Setup Wizard':
+        }
+        case 'Setup Wizard': {
           await commands.executeCommand('prolog.setupWizard');
           break;
-        case 'Configure Path':
+        }
+        case 'Configure Path': {
           await commands.executeCommand('workbench.action.openSettings', 'prolog.executablePath');
           break;
+        }
       }
     } else {
       window.showErrorMessage(errorMessage);
@@ -494,18 +535,18 @@ export default class PrologTerminal {
   public static async sendString(text: string) {
     try {
       await PrologTerminal.createPrologTerm();
-      
+
       // Get shell info for proper escaping
       const shell = await PrologTerminal.detectShell();
-      
+
       // finish goal by .
-      if (!text.endsWith(".")) {
-        text += ".";
+      if (!text.endsWith('.')) {
+        text += '.';
       }
-      
+
       // Escape text for the detected shell if needed
       const escapedText = PrologTerminal.escapeForShell(text, shell);
-      
+
       PrologTerminal._terminal.sendText(escapedText);
       PrologTerminal._terminal.show(false);
     } catch (error) {
@@ -519,11 +560,13 @@ export default class PrologTerminal {
       return;
     }
     try {
-      PrologTerminal._document = window.activeTextEditor.document;// Get the active Prolog document
-      await PrologTerminal.createPrologTerm();// Create the Prolog terminal
+      PrologTerminal._document = window.activeTextEditor.document; // Get the active Prolog document
+      await PrologTerminal.createPrologTerm(); // Create the Prolog terminal
       // Get the file name and escape it using jsesc
-      let fname = jsesc(PlatformUtils.normalizePath(PrologTerminal._document.fileName), { quotes: "single" });
-      let goals = `['${fname}']`;// Define the goals to load the Prolog file
+      const fname = jsesc(PlatformUtils.normalizePath(PrologTerminal._document.fileName), {
+        quotes: 'single',
+      });
+      const goals = `['${fname}']`; // Define the goals to load the Prolog file
       // load the file into swipl with a goal
       if (PrologTerminal._document.isDirty) {
         PrologTerminal._document.save().then(_ => {
@@ -543,18 +586,18 @@ export default class PrologTerminal {
     if (!window.activeTextEditor) {
       return;
     }
-    let editor: TextEditor = window.activeTextEditor;
-    let doc: TextDocument = editor.document;
-    let pred = Utils.getPredicateUnderCursor(doc, editor.selection.active);// Get the predicate under the cursor using utility function
+    const editor: TextEditor = window.activeTextEditor;
+    const doc: TextDocument = editor.document;
+    const pred = Utils.getPredicateUnderCursor(doc, editor.selection.active); // Get the predicate under the cursor using utility function
     // if no predicate under cursor
     if (!pred) {
       return;
     }
-    PrologTerminal.loadDocument();// Load the current Prolog document into the Prolog terminal
-    let goal = pred?.wholePred || "";// Extract the goal from the predicate
+    PrologTerminal.loadDocument(); // Load the current Prolog document into the Prolog terminal
+    let goal = pred?.wholePred || ''; // Extract the goal from the predicate
     // Separate the module if present
-    if (goal.indexOf(":") > -1) {
-      const parts = goal.split(":");
+    if (goal.indexOf(':') > -1) {
+      const parts = goal.split(':');
       goal = parts.length > 1 ? parts[1] : goal;
     }
     PrologTerminal.sendString(goal);

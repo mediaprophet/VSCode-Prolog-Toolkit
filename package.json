@@ -64,12 +64,7 @@
     "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues"
   },
   "main": "./out/pub/extension.js",
-  "browser": {
-    "vscode": "./test/vscode-mock.js"
-  },
-  "activationEvents": [
-    "onLanguage:prolog"
-  ],
+  "activationEvents": [],
   "contributes": {
     "languages": [
       {
@@ -447,7 +442,7 @@
       }
     ],
     "configuration": {
-      "title": "",
+      "title": "Prolog",
       "properties": {
         "prolog.executablePath": {
           "type": "string",
@@ -510,10 +505,14 @@
               "default": []
             },
             "macos": {
-              "default": ["--quiet"]
+              "default": [
+                "--quiet"
+              ]
             },
             "linux": {
-              "default": ["--quiet"]
+              "default": [
+                "--quiet"
+              ]
             }
           }
         },
@@ -680,6 +679,7 @@
           "id": "prologSettings",
           "name": "Prolog Settings",
           "type": "webview",
+          "icon": "images/prolog-activity-icon.svg",
           "when": "resourceLangId == prolog"
         }
       ],
@@ -688,21 +688,26 @@
           "id": "prologDashboard",
           "name": "Dashboard",
           "type": "webview",
+          "icon": "images/prolog-activity-icon.svg",
           "when": "true"
         },
         {
           "id": "prologActivity",
           "name": "Prolog Explorer",
+          "type": "webview",
+          "icon": "images/prolog-activity-icon.svg",
           "when": "true"
         },
         {
           "id": "prologQueries",
           "name": "Query History",
+          "icon": "images/prolog-activity-icon.svg",
           "when": "true"
         },
         {
           "id": "prologFiles",
           "name": "Prolog Files",
+          "icon": "images/prolog-activity-icon.svg",
           "when": "true"
         }
       ]
@@ -712,7 +717,7 @@
         {
           "id": "prolog-toolkit",
           "title": "Prolog Toolkit",
-          "icon": "./images/prolog-activity-icon.svg"
+          "icon": "images/prolog-activity-icon.svg"
         }
       ]
     },
@@ -731,7 +736,7 @@
     "lint:fix": "eslint src --ext ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
-    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServer.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node",
+    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServerRefactored.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node",
     "esbuild": "npm run -S esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "compile": "tsc -p tsconfig.build.json",
@@ -785,22 +790,22 @@
     "@types/vscode": "^1.102.0",
     "@types/which": "^3.0.4",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.0",
     "chai": "^5.2.1",
     "cross-env": "^10.0.0",
     "esbuild": "^0.25.8",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.3",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
     "husky": "^9.1.7",
     "mocha": "^11.7.1",
-    "nyc": "^15.1.0",
+    "nyc": "^17.1.0",
     "ovsx": "^0.10.5",
     "prettier": "^3.2.5",
-    "rimraf": "^5.0.5",
+    "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
@@ -810,18 +815,17 @@
     "axios": "^1.6.8",
     "command-exists": "^1.2.9",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
     "fast-glob": "^3.3.3",
-    "helmet": "^7.1.0",
+    "helmet": "^8.1.0",
     "js-string-escape": "^1.0.1",
     "jsesc": "^3.1.0",
     "jsonwebtoken": "^9.0.2",
-    "os": "^0.1.2",
     "process-promises": "^1.0.0",
     "readline-promise": "1.0.5",
     "split": "^1.0.1",
-    "uuid": "^9.0.1",
+    "uuid": "^11.1.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11",

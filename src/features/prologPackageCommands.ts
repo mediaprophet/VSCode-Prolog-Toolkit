@@ -48,15 +48,16 @@ export class PrologPackageCommands {
 
   private async handleListCommand(args: string[]): Promise<string> {
     const listType = args[0]?.toLowerCase() || 'installed';
-    
+
     if (listType === 'available' || listType === 'all') {
       const packs = await this.packageManager.listAvailablePacks();
       if (packs.length === 0) {
         return '📦 No available packs found.';
       }
-      
+
       let result = `📦 **Available Packs** (${packs.length} found):\n\n`;
-      for (const pack of packs.slice(0, 20)) { // Limit to first 20 for readability
+      for (const pack of packs.slice(0, 20)) {
+        // Limit to first 20 for readability
         result += `• **${pack.name}** ${pack.version ? `v${pack.version}` : ''}\n`;
         if (pack.title) {
           result += `  ${pack.title}\n`;
@@ -66,18 +67,18 @@ export class PrologPackageCommands {
         }
         result += '\n';
       }
-      
+
       if (packs.length > 20) {
         result += `... and ${packs.length - 20} more packs. Use \`/prolog pack search <keyword>\` to find specific packs.\n`;
       }
-      
+
       return result;
     } else {
       const packs = await this.packageManager.listInstalledPacks();
       if (packs.length === 0) {
         return '📦 No packs are currently installed.';
       }
-      
+
       let result = `📦 **Installed Packs** (${packs.length} found):\n\n`;
       for (const pack of packs) {
         result += `• **${pack.name}** ${pack.version ? `v${pack.version}` : ''}\n`;
@@ -86,7 +87,7 @@ export class PrologPackageCommands {
         }
         result += '\n';
       }
-      
+
       return result;
     }
   }
@@ -97,7 +98,7 @@ export class PrologPackageCommands {
     }
 
     const packName = args[0];
-    
+
     // Validate pack security first
     const securityCheck = await this.packageManager.validatePackSecurity(packName);
     if (!securityCheck.safe) {
@@ -106,12 +107,14 @@ export class PrologPackageCommands {
         'Yes, Install Anyway',
         'Cancel'
       );
-      
+
       if (proceed !== 'Yes, Install Anyway') {
         return `❌ Installation of '${packName}' cancelled due to security concerns.`;
       }
     } else if (securityCheck.warnings.length > 0) {
-      window.showInformationMessage(`Pack '${packName}' has some warnings: ${securityCheck.warnings.join(', ')}`);
+      window.showInformationMessage(
+        `Pack '${packName}' has some warnings: ${securityCheck.warnings.join(', ')}`
+      );
     }
 
     const result = await this.packageManager.installPack(packName);
@@ -124,14 +127,14 @@ export class PrologPackageCommands {
     }
 
     const packName = args[0];
-    
+
     // Confirm uninstallation
     const confirm = await window.showWarningMessage(
       `Are you sure you want to uninstall pack '${packName}'?`,
       'Yes, Uninstall',
       'Cancel'
     );
-    
+
     if (confirm !== 'Yes, Uninstall') {
       return `❌ Uninstallation of '${packName}' cancelled.`;
     }
@@ -160,10 +163,10 @@ export class PrologPackageCommands {
 
       let results = `🔄 **Updating ${outdatedPacks.length} pack(s):**\n\n`;
       for (const pack of outdatedPacks) {
-        const result = await this.packageManager.updatePack(pack.name || "");
+        const result = await this.packageManager.updatePack(pack.name || '');
         results += `• ${pack.name}: ${result.success ? '✅' : '❌'} ${result.message}\n`;
       }
-      
+
       return results;
     } else {
       const packName = args[0];
@@ -179,13 +182,13 @@ export class PrologPackageCommands {
 
     const packName = args[0];
     const packInfo = await this.packageManager.getPackInfo(packName);
-    
+
     if (!packInfo) {
       return `❌ Pack '${packName}' not found or information unavailable.`;
     }
 
     let result = `📦 **Pack Information: ${packInfo.name}**\n\n`;
-    
+
     if (packInfo.title) {
       result += `**Title:** ${packInfo.title}\n`;
     }
@@ -210,9 +213,9 @@ export class PrologPackageCommands {
     if (packInfo.conflicts && packInfo.conflicts.length > 0) {
       result += `**Conflicts:** ${packInfo.conflicts.join(', ')}\n`;
     }
-    
+
     result += `**Installed:** ${packInfo.installed ? '✅ Yes' : '❌ No'}\n`;
-    
+
     if (packInfo.outdated) {
       result += `**Status:** ⚠️ Outdated (update available)\n`;
     }
@@ -227,14 +230,15 @@ export class PrologPackageCommands {
 
     const keyword = args.join(' ');
     const packs = await this.packageManager.searchPacks(keyword);
-    
+
     if (packs.length === 0) {
       return `🔍 No packs found matching '${keyword}'.`;
     }
 
     let result = `🔍 **Search Results for '${keyword}'** (${packs.length} found):\n\n`;
-    
-    for (const pack of packs.slice(0, 10)) { // Limit to first 10 results
+
+    for (const pack of packs.slice(0, 10)) {
+      // Limit to first 10 results
       result += `• **${pack.name}** ${pack.version ? `v${pack.version}` : ''}\n`;
       if (pack.title) {
         result += `  ${pack.title}\n`;
@@ -244,7 +248,7 @@ export class PrologPackageCommands {
       }
       result += '\n';
     }
-    
+
     if (packs.length > 10) {
       result += `... and ${packs.length - 10} more results. Try a more specific search term.\n`;
     }
@@ -254,13 +258,13 @@ export class PrologPackageCommands {
 
   private async handleOutdatedCommand(): Promise<string> {
     const outdatedPacks = await this.packageManager.checkOutdatedPacks();
-    
+
     if (outdatedPacks.length === 0) {
       return '✅ All installed packs are up to date.';
     }
 
     let result = `⚠️ **Outdated Packs** (${outdatedPacks.length} found):\n\n`;
-    
+
     for (const pack of outdatedPacks) {
       result += `• **${pack.name}** ${pack.version ? `v${pack.version}` : ''}\n`;
       if (pack.title) {
@@ -268,7 +272,7 @@ export class PrologPackageCommands {
       }
       result += '\n';
     }
-    
+
     result += `\nUse \`/prolog pack update\` to update all outdated packs, or \`/prolog pack update <pack_name>\` to update a specific pack.\n`;
 
     return result;
@@ -276,7 +280,7 @@ export class PrologPackageCommands {
 
   private async handleServersCommand(args: string[]): Promise<string> {
     const subCommand = args[0]?.toLowerCase();
-    
+
     if (subCommand === 'add' && args[1]) {
       const serverUrl = args[1];
       try {
@@ -293,15 +297,15 @@ export class PrologPackageCommands {
     } else {
       const servers = this.packageManager.getPackServers();
       let result = `🌐 **Configured Pack Servers:**\n\n`;
-      
+
       servers.forEach((server, index) => {
         result += `${index + 1}. ${server}${index === 0 ? ' (default)' : ''}\n`;
       });
-      
+
       result += `\n**Usage:**\n`;
       result += `• \`/prolog pack servers add <url>\` - Add a custom server\n`;
       result += `• \`/prolog pack servers remove <url>\` - Remove a custom server\n`;
-      
+
       return result;
     }
   }
@@ -309,11 +313,11 @@ export class PrologPackageCommands {
   private formatOperationResult(operation: string, result: PackageOperationResult): string {
     const icon = result.success ? '✅' : '❌';
     let message = `${icon} ${operation}: ${result.message}`;
-    
+
     if (result.details) {
       message += `\n\n**Details:**\n${result.details}`;
     }
-    
+
     return message;
   }
 
@@ -350,20 +354,20 @@ export class PrologPackageCommands {
     const availablePacks = await this.packageManager.listAvailablePacks();
     const installedPacks = await this.packageManager.listInstalledPacks();
     const installedNames = new Set(installedPacks.map(p => p.name));
-    
+
     const items: PackQuickPickItem[] = availablePacks
       .filter(pack => !installedNames.has(pack.name))
       .map(pack => ({
         label: pack.name,
         description: pack.version ? `v${pack.version}` : '',
         detail: pack.title || pack.description || 'No description available',
-        pack
+        pack,
       }));
 
     const selected = await window.showQuickPick(items, {
       placeHolder: 'Select a pack to install',
       matchOnDescription: true,
-      matchOnDetail: true
+      matchOnDetail: true,
     });
 
     if (selected) {
@@ -381,7 +385,7 @@ export class PrologPackageCommands {
    */
   async showUninstallPicker(): Promise<void> {
     const installedPacks = await this.packageManager.listInstalledPacks();
-    
+
     if (installedPacks.length === 0) {
       window.showInformationMessage('No packs are currently installed.');
       return;
@@ -391,13 +395,13 @@ export class PrologPackageCommands {
       label: pack.name,
       description: pack.version ? `v${pack.version}` : '',
       detail: pack.title || pack.description || 'No description available',
-      pack
+      pack,
     }));
 
     const selected = await window.showQuickPick(items, {
       placeHolder: 'Select a pack to uninstall',
       matchOnDescription: true,
-      matchOnDetail: true
+      matchOnDetail: true,
     });
 
     if (selected) {
@@ -406,7 +410,7 @@ export class PrologPackageCommands {
         'Yes, Uninstall',
         'Cancel'
       );
-      
+
       if (confirm === 'Yes, Uninstall') {
         const result = await this.packageManager.uninstallPack(selected.pack.name);
         if (result.success) {

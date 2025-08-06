@@ -142,11 +142,13 @@ export interface PromiseUtils {
   timeout: <T>(promise: Promise<T>, ms: number) => Promise<T>;
   retry: <T>(fn: () => Promise<T>, attempts: number, delay?: number) => Promise<T>;
   all: <T>(promises: Promise<T>[]) => Promise<T[]>;
-  allSettled: <T>(promises: Promise<T>[]) => Promise<Array<{
-    status: 'fulfilled' | 'rejected';
-    value?: T;
-    reason?: any;
-  }>>;
+  allSettled: <T>(promises: Promise<T>[]) => Promise<
+    Array<{
+      status: 'fulfilled' | 'rejected';
+      value?: T;
+      reason?: any;
+    }>
+  >;
   race: <T>(promises: Promise<T>[]) => Promise<T>;
   series: <T>(tasks: (() => Promise<T>)[]) => Promise<T[]>;
   parallel: <T>(tasks: (() => Promise<T>)[], concurrency: number) => Promise<T[]>;
@@ -283,7 +285,10 @@ export interface PerformanceUtils {
   timer: () => PerformanceTimer;
   measure: <T>(name: string, fn: () => T) => T;
   measureAsync: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
-  benchmark: <T>(fn: () => T, iterations: number) => {
+  benchmark: <T>(
+    fn: () => T,
+    iterations: number
+  ) => {
     average: number;
     min: number;
     max: number;
@@ -316,15 +321,15 @@ export interface TimingUtils {
     wait: number,
     options?: DebounceOptions
   ) => T & { cancel: () => void; flush: () => void };
-  
+
   throttle: <T extends (...args: any[]) => any>(
     func: T,
     wait: number,
     options?: ThrottleOptions
   ) => T & { cancel: () => void; flush: () => void };
-  
+
   once: <T extends (...args: any[]) => any>(func: T) => T;
-  
+
   memoize: <T extends (...args: any[]) => any>(
     func: T,
     resolver?: (...args: Parameters<T>) => string
@@ -344,36 +349,36 @@ export interface Utils {
   performance: PerformanceUtils;
   timing: TimingUtils;
   eventEmitter: EventEmitterUtils;
-  
+
   // Safe access utilities
   safeArrayAccess: SafeArrayAccess<any>;
   safeObjectAccess: SafeObjectAccess<any>;
   getConfigValue: ConfigValue<any>;
-  
+
   // Error handling utilities
   isError: ErrorTypeGuard;
   getErrorMessage: ErrorFormatter;
   formatError: ErrorFormatter;
   logError: ErrorLogger;
-  
+
   // Type guards
   isString: StringTypeGuard;
   isNumber: NumberTypeGuard;
   isObject: ObjectTypeGuard;
   isArray: ArrayTypeGuard<any>;
-  
+
   // File system utilities
   readFile: FileReader;
   writeFile: FileWriter;
   fileExists: FileExists;
   listDirectory: DirectoryLister;
-  
+
   // Validation utilities
   validate: Validator<any>;
-  
+
   // Cache utilities
   createCache: <T>(maxSize?: number, defaultTtl?: number) => Cache<T>;
-  
+
   // Logger utilities
   createLogger: (config: LoggerConfig) => Logger;
 }

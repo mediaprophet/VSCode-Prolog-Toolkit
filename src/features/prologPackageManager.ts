@@ -38,7 +38,7 @@ export class PrologPackageManager {
   async listAvailablePacks(): Promise<PrologPack[]> {
     try {
       const response = await this.backend.sendRequest('query', {
-        goal: 'findall(pack(Name, Title, Version, Author, Home, Download), (pack_search(., Packs), member(pack(Name, Title, Version, Author, Home, Download), Packs)), AvailablePacks).'
+        goal: 'findall(pack(Name, Title, Version, Author, Home, Download), (pack_search(., Packs), member(pack(Name, Title, Version, Author, Home, Download), Packs)), AvailablePacks).',
       });
 
       if (response.status === 'ok' && response.results) {
@@ -57,7 +57,7 @@ export class PrologPackageManager {
   async listInstalledPacks(): Promise<PrologPack[]> {
     try {
       const response = await this.backend.sendRequest('query', {
-        goal: 'findall(pack(Name, Title, Version, Author, Home), (pack_list_installed(Packs), member(pack(Name, _, _), Packs), pack_info(Name, title(Title)), pack_info(Name, version(Version)), pack_info(Name, author(Author)), pack_info(Name, home(Home))), InstalledPacks).'
+        goal: 'findall(pack(Name, Title, Version, Author, Home), (pack_list_installed(Packs), member(pack(Name, _, _), Packs), pack_info(Name, title(Title)), pack_info(Name, version(Version)), pack_info(Name, author(Author)), pack_info(Name, home(Home))), InstalledPacks).',
       });
 
       if (response.status === 'ok' && response.results) {
@@ -77,7 +77,8 @@ export class PrologPackageManager {
     if (!this.validatePackName(packName)) {
       return {
         success: false,
-        message: 'Invalid pack name. Pack names should contain only alphanumeric characters, underscores, and hyphens.'
+        message:
+          'Invalid pack name. Pack names should contain only alphanumeric characters, underscores, and hyphens.',
       };
     }
 
@@ -85,20 +86,23 @@ export class PrologPackageManager {
       {
         location: ProgressLocation.Notification,
         title: `Installing pack: ${packName}`,
-        cancellable: true
+        cancellable: true,
       },
-      async (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => {
+      async (
+        progress: Progress<{ message?: string; increment?: number }>,
+        token: CancellationToken
+      ) => {
         try {
           progress.report({ message: 'Checking pack availability...' });
-          
+
           // Check if pack exists
           const availablePacks = await this.listAvailablePacks();
           const packExists = availablePacks.some(pack => pack.name === packName);
-          
+
           if (!packExists) {
             return {
               success: false,
-              message: `Pack '${packName}' not found in available packs.`
+              message: `Pack '${packName}' not found in available packs.`,
             };
           }
 
@@ -106,13 +110,13 @@ export class PrologPackageManager {
 
           const response = await this.backend.sendRequest('query', {
             goal: `pack_install(${packName}, [interactive(false), upgrade(true)]).`,
-            timeoutMs: 60000 // 60 seconds timeout for installation
+            timeoutMs: 60000, // 60 seconds timeout for installation
           });
 
           if (token.isCancellationRequested) {
             return {
               success: false,
-              message: 'Installation cancelled by user.'
+              message: 'Installation cancelled by user.',
             };
           }
 
@@ -122,30 +126,30 @@ export class PrologPackageManager {
             // Verify installation
             const installedPacks = await this.listInstalledPacks();
             const isInstalled = installedPacks.some(pack => pack.name === packName);
-            
+
             if (isInstalled) {
               return {
                 success: true,
-                message: `Pack '${packName}' installed successfully.`
+                message: `Pack '${packName}' installed successfully.`,
               };
             } else {
               return {
                 success: false,
-                message: `Pack '${packName}' installation completed but verification failed.`
+                message: `Pack '${packName}' installation completed but verification failed.`,
               };
             }
           } else {
             return {
               success: false,
               message: `Failed to install pack '${packName}': ${response.error || 'Unknown error'}`,
-              details: response.message
+              details: response.message,
             };
           }
         } catch (error) {
           return {
             success: false,
             message: `Installation failed: ${error}`,
-            details: error instanceof Error ? error.stack : undefined
+            details: error instanceof Error ? error.stack : undefined,
           };
         }
       }
@@ -159,7 +163,7 @@ export class PrologPackageManager {
     if (!this.validatePackName(packName)) {
       return {
         success: false,
-        message: 'Invalid pack name.'
+        message: 'Invalid pack name.',
       };
     }
 
@@ -167,7 +171,7 @@ export class PrologPackageManager {
       {
         location: ProgressLocation.Notification,
         title: `Uninstalling pack: ${packName}`,
-        cancellable: false
+        cancellable: false,
       },
       async (progress: Progress<{ message?: string; increment?: number }>) => {
         try {
@@ -180,7 +184,7 @@ export class PrologPackageManager {
           if (!isInstalled) {
             return {
               success: false,
-              message: `Pack '${packName}' is not installed.`
+              message: `Pack '${packName}' is not installed.`,
             };
           }
 
@@ -188,7 +192,7 @@ export class PrologPackageManager {
 
           const response = await this.backend.sendRequest('query', {
             goal: `pack_remove(${packName}).`,
-            timeoutMs: 30000 // 30 seconds timeout
+            timeoutMs: 30000, // 30 seconds timeout
           });
 
           progress.report({ message: 'Verifying removal...', increment: 90 });
@@ -197,30 +201,30 @@ export class PrologPackageManager {
             // Verify removal
             const remainingPacks = await this.listInstalledPacks();
             const stillInstalled = remainingPacks.some(pack => pack.name === packName);
-            
+
             if (!stillInstalled) {
               return {
                 success: true,
-                message: `Pack '${packName}' uninstalled successfully.`
+                message: `Pack '${packName}' uninstalled successfully.`,
               };
             } else {
               return {
                 success: false,
-                message: `Pack '${packName}' removal completed but verification failed.`
+                message: `Pack '${packName}' removal completed but verification failed.`,
               };
             }
           } else {
             return {
               success: false,
               message: `Failed to uninstall pack '${packName}': ${response.error || 'Unknown error'}`,
-              details: response.message
+              details: response.message,
             };
           }
         } catch (error) {
           return {
             success: false,
             message: `Uninstallation failed: ${error}`,
-            details: error instanceof Error ? error.stack : undefined
+            details: error instanceof Error ? error.stack : undefined,
           };
         }
       }
@@ -234,7 +238,7 @@ export class PrologPackageManager {
     if (!this.validatePackName(packName)) {
       return {
         success: false,
-        message: 'Invalid pack name.'
+        message: 'Invalid pack name.',
       };
     }
 
@@ -242,21 +246,24 @@ export class PrologPackageManager {
       {
         location: ProgressLocation.Notification,
         title: `Updating pack: ${packName}`,
-        cancellable: true
+        cancellable: true,
       },
-      async (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => {
+      async (
+        progress: Progress<{ message?: string; increment?: number }>,
+        token: CancellationToken
+      ) => {
         try {
           progress.report({ message: 'Checking for updates...' });
 
           const response = await this.backend.sendRequest('query', {
             goal: `pack_upgrade(${packName}).`,
-            timeoutMs: 60000 // 60 seconds timeout
+            timeoutMs: 60000, // 60 seconds timeout
           });
 
           if (token.isCancellationRequested) {
             return {
               success: false,
-              message: 'Update cancelled by user.'
+              message: 'Update cancelled by user.',
             };
           }
 
@@ -265,20 +272,20 @@ export class PrologPackageManager {
           if (response.status === 'ok') {
             return {
               success: true,
-              message: `Pack '${packName}' updated successfully.`
+              message: `Pack '${packName}' updated successfully.`,
             };
           } else {
             return {
               success: false,
               message: `Failed to update pack '${packName}': ${response.error || 'Unknown error'}`,
-              details: response.message
+              details: response.message,
             };
           }
         } catch (error) {
           return {
             success: false,
             message: `Update failed: ${error}`,
-            details: error instanceof Error ? error.stack : undefined
+            details: error instanceof Error ? error.stack : undefined,
           };
         }
       }
@@ -295,7 +302,7 @@ export class PrologPackageManager {
 
     try {
       const response = await this.backend.sendRequest('query', {
-        goal: `pack_info(${packName}, Info), findall(Key-Value, member(Key(Value), Info), Details).`
+        goal: `pack_info(${packName}, Info), findall(Key-Value, member(Key(Value), Info), Details).`,
       });
 
       if (response.status === 'ok' && response.results && response.results.length > 0) {
@@ -318,7 +325,7 @@ export class PrologPackageManager {
 
     try {
       const response = await this.backend.sendRequest('query', {
-        goal: `pack_search('${keyword}', Packs).`
+        goal: `pack_search('${keyword}', Packs).`,
       });
 
       if (response.status === 'ok' && response.results) {
@@ -345,7 +352,8 @@ export class PrologPackageManager {
    */
   removePackServer(serverUrl: string): void {
     const index = this.packServers.indexOf(serverUrl);
-    if (index > 0) { // Don't remove the default server at index 0
+    if (index > 0) {
+      // Don't remove the default server at index 0
       this.packServers.splice(index, 1);
     }
   }
@@ -363,7 +371,7 @@ export class PrologPackageManager {
   async checkOutdatedPacks(): Promise<PrologPack[]> {
     try {
       const response = await this.backend.sendRequest('query', {
-        goal: 'findall(pack(Name, CurrentVersion, LatestVersion), (pack_list_installed(Packs), member(pack(Name, _, _), Packs), pack_info(Name, version(CurrentVersion)), pack_property(Name, latest_version(LatestVersion)), CurrentVersion \\= LatestVersion), OutdatedPacks).'
+        goal: 'findall(pack(Name, CurrentVersion, LatestVersion), (pack_list_installed(Packs), member(pack(Name, _, _), Packs), pack_info(Name, version(CurrentVersion)), pack_property(Name, latest_version(LatestVersion)), CurrentVersion \\= LatestVersion), OutdatedPacks).',
       });
 
       if (response.status === 'ok' && response.results) {
@@ -383,7 +391,7 @@ export class PrologPackageManager {
 
   private parsePackList(results: any[]): PrologPack[] {
     const packs: PrologPack[] = [];
-    
+
     for (const result of results) {
       if (Array.isArray(result) && result.length > 0) {
         for (const packData of result) {
@@ -394,7 +402,7 @@ export class PrologPackageManager {
         }
       }
     }
-    
+
     return packs;
   }
 
@@ -408,7 +416,7 @@ export class PrologPackageManager {
           version: args[2] || '',
           author: args[3] || '',
           home: args[4] || '',
-          download: args[5] || ''
+          download: args[5] || '',
         };
       }
       return null;
@@ -420,14 +428,14 @@ export class PrologPackageManager {
 
   private parsePackInfo(packName: string, infoData: any): PrologPack {
     const pack: PrologPack = { name: packName };
-    
+
     try {
       if (Array.isArray(infoData)) {
         for (const item of infoData) {
           if (typeof item === 'object' && item.functor === '-') {
             const key = item.args[0];
             const value = item.args[1];
-            
+
             switch (key) {
               case 'title':
                 pack.title = value;
@@ -457,7 +465,7 @@ export class PrologPackageManager {
     } catch (error) {
       console.warn('Failed to parse pack info:', infoData, error);
     }
-    
+
     return pack;
   }
 
@@ -493,7 +501,6 @@ export class PrologPackageManager {
         warnings.push('This pack is deprecated and should not be used');
         safe = false;
       }
-
     } catch (error) {
       warnings.push(`Failed to validate pack security: ${error}`);
       safe = false;

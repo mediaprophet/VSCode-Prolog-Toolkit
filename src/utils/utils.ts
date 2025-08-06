@@ -1,21 +1,17 @@
-import { basename } from "path";
-"use strict";
-import * as fs from "fs";
-import * as cp from "child_process";
-import  jsesc from "jsesc";
+// 'use strict' directive is not needed in ES modules
+import * as fs from 'fs';
+import * as cp from 'child_process';
+import jsesc from 'jsesc';
 // import { CompleterResult } from "readline";
 // import { error } from "util";
-import * as path from "path";
 import {
   ExtensionContext,
   Position,
   Range,
   TextDocument,
   workspace,
-  window,
-  DiagnosticCollection
-} from "vscode";
-import { PlatformUtils, normalizePath, getPlatform, getPlatformDefaults } from "./platformUtils";
+} from 'vscode';
+import { PlatformUtils, getPlatformDefaults } from './platformUtils';
 
 export interface ISnippet {
   [predIndicator: string]: {
@@ -47,12 +43,14 @@ export class Utils {
   public static FORMATENABLED: boolean = false;
   public static EXPATH: string | null = null;
 
-  constructor() { }
+  constructor() {
+    // Static utility class - no instance initialization needed
+  }
   public static getPredDescriptions(pred: string): string {
-    if (Utils.snippets && Utils.snippets[pred]) {
+    if (Utils.snippets?.[pred]) {
       return Utils.snippets[pred].description;
     }
-    return "";
+    return '';
   }
   // initialisation of utils class and load snippets file with it's predicates
   public static init(context: ExtensionContext) {
@@ -66,10 +64,10 @@ export class Utils {
   private static initializePlatformSettings() {
     const config = workspace.getConfiguration('prolog');
     const autoDetect = config.get<boolean>('platform.autoDetect', true);
-    
+
     if (autoDetect) {
       const platformDefaults = getPlatformDefaults();
-      
+
       // Update executable path if not explicitly set by user
       const currentExecPath = config.get<string>('executablePath');
       if (!currentExecPath || currentExecPath === '/usr/bin/swipl') {
@@ -79,13 +77,15 @@ export class Utils {
           console.log(`[Platform Utils] Auto-detected executable path: ${platformExecPath}`);
         }
       }
-      
+
       // Update runtime args if not explicitly set
       const currentRuntimeArgs = config.get<string[]>('terminal.runtimeArgs');
       if (!currentRuntimeArgs || currentRuntimeArgs.length === 0) {
         const platformRuntimeArgs = platformDefaults.defaultRuntimeArgs;
         if (platformRuntimeArgs.length > 0) {
-          console.log(`[Platform Utils] Auto-detected runtime args: ${platformRuntimeArgs.join(' ')}`);
+          console.log(
+            `[Platform Utils] Auto-detected runtime args: ${platformRuntimeArgs.join(' ')}`
+          );
         }
       }
     }
@@ -95,12 +95,12 @@ export class Utils {
   public static getPlatformExecutablePath(): string {
     const config = workspace.getConfiguration('prolog');
     let execPath = config.get<string>('executablePath', '');
-    
+
     // If no path specified, use platform default
     if (!execPath) {
       execPath = getPlatformDefaults().defaultExecutablePath;
     }
-    
+
     // Normalize and expand the path
     return PlatformUtils.normalizePath(execPath);
   }
@@ -109,12 +109,12 @@ export class Utils {
   public static getPlatformRuntimeArgs(): string[] {
     const config = workspace.getConfiguration('prolog');
     let runtimeArgs = config.get<string[]>('terminal.runtimeArgs', []);
-    
+
     // If no args specified, use platform defaults
     if (runtimeArgs.length === 0) {
       runtimeArgs = getPlatformDefaults().defaultRuntimeArgs;
     }
-    
+
     return runtimeArgs;
   }
 
@@ -128,27 +128,27 @@ export class Utils {
     const config = workspace.getConfiguration('prolog');
     const customEnvVars = config.get<Record<string, string>>('platform.environmentVariables', {});
     const platformEnvVars = PlatformUtils.getEnvironmentVariables();
-    
+
     // Merge custom environment variables with platform-specific ones
     const result: Record<string, string> = {};
-    
+
     // Add cross-platform variables
     platformEnvVars.crossPlatform.forEach(varName => {
       if (process.env[varName]) {
         result[varName] = process.env[varName]!;
       }
     });
-    
+
     // Add platform-specific variables
     platformEnvVars.platformSpecific.forEach(varName => {
       if (process.env[varName]) {
         result[varName] = process.env[varName]!;
       }
     });
-    
+
     // Override with custom variables
     Object.assign(result, customEnvVars);
-    
+
     return result;
   }
 
@@ -167,18 +167,20 @@ export class Utils {
     if (Utils.snippets) {
       return;
     }
-    let snippetsPath = context.extensionPath + "/snippets/prolog.json";
-    let snippets = fs.readFileSync(snippetsPath, "utf8").toString();
+    const snippetsPath = context.extensionPath + '/snippets/prolog.json';
+    const snippets = fs.readFileSync(snippetsPath, 'utf8').toString();
     Utils.snippets = JSON.parse(snippets);
   }
   // initialise module for predicates from the loaded snippets
-  public static genPredicateModules(context: ExtensionContext) {
+  public static genPredicateModules(_context: ExtensionContext) {
     Utils.predModules = <IPredModule>new Object();
     let pred, mod: string;
-    for (let p in Utils.snippets) { // from the loaded snippets
-      if (p.indexOf(":") > 0) {
-        [mod, pred] = p.split(":");
-        if (Utils.predModules[pred]) { // if predicates have severals modules
+    for (const p in Utils.snippets) {
+      // from the loaded snippets
+      if (p.indexOf(':') > 0) {
+        [mod, pred] = p.split(':');
+        if (Utils.predModules[pred]) {
+          // if predicates have severals modules
           Utils.predModules[pred] = Utils.predModules[pred].concat(mod);
         } else {
           Utils.predModules[pred] = [mod];
@@ -188,7 +190,7 @@ export class Utils {
   }
   // return the module of a specified predicate
   public static getPredModules(pred1: string): string[] {
-    let pred = pred1.indexOf(":") > -1 ? pred1.split(":")[1] : pred1;
+    const pred = pred1.indexOf(':') > -1 ? pred1.split(':')[1] : pred1;
     return Utils.predModules[pred] ? Utils.predModules[pred] : [];
   }
   // get all the builtin predicates names from the loaded snippet
@@ -207,48 +209,45 @@ export class Utils {
   }
 
   // get the predicate under the cursor
-  public static getPredicateUnderCursor(
-    doc: TextDocument,
-    position: Position
-  ): IPredicate {
+  public static getPredicateUnderCursor(doc: TextDocument, position: Position): IPredicate {
     // get predicate name range
-    let wordRange: Range = doc.getWordRangeAtPosition(position);
+    const wordRange: Range = doc.getWordRangeAtPosition(position);
     if (!wordRange) {
       return null;
     }
     // get predicate name
-    let predName: string = doc.getText(wordRange);
-    let re = new RegExp("^" + predName + "\\s*\\(");
-    let re1 = new RegExp("^" + predName + "\\s*\\/\\s*(\\d+)");
+    const predName: string = doc.getText(wordRange);
+    const re = new RegExp('^' + predName + '\\s*\\(');
+    const re1 = new RegExp('^' + predName + '\\s*/\\s*(\\d+)');
     let wholePred: string;
     let arity: number;
     let params: string;
     const docTxt = doc.getText(); // get the entire text of the prolog file
-    let text = docTxt
-      .split("\n")
-      .slice(position.line)// get juste the line of the predicate
-      .join("")
+    const text = docTxt
+      .split('\n')
+      .slice(position.line) // get juste the line of the predicate
+      .join('')
       .slice(wordRange.start.character)
-      .replace(/\s+/g, " "); // replace all whitespaces by space
+      .replace(/\s+/g, ' '); // replace all whitespaces by space
 
     let module = null;
 
     if (re.test(text)) {
-      let i = text.indexOf("(") + 1;// get the position of the first parenthesis
+      let i = text.indexOf('(') + 1; // get the position of the first parenthesis
       let matched = 1;
       // iteration if parenthesis in parenthesis
-      while (matched > 0) { 
-        if (text.charAt(i) === "(") {
+      while (matched > 0) {
+        if (text.charAt(i) === '(') {
           matched++;
           i++;
           continue;
         }
-        if (text.charAt(i) === ")") {
+        if (text.charAt(i) === ')') {
           matched--;
           i++;
           continue;
         }
-        i++;// index of the last parenthesis
+        i++; // index of the last parenthesis
       }
       wholePred = text.slice(0, i); // get the whole predicate
       arity = Utils.getPredicateArity(wholePred); // get the number of parameters
@@ -257,30 +256,25 @@ export class Utils {
     } else if (re1.test(text)) {
       const match = text.match(re1);
       arity = match ? parseInt(match[1]) : 0;
-      params =
-        arity === 0 ? "" : "(" + new Array(arity).fill("_").join(",") + ")";
+      params = arity === 0 ? '' : '(' + new Array(arity).fill('_').join(',') + ')';
       wholePred = predName + params;
       switch (Utils.DIALECT) {
-        case "swi":
-          let reg = new RegExp(
-            "module\\s*\\(\\s*([^,\\(]+)\\s*,\\s*\\[[^\\]]*?" +
-            predName +
-            "/" +
-            arity +
-            "\\b"
+        case 'swi': {
+          const reg = new RegExp(
+            'module\\s*\\(\\s*([^,(]+)\\s*,\\s*\\[[^\\]]*?' + predName + '/' + arity + '\\b'
           );
-          let mtch = docTxt.replace(/\n/g, "").match(reg);
+          const mtch = docTxt.replace(/\n/g, '').match(reg);
           if (mtch) {
-            let mFile = jsesc(mtch[1]);
-            let mod = Utils.execPrologSync(
-              ["-q"],
+            const mFile = jsesc(mtch[1]);
+            const mod = Utils.execPrologSync(
+              ['-q'],
               `find_module :-
                 absolute_file_name(${mFile}, File, [file_type(prolog)]),
                 load_files(File),
                 source_file_property(File, module(Mod)),
                 writeln(module:Mod).`,
-              "find_module",
-              "true",
+              'find_module',
+              'true',
               /module:(\w+)/
             );
             if (mod) {
@@ -288,31 +282,29 @@ export class Utils {
             }
           }
           break;
-        case "ecl":
-          let modDefMatch = docTxt.match(/\n?\s*:-\s*module\((\w+)\)/);
-          let expRe1 = new RegExp(
-            "\\n\\s*:-\\s*export[^\\.]+\\b" + predName + "\\s*/\\s*" + arity
+        }
+        case 'ecl': {
+          const modDefMatch = docTxt.match(/\n?\s*:-\s*module\((\w+)\)/);
+          const expRe1 = new RegExp(
+            '\\n\\s*:-\\s*export[^.]+\\b' + predName + '\\s*/\\s*' + arity
           );
-          let expRe2 = new RegExp(
-            "\\n\\s*:-\\s*import.*\\b" +
-            predName +
-            "\\s*/\\s*" +
-            arity +
-            "\\b.*from\\s*(\\w+)"
+          const expRe2 = new RegExp(
+            '\\n\\s*:-\\s*import.*\\b' + predName + '\\s*/\\s*' + arity + '\\b.*from\\s*(\\w+)'
           );
-          let impModMtch = docTxt.match(expRe2);
+          const impModMtch = docTxt.match(expRe2);
           if (modDefMatch && expRe1.test(docTxt)) {
             module = modDefMatch[1];
           } else if (impModMtch) {
             module = impModMtch[1];
           }
           break;
+        }
         default:
           break;
       }
     } else {
       arity = 0;
-      params = "";
+      params = '';
       wholePred = predName;
     }
     //get module doesnt work and useless
@@ -327,7 +319,7 @@ export class Utils {
       } else {
         let mod: string[];
         switch (Utils.DIALECT) {
-          case "swi":
+          case "swi": {
             const fm = path.resolve(`${__dirname}/findmodule.pl`);
             mod = Utils.execPrologSync(
               ["-q", fm],
@@ -340,7 +332,8 @@ export class Utils {
               /module:(\w+)/
             );
             break;
-          case "ecl":
+          }
+          case "ecl": {
             let modMtch = docTxt.match(/\n?\s*:-\s*module\((\w+)\)/);
             let currMod: string, clause: string;
             if (modMtch) {
@@ -376,28 +369,27 @@ export class Utils {
     }*/
 
     return {
-      wholePred: module ? module + ":" + wholePred : wholePred,
-      pi: module
-        ? module + ":" + predName + "/" + arity
-        : predName + "/" + arity,
+      wholePred: module ? module + ':' + wholePred : wholePred,
+      pi: module ? module + ':' + predName + '/' + arity : predName + '/' + arity,
       functor: predName,
       arity: arity,
       params: params,
-      module: module || ''
+      module: module || '',
     };
   }
   // get the number of parameters
   public static getPredicateArity(pred: string): number {
-    let re = /^\w+\((.+)\)$/;
-    if (!re.test(pred)) { // if predicate have parameters
+    const re = /^\w+\((.+)\)$/;
+    if (!re.test(pred)) {
+      // if predicate have parameters
       return 0;
     }
     let args: string[] = [];
     let plCode: string = '';
     // get the Arity from prolog
     switch (Utils.DIALECT) {
-      case "swi":
-        args = ["-f", "none", "-q"];
+      case 'swi': {
+        args = ['-f', 'none', '-q'];
         plCode = `
           outputArity :-
             read(Term),
@@ -405,28 +397,31 @@ export class Utils {
             format("arity=~d~n", [Arity]).
         `;
         break;
-      case "ecl":
+      }
+      case 'ecl': {
         plCode = `
           outputArity :-
             read(Term),
             functor(Term, _, Arity),
             printf("arity=%d%n", [Arity]).
         `;
-
+        break;
+      }
       default:
         break;
     }
-    let result = Utils.execPrologSync( // execute a prolog query 
+    const result = Utils.execPrologSync(
+      // execute a prolog query
       args,
       plCode,
-      "outputArity",
+      'outputArity',
       pred,
       /arity=(\d+)/
     );
     return result ? parseInt(result[1]) : -1; // return the number of parameters
   }
 
-  // execute a prolog query 
+  // execute a prolog query
   public static execPrologSync(
     args: string[],
     clause: string,
@@ -434,13 +429,13 @@ export class Utils {
     inputTerm: string, // input
     resultReg: RegExp
   ): string[] {
-    let plCode = jsesc(clause, { quotes: "double" }); // stringify 
+    const plCode = jsesc(clause, { quotes: 'double' }); // stringify
     let input: string,
       prologProcess: cp.SpawnSyncReturns<string | Buffer>,
       runOptions: cp.SpawnSyncOptions;
     // execute the query by transforming it in a stream
     switch (Utils.DIALECT) {
-      case "swi":
+      case 'swi': {
         input = `
           open_string("${plCode}", Stream), 
           load_files(runprolog, [stream(Stream)]).
@@ -449,45 +444,59 @@ export class Utils {
           halt.
         `;
         runOptions = {
-          cwd: workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : process.cwd(), // rootpath of the project
-          encoding: "utf8",
-          input: input
+          cwd: workspace.workspaceFolders?.[0]
+            ? workspace.workspaceFolders[0].uri.fsPath
+            : process.cwd(), // rootpath of the project
+          encoding: 'utf8',
+          input: input,
         };
         prologProcess = cp.spawnSync(Utils.RUNTIMEPATH || '', args, runOptions); // create a subprocess with prolog (specified runtimepath)
         break;
-      case "ecl":
+      }
+      case 'ecl': {
         input = `${inputTerm}.`;
         args = args.concat([
-          "-e",
-          `open(string(\"${
-          plCode
-          }\n\"), read, S),compile(stream(S)),close(S),call(${call}).`
+          '-e',
+          `open(string("${plCode}\n"), read, S),compile(stream(S)),close(S),call(${call}).`,
         ]);
         runOptions = {
-          cwd: workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : process.cwd(),// rootpath of the project
-          encoding: "utf8",
-          input: input
+          cwd: workspace.workspaceFolders?.[0]
+            ? workspace.workspaceFolders[0].uri.fsPath
+            : process.cwd(), // rootpath of the project
+          encoding: 'utf8',
+          input: input,
         };
-        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH || '', args, runOptions);// create a subprocess with prolog (specified runtimepath)
+        prologProcess = cp.spawnSync(Utils.RUNTIMEPATH || '', args, runOptions); // create a subprocess with prolog (specified runtimepath)
         break;
+      }
       default:
         break;
     }
     // get the response in output
     if (prologProcess && prologProcess.status === 0) {
-      let output = prologProcess.stdout ? prologProcess.stdout.toString() : ''; // get output with stdout
-      let err = prologProcess.stderr ? prologProcess.stderr.toString() : '';
+      const output = prologProcess.stdout ? prologProcess.stdout.toString() : ''; // get output with stdout
+      const err = prologProcess.stderr ? prologProcess.stderr.toString() : '';
       // console.log("out:" + output);
       // console.log("err:" + err);
+      
+      // Log stderr if there are any error messages for debugging
+      if (err.trim()) {
+        console.debug('[Utils] Prolog process stderr:', err);
+      }
 
-      let match = output.match(resultReg); // select the wanted result with the regex expression
+      const match = output.match(resultReg); // select the wanted result with the regex expression
       return match ? match : null;
     } else {
-      console.log("UtilsExecSyncError: " + (prologProcess && prologProcess.stderr ? prologProcess.stderr.toString() : 'Unknown error'));
+      console.log(
+        'UtilsExecSyncError: ' +
+          (prologProcess && prologProcess.stderr
+            ? prologProcess.stderr.toString()
+            : 'Unknown error')
+      );
       return null;
     }
   }
-/* //OLD
+  /* //OLD
   public static isValidEclTerm(docText: string, str: string): boolean {
     if (Utils.DIALECT !== "ecl") {
       return false;
@@ -519,7 +528,7 @@ export class Utils {
   }*/
   // Helper function to find line and column for a byte offset in the document
   public static findLineColForByte(doc: string, index: number): Position {
-    const lines = doc.split("\n");
+    const lines = doc.split('\n');
     let totalLength = 0;
     let lineStartPos = 0;
     // Iterate through lines to find the line and column for the byte offset

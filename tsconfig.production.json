@@ -3,7 +3,9 @@
     "module": "commonjs",
     "target": "es2020",
     "outDir": "out",
-    "lib": ["es2020"],
+    "lib": [
+      "es2020"
+    ],
     "sourceMap": true,
     "rootDir": ".",
     "esModuleInterop": true,
@@ -35,7 +37,7 @@
     "out",
     "dist",
     "**/*.js",
-    "src/extension_backup.ts",
+    "src/extension.ts",
     "test/**/*"
   ]
 }

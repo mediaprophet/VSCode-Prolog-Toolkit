@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ConcurrencyManager, QueuedQuery, QueryPriority } from './concurrencyManager';
+import { ConcurrencyManager, QueryPriority } from './concurrencyManager';
 import { QueryHistoryManager } from './queryHistoryManager';
 
 export interface ScheduledQuery {
@@ -54,7 +54,7 @@ export class QueryScheduler extends EventEmitter {
   private concurrencyManager: ConcurrencyManager;
   private historyManager?: QueryHistoryManager;
   private scheduledQueries: Map<string, ScheduledQuery> = new Map();
-  private schedulerInterval?: NodeJS.Timeout;
+  private schedulerInterval?: ReturnType<typeof setInterval>;
   private dependencyGraph: Map<string, Set<string>> = new Map(); // queryId -> dependents
   private conditionEvaluator: Map<string, () => boolean> = new Map();
 
@@ -64,10 +64,10 @@ export class QueryScheduler extends EventEmitter {
     options: Partial<SchedulerOptions> = {}
   ) {
     super();
-    
+
     this.concurrencyManager = concurrencyManager;
     this.historyManager = historyManager;
-    
+
     this.options = {
       maxScheduledQueries: 1000,
       checkInterval: 1000, // Check every second
@@ -77,9 +77,9 @@ export class QueryScheduler extends EventEmitter {
       defaultPriority: {
         level: 'normal',
         weight: 10,
-        timeout: 30000
+        timeout: 30000,
       },
-      ...options
+      ...options,
     };
 
     this.startScheduler();
@@ -116,7 +116,7 @@ export class QueryScheduler extends EventEmitter {
       createdAt: Date.now(),
       executionCount: 0,
       status: 'scheduled',
-      metadata
+      metadata,
     };
 
     // Validate schedule configuration
@@ -217,9 +217,8 @@ export class QueryScheduler extends EventEmitter {
     }
 
     if (filter?.tags) {
-      queries = queries.filter(q => 
-        q.metadata?.tags && 
-        filter.tags!.some(tag => q.metadata!.tags!.includes(tag))
+      queries = queries.filter(
+        q => q.metadata?.tags && filter.tags!.some(tag => q.metadata!.tags!.includes(tag))
       );
     }
 
@@ -231,7 +230,7 @@ export class QueryScheduler extends EventEmitter {
    */
   getStatistics(): SchedulerStats {
     const queries = Array.from(this.scheduledQueries.values());
-    
+
     const nextExecution = queries
       .filter(q => q.scheduleType === 'delayed' && q.scheduleConfig.executeAt)
       .map(q => q.scheduleConfig.executeAt!)
@@ -245,7 +244,7 @@ export class QueryScheduler extends EventEmitter {
       recurringQueries: queries.filter(q => q.scheduleType === 'recurring').length,
       conditionalQueries: queries.filter(q => q.scheduleType === 'conditional').length,
       dependentQueries: queries.filter(q => q.scheduleConfig.dependencies?.length).length,
-      nextExecutionTime: nextExecution
+      nextExecutionTime: nextExecution,
     };
   }
 
@@ -263,13 +262,13 @@ export class QueryScheduler extends EventEmitter {
     const { scheduleType, scheduleConfig } = query;
 
     switch (scheduleType) {
-      case 'delayed':
+      case 'delayed': {
         if (!scheduleConfig.executeAt || scheduleConfig.executeAt <= Date.now()) {
           throw new Error('Delayed queries must have a future executeAt timestamp');
         }
         break;
-
-      case 'recurring':
+      }
+      case 'recurring': {
         if (!this.options.enableRecurring) {
           throw new Error('Recurring queries are disabled');
         }
@@ -277,8 +276,8 @@ export class QueryScheduler extends EventEmitter {
           throw new Error('Recurring queries must have an interval of at least 1000ms');
         }
         break;
-
-      case 'conditional':
+      }
+      case 'conditional': {
         if (!this.options.enableConditional) {
           throw new Error('Conditional queries are disabled');
         }
@@ -286,6 +285,7 @@ export class QueryScheduler extends EventEmitter {
           throw new Error('Conditional queries must have a condition');
         }
         break;
+      }
     }
 
     if (scheduleConfig.dependencies && !this.options.enableDependencies) {
@@ -329,7 +329,7 @@ export class QueryScheduler extends EventEmitter {
     try {
       const evaluator = new Function('return ' + condition) as () => boolean;
       this.conditionEvaluator.set(queryId, evaluator);
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       throw new Error(`Invalid condition expression: ${condition}`);
     }
   }
@@ -375,46 +375,47 @@ export class QueryScheduler extends EventEmitter {
    */
   private async shouldExecuteQuery(query: ScheduledQuery, now: number): Promise<boolean> {
     switch (query.scheduleType) {
-      case 'immediate':
+      case 'immediate': {
         return true;
-
-      case 'delayed':
+      }
+      case 'delayed': {
         return query.scheduleConfig.executeAt! <= now;
-
-      case 'recurring':
+      }
+      case 'recurring': {
         if (query.status === 'paused') {
           return false;
         }
-        
+
         if (!query.lastExecutedAt) {
           return true; // First execution
         }
-        
+
         const timeSinceLastExecution = now - query.lastExecutedAt;
         const shouldExecute = timeSinceLastExecution >= query.scheduleConfig.interval!;
-        
+
         // Check max executions limit
         if (shouldExecute && query.scheduleConfig.maxExecutions) {
           return query.executionCount < query.scheduleConfig.maxExecutions;
         }
-        
-        return shouldExecute;
 
-      case 'conditional':
+        return shouldExecute;
+      }
+      case 'conditional': {
         const evaluator = this.conditionEvaluator.get(query.id);
         if (!evaluator) {
           return false;
         }
-        
+
         try {
           return evaluator();
         } catch (error: unknown) {
           console.error(`[QueryScheduler] Condition evaluation error for ${query.id}:`, error);
           return false;
         }
-
-      default:
+      }
+      default: {
         return false;
+      }
     }
   }
 
@@ -423,7 +424,10 @@ export class QueryScheduler extends EventEmitter {
    */
   private async tryExecuteQuery(query: ScheduledQuery): Promise<void> {
     // Check dependencies
-    if (query.scheduleConfig.dependencies && !this.areDependenciesSatisfied(query.scheduleConfig.dependencies)) {
+    if (
+      query.scheduleConfig.dependencies &&
+      !this.areDependenciesSatisfied(query.scheduleConfig.dependencies)
+    ) {
       return; // Dependencies not satisfied yet
     }
 
@@ -435,13 +439,7 @@ export class QueryScheduler extends EventEmitter {
       this.emit('queryScheduleExecutionStarted', query);
 
       // Queue the query in the concurrency manager
-      await this.concurrencyManager.queueQuery(
-        query.id,
-        query.cmd,
-        query.params,
-        query.priority
-      );
-
+      await this.concurrencyManager.queueQuery(query.id, query.cmd, query.params, query.priority);
     } catch (error: unknown) {
       query.status = 'failed';
       this.emit('queryScheduleExecutionFailed', { query, error });
@@ -463,11 +461,11 @@ export class QueryScheduler extends EventEmitter {
    * Set up listeners for concurrency manager events
    */
   private setupConcurrencyManagerListeners(): void {
-    this.concurrencyManager.on('queryCompleted', (event) => {
+    this.concurrencyManager.on('queryCompleted', event => {
       this.handleQueryCompletion(event.queryId, event.success, event.error);
     });
 
-    this.concurrencyManager.on('queryCancelled', (event) => {
+    this.concurrencyManager.on('queryCancelled', event => {
       this.handleQueryCancellation(event.queryId);
     });
   }
@@ -485,7 +483,10 @@ export class QueryScheduler extends EventEmitter {
       // Handle recurring queries
       if (query.scheduleType === 'recurring') {
         // Check if we've reached max executions
-        if (query.scheduleConfig.maxExecutions && query.executionCount >= query.scheduleConfig.maxExecutions) {
+        if (
+          query.scheduleConfig.maxExecutions &&
+          query.executionCount >= query.scheduleConfig.maxExecutions
+        ) {
           query.status = 'completed';
           this.emit('queryScheduleCompleted', query);
         } else {
@@ -500,7 +501,6 @@ export class QueryScheduler extends EventEmitter {
 
       // Trigger dependent queries
       this.triggerDependentQueries(queryId);
-
     } else {
       query.status = 'failed';
       this.emit('queryScheduleFailed', { query, error });
@@ -519,8 +519,8 @@ export class QueryScheduler extends EventEmitter {
         priority: query.priority.level,
         metadata: {
           tags: query.metadata?.tags,
-          sessionId: 'scheduler'
-        }
+          sessionId: 'scheduler',
+        },
       });
     }
   }
@@ -561,13 +561,16 @@ export class QueryScheduler extends EventEmitter {
    */
   private cleanupCompletedQueries(): void {
     const toRemove: string[] = [];
-    
+
     for (const [id, query] of this.scheduledQueries.entries()) {
-      if (['completed', 'failed', 'cancelled'].includes(query.status) && 
-          query.scheduleType !== 'recurring') {
+      if (
+        ['completed', 'failed', 'cancelled'].includes(query.status) &&
+        query.scheduleType !== 'recurring'
+      ) {
         // Keep completed queries for a while before cleanup
         const timeSinceCompletion = Date.now() - (query.lastExecutedAt || query.createdAt);
-        if (timeSinceCompletion > 5 * 60 * 1000) { // 5 minutes
+        if (timeSinceCompletion > 5 * 60 * 1000) {
+          // 5 minutes
           toRemove.push(id);
         }
       }

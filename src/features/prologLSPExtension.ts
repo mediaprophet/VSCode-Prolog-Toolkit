@@ -18,7 +18,7 @@ import {
   DiagnosticCollection,
   CompletionItem,
   CompletionItemKind,
-  MarkdownString
+  MarkdownString,
 } from 'vscode';
 import { PrologBackend } from '../prologBackend';
 
@@ -44,13 +44,13 @@ export class PrologLSPExtension {
   public registerFeatures() {
     // Register custom commands for LSP-style operations
     this.registerCustomCommands();
-    
+
     // Register enhanced code actions
     this.registerCodeActionProvider();
-    
+
     // Register enhanced completion provider
     this.registerEnhancedCompletionProvider();
-    
+
     // Register N3 diagnostics
     this.registerN3DiagnosticsProvider();
   }
@@ -60,67 +60,78 @@ export class PrologLSPExtension {
    */
   private registerCustomCommands() {
     // Custom query execution command
-    const queryCommand = commands.registerCommand('prolog.lsp.executeQuery', async (query?: string) => {
-      if (!query) {
-        query = await window.showInputBox({
-          prompt: 'Enter Prolog query',
-          placeHolder: 'member(X, [1,2,3])'
-        });
-      }
-      
-      if (query && this.backend?.isRunning()) {
-        try {
-          const response = await this.backend.sendRequest('query', {
-            goal: query,
-            timeoutMs: 10000
+    const queryCommand = commands.registerCommand(
+      'prolog.lsp.executeQuery',
+      async (query?: string) => {
+        if (!query) {
+          query = await window.showInputBox({
+            prompt: 'Enter Prolog query',
+            placeHolder: 'member(X, [1,2,3])',
           });
-          
-          if (response.status === 'ok') {
-            this.showQueryResults(response.results || []);
-          } else {
-            window.showErrorMessage(`Query failed: ${response.error}`);
+        }
+
+        if (query && this.backend?.isRunning()) {
+          try {
+            const response = await this.backend.sendRequest('query', {
+              goal: query,
+              timeoutMs: 10000,
+            });
+
+            if (response.status === 'ok') {
+              this.showQueryResults(response.results || []);
+            } else {
+              window.showErrorMessage(`Query failed: ${response.error}`);
+            }
+          } catch (error) {
+            window.showErrorMessage(`Query error: ${error}`);
           }
-        } catch (error) {
-          window.showErrorMessage(`Query error: ${error}`);
         }
       }
-    });
+    );
 
     // Custom help lookup command
-    const helpCommand = commands.registerCommand('prolog.lsp.getHelp', async (predicate?: string) => {
-      if (!predicate) {
-        predicate = await window.showInputBox({
-          prompt: 'Enter predicate name',
-          placeHolder: 'member/2'
-        });
-      }
-      
-      if (predicate && this.backend?.isRunning()) {
-        try {
-          const response = await this.backend.sendRequest('help', {
-            predicate,
-            timeoutMs: 5000
+    const helpCommand = commands.registerCommand(
+      'prolog.lsp.getHelp',
+      async (predicate?: string) => {
+        if (!predicate) {
+          predicate = await window.showInputBox({
+            prompt: 'Enter predicate name',
+            placeHolder: 'member/2',
           });
-          
-          if (response.status === 'ok' && response.doc) {
-            this.showHelpDocumentation(response.doc);
-          } else {
-            window.showInformationMessage(`No help found for ${predicate}`);
+        }
+
+        if (predicate && this.backend?.isRunning()) {
+          try {
+            const response = await this.backend.sendRequest('help', {
+              predicate,
+              timeoutMs: 5000,
+            });
+
+            if (response.status === 'ok' && response.doc) {
+              this.showHelpDocumentation(response.doc);
+            } else {
+              window.showInformationMessage(`No help found for ${predicate}`);
+            }
+          } catch (error) {
+            window.showErrorMessage(`Help lookup error: ${error}`);
           }
-        } catch (error) {
-          window.showErrorMessage(`Help lookup error: ${error}`);
         }
       }
-    });
+    );
 
     // N3 diagnostics command
-    const n3DiagnosticsCommand = commands.registerCommand('prolog.lsp.runN3Diagnostics', async (uri?: Uri) => {
-      const document = uri ? await workspace.openTextDocument(uri) : window.activeTextEditor?.document;
-      
-      if (document && document.languageId === 'prolog') {
-        await this.runN3Diagnostics(document);
+    const n3DiagnosticsCommand = commands.registerCommand(
+      'prolog.lsp.runN3Diagnostics',
+      async (uri?: Uri) => {
+        const document = uri
+          ? await workspace.openTextDocument(uri)
+          : window.activeTextEditor?.document;
+
+        if (document && document.languageId === 'prolog') {
+          await this.runN3Diagnostics(document);
+        }
       }
-    });
+    );
 
     this.context.subscriptions.push(queryCommand, helpCommand, n3DiagnosticsCommand);
   }
@@ -130,18 +141,23 @@ export class PrologLSPExtension {
    */
   private registerCodeActionProvider() {
     const provider = languages.registerCodeActionsProvider('prolog', {
-      provideCodeActions: (document: TextDocument, range: Range, context: CodeActionContext, token: CancellationToken): ProviderResult<CodeAction[]> => {
+      provideCodeActions: (
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
+        token: CancellationToken
+      ): ProviderResult<CodeAction[]> => {
         const actions: CodeAction[] = [];
-        
+
         // Add query execution action
         const queryAction = new CodeAction('Execute as Query', CodeActionKind.Empty);
         queryAction.command = {
           command: 'prolog.lsp.executeQuery',
           title: 'Execute as Query',
-          arguments: [document.getText(range)]
+          arguments: [document.getText(range)],
         };
         actions.push(queryAction);
-        
+
         // Add help lookup action for predicates
         const text = document.getText(range);
         const predicateMatch = text.match(/([a-z][a-zA-Z0-9_]*)\s*\(/);
@@ -150,26 +166,26 @@ export class PrologLSPExtension {
           helpAction.command = {
             command: 'prolog.lsp.getHelp',
             title: 'Get Help',
-            arguments: [predicateMatch[1]]
+            arguments: [predicateMatch[1]],
           };
           actions.push(helpAction);
         }
-        
+
         // Add N3 diagnostics action
         if (this.isN3Content(document.getText())) {
           const n3Action = new CodeAction('Run N3 Diagnostics', CodeActionKind.Source);
           n3Action.command = {
             command: 'prolog.lsp.runN3Diagnostics',
             title: 'Run N3 Diagnostics',
-            arguments: [document.uri]
+            arguments: [document.uri],
           };
           actions.push(n3Action);
         }
-        
+
         return actions;
-      }
+      },
     });
-    
+
     this.context.subscriptions.push(provider);
   }
 
@@ -177,39 +193,53 @@ export class PrologLSPExtension {
    * Register enhanced completion provider with backend integration
    */
   private registerEnhancedCompletionProvider() {
-    const provider = languages.registerCompletionItemProvider('prolog', {
-      provideCompletionItems: async (document: TextDocument, position: Position, token: CancellationToken): Promise<CompletionItem[]> => {
-        const items: CompletionItem[] = [];
-        
-        // Get context around cursor
-        const line = document.lineAt(position);
-        const prefix = line.text.substring(0, position.character);
-        
-        // Add built-in predicate completions
-        if (this.backend?.isRunning()) {
-          try {
-            // This would require extending the backend to support predicate listing
-            const builtins = await this.getBuiltinPredicates();
-            builtins.forEach(predicate => {
-              const item = new CompletionItem(predicate.name, CompletionItemKind.Function);
-              item.detail = predicate.arity ? `${predicate.name}/${predicate.arity}` : predicate.name;
-              item.documentation = new MarkdownString(predicate.description || 'Built-in predicate');
-              items.push(item);
-            });
-          } catch (error) {
-            // Fallback to static completions
+    const provider = languages.registerCompletionItemProvider(
+      'prolog',
+      {
+        provideCompletionItems: async (
+          document: TextDocument,
+          position: Position,
+          token: CancellationToken
+        ): Promise<CompletionItem[]> => {
+          const items: CompletionItem[] = [];
+
+          // Get context around cursor
+          const line = document.lineAt(position);
+          const prefix = line.text.substring(0, position.character);
+
+          // Add built-in predicate completions
+          if (this.backend?.isRunning()) {
+            try {
+              // This would require extending the backend to support predicate listing
+              const builtins = await this.getBuiltinPredicates();
+              builtins.forEach(predicate => {
+                const item = new CompletionItem(predicate.name, CompletionItemKind.Function);
+                item.detail = predicate.arity
+                  ? `${predicate.name}/${predicate.arity}`
+                  : predicate.name;
+                item.documentation = new MarkdownString(
+                  predicate.description || 'Built-in predicate'
+                );
+                items.push(item);
+              });
+            } catch (_error) {
+              // Fallback to static completions
+            }
           }
-        }
-        
-        // Add N3 specific completions if in N3 context
-        if (this.isN3Content(document.getText())) {
-          items.push(...this.getN3Completions());
-        }
-        
-        return items;
-      }
-    }, '(', ',', ' ');
-    
+
+          // Add N3 specific completions if in N3 context
+          if (this.isN3Content(document.getText())) {
+            items.push(...this.getN3Completions());
+          }
+
+          return items;
+        },
+      },
+      '(',
+      ',',
+      ' '
+    );
+
     this.context.subscriptions.push(provider);
   }
 
@@ -218,12 +248,12 @@ export class PrologLSPExtension {
    */
   private registerN3DiagnosticsProvider() {
     // Run diagnostics on document changes
-    const disposable = workspace.onDidChangeTextDocument(async (event) => {
+    const disposable = workspace.onDidChangeTextDocument(async event => {
       if (event.document.languageId === 'prolog' && this.isN3Content(event.document.getText())) {
         await this.runN3Diagnostics(event.document);
       }
     });
-    
+
     this.context.subscriptions.push(disposable);
   }
 
@@ -238,14 +268,14 @@ export class PrologLSPExtension {
     try {
       const diagnostics: Diagnostic[] = [];
       const content = document.getText();
-      
+
       // Try to load N3 content and check for errors
       const response = await this.backend.sendRequest('n3_load', {
         content,
         validate: true,
-        timeoutMs: 5000
+        timeoutMs: 5000,
       });
-      
+
       if (response.status === 'error') {
         // Parse error information and create diagnostics
         const diagnostic = new Diagnostic(
@@ -256,12 +286,11 @@ export class PrologLSPExtension {
         diagnostic.source = 'prolog-n3';
         diagnostics.push(diagnostic);
       }
-      
+
       // Check for common N3 issues
       diagnostics.push(...this.checkN3CommonIssues(document));
-      
+
       this.diagnosticCollection.set(document.uri, diagnostics);
-      
     } catch (error) {
       console.error('N3 diagnostics error:', error);
     }
@@ -274,10 +303,14 @@ export class PrologLSPExtension {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split('\n');
-    
+
     lines.forEach((line, index) => {
       // Check for missing prefixes
-      if (line.includes(':') && !line.includes('@prefix') && !text.includes(`@prefix ${line.split(':')[0]}:`)) {
+      if (
+        line.includes(':') &&
+        !line.includes('@prefix') &&
+        !text.includes(`@prefix ${line.split(':')[0]}:`)
+      ) {
         const diagnostic = new Diagnostic(
           new Range(index, 0, index, line.length),
           `Undefined prefix: ${line.split(':')[0]}`,
@@ -286,7 +319,7 @@ export class PrologLSPExtension {
         diagnostic.source = 'prolog-n3';
         diagnostics.push(diagnostic);
       }
-      
+
       // Check for malformed triples
       if (line.trim().endsWith('.') && !line.includes('@') && line.split(/\s+/).length < 3) {
         const diagnostic = new Diagnostic(
@@ -298,7 +331,7 @@ export class PrologLSPExtension {
         diagnostics.push(diagnostic);
       }
     });
-    
+
     return diagnostics;
   }
 
@@ -310,16 +343,20 @@ export class PrologLSPExtension {
       window.showInformationMessage('Query succeeded with no results');
       return;
     }
-    
+
     // Format results for display
-    const formatted = results.map((result, index) => {
-      if (typeof result === 'object' && result !== null) {
-        const bindings = Object.entries(result).map(([key, value]) => `${key} = ${value}`).join(', ');
-        return `Solution ${index + 1}: ${bindings}`;
-      }
-      return `Solution ${index + 1}: ${JSON.stringify(result)}`;
-    }).join('\n');
-    
+    const formatted = results
+      .map((result, index) => {
+        if (typeof result === 'object' && result !== null) {
+          const bindings = Object.entries(result)
+            .map(([key, value]) => `${key} = ${value}`)
+            .join(', ');
+          return `Solution ${index + 1}: ${bindings}`;
+        }
+        return `Solution ${index + 1}: ${JSON.stringify(result)}`;
+      })
+      .join('\n');
+
     // Show in output channel or information message
     window.showInformationMessage(`Query Results:\n${formatted}`, { modal: true });
   }
@@ -329,7 +366,7 @@ export class PrologLSPExtension {
    */
   private showHelpDocumentation(doc: any) {
     const content = `# ${doc.name}/${doc.arity}\n\n${doc.summary || 'No description available'}`;
-    
+
     // Could create a webview or show in information message
     window.showInformationMessage(content, { modal: true });
   }
@@ -338,24 +375,35 @@ export class PrologLSPExtension {
    * Check if document contains N3 content
    */
   private isN3Content(text: string): boolean {
-    return text.includes('@prefix') || text.includes('@base') || text.includes('rdf:') || text.includes('rdfs:');
+    return (
+      text.includes('@prefix') ||
+      text.includes('@base') ||
+      text.includes('rdf:') ||
+      text.includes('rdfs:')
+    );
   }
 
   /**
    * Get built-in predicates (would need backend support)
    */
-  private async getBuiltinPredicates(): Promise<Array<{name: string, arity?: number, description?: string}>> {
+  private async getBuiltinPredicates(): Promise<
+    Array<{ name: string; arity?: number; description?: string }>
+  > {
     // This would require extending the backend to list predicates
     // For now, return a static list of common predicates
     return [
       { name: 'member', arity: 2, description: 'True if Elem is a member of List' },
-      { name: 'append', arity: 3, description: 'True if List3 is the concatenation of List1 and List2' },
+      {
+        name: 'append',
+        arity: 3,
+        description: 'True if List3 is the concatenation of List1 and List2',
+      },
       { name: 'findall', arity: 3, description: 'Find all solutions to Goal' },
       { name: 'bagof', arity: 3, description: 'Collect solutions to Goal' },
       { name: 'setof', arity: 3, description: 'Collect unique solutions to Goal' },
       { name: 'length', arity: 2, description: 'True if Length is the length of List' },
       { name: 'reverse', arity: 2, description: 'True if List2 is the reverse of List1' },
-      { name: 'sort', arity: 2, description: 'True if Sorted is the sorted version of List' }
+      { name: 'sort', arity: 2, description: 'True if Sorted is the sorted version of List' },
     ];
   }
 
@@ -364,32 +412,36 @@ export class PrologLSPExtension {
    */
   private getN3Completions(): CompletionItem[] {
     const items: CompletionItem[] = [];
-    
+
     // Common N3 prefixes
     const prefixes = [
       { name: '@prefix rdf:', detail: 'RDF namespace' },
       { name: '@prefix rdfs:', detail: 'RDF Schema namespace' },
       { name: '@prefix owl:', detail: 'OWL namespace' },
-      { name: '@prefix xsd:', detail: 'XML Schema namespace' }
+      { name: '@prefix xsd:', detail: 'XML Schema namespace' },
     ];
-    
+
     prefixes.forEach(prefix => {
       const item = new CompletionItem(prefix.name, CompletionItemKind.Keyword);
       item.detail = prefix.detail;
       items.push(item);
     });
-    
+
     // Common N3 properties
     const properties = [
-      'rdf:type', 'rdfs:label', 'rdfs:comment', 'owl:sameAs', 'owl:differentFrom'
+      'rdf:type',
+      'rdfs:label',
+      'rdfs:comment',
+      'owl:sameAs',
+      'owl:differentFrom',
     ];
-    
+
     properties.forEach(prop => {
       const item = new CompletionItem(prop, CompletionItemKind.Property);
       item.detail = 'N3 property';
       items.push(item);
     });
-    
+
     return items;
   }
 

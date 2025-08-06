@@ -1,7 +1,6 @@
-import * as vscode from 'vscode';
 import { spawn } from 'child_process';
-import * as os from 'os';
-import { PlatformUtils, PlatformType } from '../utils/platformUtils';
+import * as vscode from 'vscode';
+import { PlatformType, PlatformUtils } from '../utils/platformUtils';
 
 /**
  * Package manager information interface
@@ -64,6 +63,8 @@ export class PackageManagerIntegration {
       case 'linux':
         this.initializeLinuxManagers();
         break;
+      default:
+        break;
     }
   }
 
@@ -79,7 +80,7 @@ export class PackageManagerIntegration {
         installCommand: 'winget install SWI.SWI-Prolog',
         packageName: 'SWI.SWI-Prolog',
         isAvailable: false,
-        priority: 100
+        priority: 100,
       },
       {
         name: 'chocolatey',
@@ -88,7 +89,7 @@ export class PackageManagerIntegration {
         installCommand: 'choco install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 90
+        priority: 90,
       },
       {
         name: 'scoop',
@@ -97,8 +98,8 @@ export class PackageManagerIntegration {
         installCommand: 'scoop install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 80
-      }
+        priority: 80,
+      },
     ];
 
     managers.forEach(manager => {
@@ -118,7 +119,7 @@ export class PackageManagerIntegration {
         installCommand: 'brew install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 100
+        priority: 100,
       },
       {
         name: 'macports',
@@ -127,8 +128,8 @@ export class PackageManagerIntegration {
         installCommand: 'sudo port install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 90
-      }
+        priority: 90,
+      },
     ];
 
     managers.forEach(manager => {
@@ -148,7 +149,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo apt update && sudo apt install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 100
+        priority: 100,
       },
       {
         name: 'dnf',
@@ -157,7 +158,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo dnf install pl',
         packageName: 'pl',
         isAvailable: false,
-        priority: 95
+        priority: 95,
       },
       {
         name: 'yum',
@@ -166,7 +167,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo yum install pl',
         packageName: 'pl',
         isAvailable: false,
-        priority: 90
+        priority: 90,
       },
       {
         name: 'pacman',
@@ -175,7 +176,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo pacman -S swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 85
+        priority: 85,
       },
       {
         name: 'zypper',
@@ -184,7 +185,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo zypper install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 80
+        priority: 80,
       },
       {
         name: 'snap',
@@ -193,7 +194,7 @@ export class PackageManagerIntegration {
         installCommand: 'sudo snap install swi-prolog',
         packageName: 'swi-prolog',
         isAvailable: false,
-        priority: 70
+        priority: 70,
       },
       {
         name: 'flatpak',
@@ -202,8 +203,8 @@ export class PackageManagerIntegration {
         installCommand: 'flatpak install flathub org.swi_prolog.SWI-Prolog',
         packageName: 'org.swi_prolog.SWI-Prolog',
         isAvailable: false,
-        priority: 60
-      }
+        priority: 60,
+      },
     ];
 
     managers.forEach(manager => {
@@ -235,7 +236,7 @@ export class PackageManagerIntegration {
         if (isAvailable) {
           available.push(manager);
         }
-      } catch (error) {
+      } catch (_error) {
         manager.isAvailable = false;
         this.detectionCache.set(name, false);
       }
@@ -249,20 +250,23 @@ export class PackageManagerIntegration {
    * Check if a specific package manager is available
    */
   private async checkPackageManagerAvailability(manager: PackageManagerInfo): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const [command, ...args] = manager.checkCommand.split(' ');
-      
-      const process = spawn(command, args, {
+      if (!command) {
+        resolve(false);
+        return;
+      }
+      const process: import('child_process').ChildProcess = spawn(command, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 5000
+        timeout: 5000,
       });
 
       let hasOutput = false;
 
-      process.stdout?.on('data', (data) => {
+      process.stdout?.on('data', data => {
         const output = data.toString();
         hasOutput = true;
-        
+
         // Try to extract version information
         const versionMatch = output.match(/(\d+\.\d+(?:\.\d+)?)/);
         if (versionMatch) {
@@ -270,7 +274,7 @@ export class PackageManagerIntegration {
         }
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         // Most package managers return 0 for version commands
         resolve(code === 0 && hasOutput);
       });
@@ -302,14 +306,22 @@ export class PackageManagerIntegration {
       try {
         const isInstalled = await this.checkPackageInstallation(manager);
         if (isInstalled.installed) {
-          return {
+          const result: {
+            isInstalled: boolean;
+            packageManager: string;
+            version?: string;
+            packageName: string;
+          } = {
             isInstalled: true,
             packageManager: manager.name,
-            version: isInstalled.version,
-            packageName: manager.packageName
+            packageName: manager.packageName,
           };
+          if (isInstalled.version !== undefined) {
+            result.version = isInstalled.version;
+          }
+          return result;
         }
-      } catch (error) {
+      } catch (_error) {
         // Continue checking other managers
         continue;
       }
@@ -325,7 +337,7 @@ export class PackageManagerIntegration {
     installed: boolean;
     version?: string;
   }> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let checkCommand: string;
       let expectedOutput: RegExp;
 
@@ -381,24 +393,41 @@ export class PackageManagerIntegration {
       }
 
       const [command, ...args] = checkCommand.split(' ');
-      const process = spawn(command, args, {
+      if (typeof command !== 'string' || !command.trim()) {
+        resolve({ installed: false });
+        return;
+      }
+      // Ensure command is a non-empty string and all args are strings
+      const safeCommand: string = command.trim();
+      const safeArgs: string[] = args.filter((arg): arg is string => typeof arg === 'string');
+      if (!safeCommand) {
+        resolve({ installed: false });
+        return;
+      }
+      const process: import('child_process').ChildProcess = spawn(safeCommand, safeArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 10000
+        timeout: 10000,
       });
 
       let output = '';
-      process.stdout?.on('data', (data) => {
+      process.stdout?.on('data', data => {
         output += data.toString();
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         if (code === 0 && expectedOutput.test(output)) {
           // Try to extract version
           const versionMatch = output.match(/(\d+\.\d+(?:\.\d+)?)/);
-          resolve({
-            installed: true,
-            version: versionMatch ? versionMatch[1] : undefined
-          });
+          if (versionMatch && versionMatch[1]) {
+            resolve({
+              installed: true,
+              version: versionMatch[1],
+            });
+          } else {
+            resolve({
+              installed: true
+            });
+          }
         } else {
           resolve({ installed: false });
         }
@@ -426,7 +455,7 @@ export class PackageManagerIntegration {
         success: false,
         packageManager: 'none',
         command: '',
-        error: 'No package managers found on this system'
+        error: 'No package managers found on this system',
       };
     }
 
@@ -439,6 +468,14 @@ export class PackageManagerIntegration {
       }
     }
 
+    if (!selectedManager) {
+      return {
+        success: false,
+        packageManager: 'none',
+        command: '',
+        error: 'No valid package manager selected',
+      };
+    }
     return await this.executeInstallation(selectedManager);
   }
 
@@ -446,49 +483,62 @@ export class PackageManagerIntegration {
    * Execute the installation using a specific package manager
    */
   private async executeInstallation(manager: PackageManagerInfo): Promise<InstallationResult> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const [command, ...args] = manager.installCommand.split(' ');
-      
+      if (!command) {
+        throw new Error('Install command must be a string');
+      }
       // Check if command requires elevation
-      const requiresElevation = manager.installCommand.includes('sudo') || 
-                               (this.platform === 'windows' && ['choco', 'winget'].includes(manager.name));
+      const requiresElevation =
+        manager.installCommand.includes('sudo') ||
+        (this.platform === 'windows' && ['choco', 'winget'].includes(manager.name));
 
-      const process = spawn(command, args, {
+      const process: import('child_process').ChildProcess = spawn(command, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 300000, // 5 minutes timeout for installation
-        shell: true // Use shell for complex commands
+        shell: true, // Use shell for complex commands
       });
 
       let stdout = '';
       let stderr = '';
 
-      process.stdout?.on('data', (data) => {
+      process.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      process.stderr?.on('data', (data) => {
+      process.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
-      process.on('close', (code) => {
+      process.on('close', code => {
         const success = code === 0;
-        resolve({
-          success,
-          packageManager: manager.name,
-          command: manager.installCommand,
-          output: stdout,
-          error: success ? undefined : stderr,
-          requiresElevation
-        });
+        if (success) {
+          resolve({
+            success,
+            packageManager: manager.name,
+            command: manager.installCommand,
+            output: stdout,
+            requiresElevation,
+          });
+        } else {
+          resolve({
+            success,
+            packageManager: manager.name,
+            command: manager.installCommand,
+            output: stdout,
+            error: stderr,
+            requiresElevation,
+          });
+        }
       });
 
-      process.on('error', (error) => {
+      process.on('error', error => {
         resolve({
           success: false,
           packageManager: manager.name,
           command: manager.installCommand,
           error: error.message,
-          requiresElevation
+          requiresElevation,
         });
       });
 
@@ -500,7 +550,7 @@ export class PackageManagerIntegration {
           packageManager: manager.name,
           command: manager.installCommand,
           error: 'Installation timed out after 5 minutes',
-          requiresElevation
+          requiresElevation,
         });
       }, 300000);
     });
@@ -524,19 +574,19 @@ export class PackageManagerIntegration {
       label: manager.displayName,
       description: `Install using: ${manager.installCommand}`,
       detail: manager.version ? `Version: ${manager.version}` : 'Available',
-      manager: manager.name
+      manager: manager.name,
     }));
 
     items.push({
       label: 'Manual Installation',
       description: 'Download and install manually',
       detail: 'Opens the official SWI-Prolog download page',
-      manager: 'manual'
+      manager: 'manual',
     });
 
     const selected = await vscode.window.showQuickPick(items, {
       title: 'Install SWI-Prolog',
-      placeHolder: 'Choose an installation method'
+      placeHolder: 'Choose an installation method',
     });
 
     if (!selected) {
@@ -550,8 +600,9 @@ export class PackageManagerIntegration {
 
     // Show confirmation dialog
     const manager = availableManagers.find(m => m.name === selected.manager)!;
-    const requiresElevation = manager.installCommand.includes('sudo') || 
-                             (this.platform === 'windows' && ['choco', 'winget'].includes(manager.name));
+    const requiresElevation =
+      manager.installCommand.includes('sudo') ||
+      (this.platform === 'windows' && ['choco', 'winget'].includes(manager.name));
 
     let confirmMessage = `Install SWI-Prolog using ${manager.displayName}?\n\nCommand: ${manager.installCommand}`;
     if (requiresElevation) {
@@ -570,34 +621,37 @@ export class PackageManagerIntegration {
     }
 
     // Show progress and execute installation
-    return vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: `Installing SWI-Prolog via ${manager.displayName}`,
-      cancellable: false
-    }, async (progress) => {
-      progress.report({ message: 'Starting installation...' });
-      
-      const result = await this.executeInstallation(manager);
-      
-      if (result.success) {
-        progress.report({ message: 'Installation completed successfully!' });
-        vscode.window.showInformationMessage(
-          `SWI-Prolog has been installed successfully using ${manager.displayName}!`
-        );
-      } else {
-        let errorMessage = `Installation failed using ${manager.displayName}.`;
-        if (result.requiresElevation) {
-          errorMessage += ' Make sure you have administrator/sudo privileges.';
+    return vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Installing SWI-Prolog via ${manager.displayName}`,
+        cancellable: false,
+      },
+      async progress => {
+        progress.report({ message: 'Starting installation...' });
+
+        const result = await this.executeInstallation(manager);
+
+        if (result.success) {
+          progress.report({ message: 'Installation completed successfully!' });
+          vscode.window.showInformationMessage(
+            `SWI-Prolog has been installed successfully using ${manager.displayName}!`
+          );
+        } else {
+          let errorMessage = `Installation failed using ${manager.displayName}.`;
+          if (result.requiresElevation) {
+            errorMessage += ' Make sure you have administrator/sudo privileges.';
+          }
+          if (result.error) {
+            errorMessage += `\n\nError: ${result.error}`;
+          }
+
+          vscode.window.showErrorMessage(errorMessage);
         }
-        if (result.error) {
-          errorMessage += `\n\nError: ${result.error}`;
-        }
-        
-        vscode.window.showErrorMessage(errorMessage);
+
+        return result;
       }
-      
-      return result;
-    });
+    );
   }
 
   /**

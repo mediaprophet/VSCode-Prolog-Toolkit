@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events';
-import { QueryStatus } from './queryNotificationManager';
 
 export interface ResourceQuota {
   maxConcurrentQueries: number;
@@ -46,19 +45,19 @@ export class ConcurrencyManager extends EventEmitter {
   private queryQueue: QueuedQuery[] = [];
   private activeQueries: Map<string, QueuedQuery> = new Map();
   private resourceUsage: ResourceUsage;
-  private processingInterval?: NodeJS.Timeout;
-  private resourceMonitorInterval?: NodeJS.Timeout;
+  private processingInterval?: ReturnType<typeof setInterval>;
+  private resourceMonitorInterval?: ReturnType<typeof setInterval>;
 
   constructor(quota: Partial<ResourceQuota> = {}) {
     super();
-    
+
     this.resourceQuota = {
       maxConcurrentQueries: 10,
       maxMemoryUsageMB: 512,
       maxCpuUsagePercent: 80,
       maxQueryDurationMs: 30000,
       maxQueueSize: 100,
-      ...quota
+      ...quota,
     };
 
     this.resourceUsage = {
@@ -66,7 +65,7 @@ export class ConcurrencyManager extends EventEmitter {
       memoryUsageMB: 0,
       cpuUsagePercent: 0,
       queueSize: 0,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     };
 
     this.startProcessing();
@@ -94,7 +93,7 @@ export class ConcurrencyManager extends EventEmitter {
         level: 'normal',
         weight: this.getPriorityWeight(priority.level || 'normal'),
         timeout: priority.timeout || this.resourceQuota.maxQueryDurationMs,
-        ...priority
+        ...priority,
       };
 
       const queuedQuery: QueuedQuery = {
@@ -105,7 +104,7 @@ export class ConcurrencyManager extends EventEmitter {
         queuedAt: Date.now(),
         ...(resourceRequirements && { resourceRequirements }),
         resolve,
-        reject
+        reject,
       };
 
       // Insert query in priority order
@@ -116,10 +115,12 @@ export class ConcurrencyManager extends EventEmitter {
         queryId: id,
         priority: queryPriority.level,
         queuePosition: this.queryQueue.findIndex(q => q.id === id) + 1,
-        queueSize: this.queryQueue.length
+        queueSize: this.queryQueue.length,
       });
 
-      console.log(`[ConcurrencyManager] Queued query ${id} with priority ${queryPriority.level} (queue size: ${this.queryQueue.length})`);
+      console.log(
+        `[ConcurrencyManager] Queued query ${id} with priority ${queryPriority.level} (queue size: ${this.queryQueue.length})`
+      );
     });
   }
 
@@ -178,13 +179,13 @@ export class ConcurrencyManager extends EventEmitter {
         id: q.id,
         priority: q.priority.level,
         queuedAt: q.queuedAt,
-        waitTime: now - q.queuedAt
+        waitTime: now - q.queuedAt,
       })),
       activeQueries: Array.from(this.activeQueries.values()).map(q => ({
         id: q.id,
         startedAt: q.queuedAt,
-        duration: now - q.queuedAt
-      }))
+        duration: now - q.queuedAt,
+      })),
     };
   }
 
@@ -202,11 +203,16 @@ export class ConcurrencyManager extends EventEmitter {
    */
   private getPriorityWeight(level: string): number {
     switch (level) {
-      case 'critical': return 1000;
-      case 'high': return 100;
-      case 'normal': return 10;
-      case 'low': return 1;
-      default: return 10;
+      case 'critical':
+        return 1000;
+      case 'high':
+        return 100;
+      case 'normal':
+        return 10;
+      case 'low':
+        return 1;
+      default:
+        return 10;
     }
   }
 
@@ -215,22 +221,22 @@ export class ConcurrencyManager extends EventEmitter {
    */
   private insertQueryByPriority(query: QueuedQuery): void {
     let insertIndex = this.queryQueue.length;
-    
+
     for (let i = 0; i < this.queryQueue.length; i++) {
       const existingQuery = this.queryQueue[i];
-      
+
       // Higher priority goes first
       if (existingQuery && query.priority.weight > existingQuery.priority.weight) {
         insertIndex = i;
         break;
       }
-      
+
       // Same priority, maintain FIFO order (already at end)
       if (existingQuery && query.priority.weight === existingQuery.priority.weight) {
         continue;
       }
     }
-    
+
     this.queryQueue.splice(insertIndex, 0, query);
   }
 
@@ -245,7 +251,8 @@ export class ConcurrencyManager extends EventEmitter {
 
     // Check memory requirements
     if (query.resourceRequirements?.memoryMB) {
-      const projectedMemory = this.resourceUsage.memoryUsageMB + query.resourceRequirements.memoryMB;
+      const projectedMemory =
+        this.resourceUsage.memoryUsageMB + query.resourceRequirements.memoryMB;
       if (projectedMemory > this.resourceQuota.maxMemoryUsageMB) {
         return false;
       }
@@ -253,7 +260,8 @@ export class ConcurrencyManager extends EventEmitter {
 
     // Check CPU requirements
     if (query.resourceRequirements?.cpuPercent) {
-      const projectedCpu = this.resourceUsage.cpuUsagePercent + query.resourceRequirements.cpuPercent;
+      const projectedCpu =
+        this.resourceUsage.cpuUsagePercent + query.resourceRequirements.cpuPercent;
       if (projectedCpu > this.resourceQuota.maxCpuUsagePercent) {
         return false;
       }
@@ -285,7 +293,7 @@ export class ConcurrencyManager extends EventEmitter {
       if (!query) {
         continue;
       }
-      
+
       // Check if query has timed out in queue
       const waitTime = Date.now() - query.queuedAt;
       if (waitTime > query.priority.timeout) {
@@ -301,11 +309,11 @@ export class ConcurrencyManager extends EventEmitter {
         // Remove from queue and add to active queries
         this.queryQueue.splice(i, 1);
         this.activeQueries.set(query.id, query);
-        
+
         // Execute the query
         this.executeQuery(query);
         this.updateResourceUsage();
-        
+
         i--; // Adjust index after removal
       }
     }
@@ -316,11 +324,11 @@ export class ConcurrencyManager extends EventEmitter {
    */
   private async executeQuery(query: QueuedQuery): Promise<void> {
     const startTime = Date.now();
-    
+
     this.emit('queryStarted', {
       queryId: query.id,
       priority: query.priority.level,
-      waitTime: startTime - query.queuedAt
+      waitTime: startTime - query.queuedAt,
     });
 
     try {
@@ -337,35 +345,34 @@ export class ConcurrencyManager extends EventEmitter {
         this.emit('executeQuery', {
           query,
           resolve,
-          reject
+          reject,
         });
       });
 
       const result = await Promise.race([executionPromise, timeoutPromise]);
-      
+
       // Query completed successfully
       this.activeQueries.delete(query.id);
       query.resolve(result);
-      
+
       const duration = Date.now() - startTime;
       this.emit('queryCompleted', {
         queryId: query.id,
         duration,
-        success: true
+        success: true,
       });
-
     } catch (error: unknown) {
       // Query failed or timed out
       this.activeQueries.delete(query.id);
       query.reject(error);
-      
+
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.emit('queryCompleted', {
         queryId: query.id,
         duration,
         success: false,
-        error: errorMessage
+        error: errorMessage,
       });
     }
 
@@ -390,7 +397,7 @@ export class ConcurrencyManager extends EventEmitter {
       memoryUsageMB: this.estimateMemoryUsage(),
       cpuUsagePercent: this.estimateCpuUsage(),
       queueSize: this.queryQueue.length,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     };
 
     this.emit('resourceUsageUpdated', this.resourceUsage);
@@ -404,7 +411,7 @@ export class ConcurrencyManager extends EventEmitter {
     // In a real implementation, this would use actual system metrics
     const baseMemory = 50; // Base memory usage in MB
     const perQueryMemory = 10; // Estimated memory per query in MB
-    return baseMemory + (this.activeQueries.size * perQueryMemory);
+    return baseMemory + this.activeQueries.size * perQueryMemory;
   }
 
   /**

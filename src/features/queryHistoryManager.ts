@@ -71,18 +71,29 @@ export interface QueryHistoryOptions {
  * Persistent query history storage and management system
  */
 export class QueryHistoryManager extends EventEmitter {
+  private static instance: QueryHistoryManager;
   private options: QueryHistoryOptions;
   private historyFile: string;
   private indexFile: string;
   private memoryCache: Map<string, QueryHistoryEntry> = new Map();
   private writeQueue: QueryHistoryEntry[] = [];
-  private writeInterval?: NodeJS.Timeout;
-  private cleanupInterval?: NodeJS.Timeout;
+  private writeInterval?: ReturnType<typeof setInterval>;
+  private cleanupInterval?: ReturnType<typeof setInterval>;
   private isInitialized: boolean = false;
+
+  /**
+   * Get singleton instance of QueryHistoryManager
+   */
+  public static getInstance(options?: Partial<QueryHistoryOptions>): QueryHistoryManager {
+    if (!QueryHistoryManager.instance) {
+      QueryHistoryManager.instance = new QueryHistoryManager(options);
+    }
+    return QueryHistoryManager.instance;
+  }
 
   constructor(options: Partial<QueryHistoryOptions> = {}) {
     super();
-    
+
     this.options = {
       storageDir: path.join(process.cwd(), '.prolog-history'),
       maxHistorySize: 10000,
@@ -90,7 +101,7 @@ export class QueryHistoryManager extends EventEmitter {
       retentionDays: 30,
       autoCleanup: true,
       batchSize: 100,
-      ...options
+      ...options,
     };
 
     this.historyFile = path.join(this.options.storageDir, 'query-history.jsonl');
@@ -136,9 +147,9 @@ export class QueryHistoryManager extends EventEmitter {
     }
 
     const historyEntry: QueryHistoryEntry = {
-      ...entry
+      ...entry,
     };
-    
+
     // Only set duration if endTime is provided
     if (entry.endTime) {
       historyEntry.duration = entry.endTime - entry.startTime;
@@ -177,9 +188,9 @@ export class QueryHistoryManager extends EventEmitter {
 
     const updatedEntry: QueryHistoryEntry = {
       ...existingEntry,
-      ...updates
+      ...updates,
     };
-    
+
     // Calculate duration if endTime is provided in updates
     if (updates.endTime) {
       updatedEntry.duration = updates.endTime - existingEntry.startTime;
@@ -227,43 +238,50 @@ export class QueryHistoryManager extends EventEmitter {
     }
 
     if (filter.priority && filter.priority.length > 0) {
-      entries = entries.filter(entry => entry.priority && filter.priority!.includes(entry.priority));
+      entries = entries.filter(
+        entry => entry.priority && filter.priority!.includes(entry.priority)
+      );
     }
 
     if (filter.tags && filter.tags.length > 0) {
-      entries = entries.filter(entry => 
-        entry.metadata?.tags && 
-        filter.tags!.some(tag => entry.metadata!.tags!.includes(tag))
+      entries = entries.filter(
+        entry =>
+          entry.metadata?.tags && filter.tags!.some(tag => entry.metadata!.tags!.includes(tag))
       );
     }
 
     // Sort entries
     const sortBy = filter.sortBy || 'startTime';
     const sortOrder = filter.sortOrder || 'desc';
-    
+
     entries.sort((a, b) => {
       let aValue: unknown, bValue: unknown;
-      
+
       switch (sortBy) {
-        case 'startTime':
+        case 'startTime': {
           aValue = a.startTime;
           bValue = b.startTime;
           break;
-        case 'endTime':
+        }
+        case 'endTime': {
           aValue = a.endTime || 0;
           bValue = b.endTime || 0;
           break;
-        case 'duration':
+        }
+        case 'duration': {
           aValue = a.duration || 0;
           bValue = b.duration || 0;
           break;
-        case 'cmd':
+        }
+        case 'cmd': {
           aValue = a.cmd;
           bValue = b.cmd;
           break;
-        default:
+        }
+        default: {
           aValue = a.startTime;
           bValue = b.startTime;
+        }
       }
 
       if (sortOrder === 'asc') {
@@ -284,7 +302,7 @@ export class QueryHistoryManager extends EventEmitter {
     return {
       entries: paginatedEntries,
       total,
-      hasMore
+      hasMore,
     };
   }
 
@@ -335,14 +353,16 @@ export class QueryHistoryManager extends EventEmitter {
       errorQueries: entries.filter(e => e.status === 'error').length,
       cancelledQueries: entries.filter(e => e.status === 'cancelled').length,
       timeoutQueries: entries.filter(e => e.status === 'timeout').length,
-      averageDuration: completedEntries.length > 0 
-        ? completedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) / completedEntries.length 
-        : 0,
+      averageDuration:
+        completedEntries.length > 0
+          ? completedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) /
+            completedEntries.length
+          : 0,
       totalDuration: completedEntries.reduce((sum, e) => sum + (e.duration || 0), 0),
       queriesByStatus: {},
       queriesByPriority: {},
       queriesByCmd: {},
-      dailyStats: []
+      dailyStats: [],
     };
 
     // Count by status
@@ -353,7 +373,8 @@ export class QueryHistoryManager extends EventEmitter {
     // Count by priority
     entries.forEach(entry => {
       if (entry.priority) {
-        stats.queriesByPriority[entry.priority] = (stats.queriesByPriority[entry.priority] || 0) + 1;
+        stats.queriesByPriority[entry.priority] =
+          (stats.queriesByPriority[entry.priority] || 0) + 1;
       }
     });
 
@@ -368,14 +389,14 @@ export class QueryHistoryManager extends EventEmitter {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0] || date.toISOString().substring(0, 10);
-      
+
       const dayStart = new Date(date);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const dayEntries = entries.filter(entry => 
-        entry.startTime >= dayStart.getTime() && entry.startTime <= dayEnd.getTime()
+      const dayEntries = entries.filter(
+        entry => entry.startTime >= dayStart.getTime() && entry.startTime <= dayEnd.getTime()
       );
 
       const dayCompletedEntries = dayEntries.filter(e => e.status === 'completed' && e.duration);
@@ -383,13 +404,43 @@ export class QueryHistoryManager extends EventEmitter {
       stats.dailyStats.push({
         date: dateStr,
         count: dayEntries.length,
-        avgDuration: dayCompletedEntries.length > 0
-          ? dayCompletedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) / dayCompletedEntries.length
-          : 0
+        avgDuration:
+          dayCompletedEntries.length > 0
+            ? dayCompletedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) /
+              dayCompletedEntries.length
+            : 0,
       });
     }
 
     return stats;
+  }
+
+  /**
+   * Get recent queries with limit
+   */
+  async getRecentQueries(limit: number = 10): Promise<
+    Array<{
+      query: string;
+      success: boolean;
+      timestamp: number;
+      result?: unknown;
+    }>
+  > {
+    if (!this.isInitialized) {
+      throw new Error('QueryHistoryManager not initialized');
+    }
+
+    const entries = Array.from(this.memoryCache.values())
+      .filter(entry => entry.status === 'completed' || entry.status === 'error')
+      .sort((a, b) => b.startTime - a.startTime)
+      .slice(0, limit);
+
+    return entries.map(entry => ({
+      query: entry.cmd,
+      success: entry.status === 'completed',
+      timestamp: entry.startTime,
+      result: entry.results,
+    }));
   }
 
   /**
@@ -429,7 +480,10 @@ export class QueryHistoryManager extends EventEmitter {
 
     try {
       const data = fs.readFileSync(this.historyFile, 'utf8');
-      const lines = data.trim().split('\n').filter(line => line.trim());
+      const lines = data
+        .trim()
+        .split('\n')
+        .filter(line => line.trim());
 
       for (const line of lines) {
         try {
@@ -466,11 +520,11 @@ export class QueryHistoryManager extends EventEmitter {
     }
 
     const batch = this.writeQueue.splice(0, this.options.batchSize);
-    
+
     try {
       const lines = batch.map(entry => JSON.stringify(entry)).join('\n') + '\n';
       fs.appendFileSync(this.historyFile, lines, 'utf8');
-      
+
       console.log(`[QueryHistoryManager] Persisted ${batch.length} entries to disk`);
     } catch (error: unknown) {
       console.error('[QueryHistoryManager] Error writing to disk:', error);
@@ -483,16 +537,19 @@ export class QueryHistoryManager extends EventEmitter {
    * Start the cleanup processor for old entries
    */
   private startCleanupProcessor(): void {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupOldEntries();
-    }, 24 * 60 * 60 * 1000); // Run daily
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanupOldEntries();
+      },
+      24 * 60 * 60 * 1000
+    ); // Run daily
   }
 
   /**
    * Clean up old entries based on retention policy
    */
   private async cleanupOldEntries(): Promise<void> {
-    const cutoffTime = Date.now() - (this.options.retentionDays * 24 * 60 * 60 * 1000);
+    const cutoffTime = Date.now() - this.options.retentionDays * 24 * 60 * 60 * 1000;
     let removedCount = 0;
 
     for (const [id, entry] of this.memoryCache.entries()) {
@@ -519,11 +576,12 @@ export class QueryHistoryManager extends EventEmitter {
     }
 
     // Remove oldest entries
-    const entries = Array.from(this.memoryCache.entries())
-      .sort(([, a], [, b]) => a.startTime - b.startTime);
+    const entries = Array.from(this.memoryCache.entries()).sort(
+      ([, a], [, b]) => a.startTime - b.startTime
+    );
 
     const toRemove = entries.slice(0, this.memoryCache.size - this.options.maxHistorySize);
-    
+
     for (const [id] of toRemove) {
       this.memoryCache.delete(id);
     }
@@ -539,7 +597,7 @@ export class QueryHistoryManager extends EventEmitter {
     try {
       const entries = Array.from(this.memoryCache.values());
       const lines = entries.map(entry => JSON.stringify(entry)).join('\n');
-      
+
       fs.writeFileSync(this.historyFile, lines + '\n', 'utf8');
       console.log(`[QueryHistoryManager] Rewrote history file with ${entries.length} entries`);
     } catch (error: unknown) {

@@ -1,9 +1,9 @@
 /**
  * VSCode Prolog Toolkit API SDK
- * 
+ *
  * A comprehensive TypeScript/JavaScript SDK for integrating AI agents and external applications
  * with the VSCode Prolog Toolkit's HTTP and WebSocket APIs.
- * 
+ *
  * @version 1.0.0
  * @author VSCode Prolog Toolkit Team
  */
@@ -14,7 +14,7 @@ export {
   createPrologApiClient,
   createApiKeyClient,
   createJwtClient,
-  createLocalClient
+  createLocalClient,
 } from './prologApiClient';
 
 // WebSocket Client
@@ -23,7 +23,7 @@ export {
   createPrologWebSocketClient,
   createApiKeyWebSocketClient,
   createJwtWebSocketClient,
-  createLocalWebSocketClient
+  createLocalWebSocketClient,
 } from './prologWebSocketClient';
 
 // Type Definitions
@@ -40,15 +40,19 @@ export type {
   Session,
   CLPRequest,
   ProbabilisticRequest,
-  N3Request
+  N3Request,
 } from './prologApiClient';
 
 export type {
   PrologWebSocketConfig,
   QueryNotification,
   SessionEvent,
-  SystemStatus
+  SystemStatus,
 } from './prologWebSocketClient';
+
+// Import the classes for use in the SDK
+import { PrologApiClient } from './prologApiClient';
+import { PrologWebSocketClient } from './prologWebSocketClient';
 
 /**
  * Combined SDK class that provides both HTTP and WebSocket functionality
@@ -61,19 +65,17 @@ export class PrologSDK {
     apiConfig: import('./prologApiClient').PrologApiClientConfig;
     wsConfig?: import('./prologWebSocketClient').PrologWebSocketConfig;
   }) {
-    const { PrologApiClient } = require('./prologApiClient');
     this.api = new PrologApiClient(config.apiConfig);
 
     if (config.wsConfig) {
-      const { PrologWebSocketClient } = require('./prologWebSocketClient');
       this.ws = new PrologWebSocketClient(config.wsConfig);
     } else {
       // Create WebSocket client with same auth as API client
-      const wsUrl = config.apiConfig.baseUrl.replace(/^https?:/, 'ws:').replace(/^http:/, 'ws:') + ':8081';
-      const { PrologWebSocketClient } = require('./prologWebSocketClient');
+      const wsUrl =
+        config.apiConfig.baseUrl.replace(/^https?:/, 'ws:').replace(/^http:/, 'ws:') + ':8081';
       this.ws = new PrologWebSocketClient({
         url: wsUrl,
-        auth: config.apiConfig.auth
+        auth: config.apiConfig.auth,
       });
     }
   }
@@ -102,15 +104,17 @@ export class PrologSDK {
     // Subscribe to query notifications if WebSocket is connected
     if (this.ws.isConnectedToServer() && onProgress) {
       const response = await this.api.query(request);
-      
+
       // Subscribe to this specific query
       await this.ws.subscribeToQuery(response.query_id);
-      
+
       // Set up progress listener
-      const progressHandler = (notification: import('./prologWebSocketClient').QueryNotification) => {
+      const progressHandler = (
+        notification: import('./prologWebSocketClient').QueryNotification
+      ) => {
         if (notification.query_id === response.query_id) {
           onProgress(notification);
-          
+
           // Unsubscribe when query completes
           if (notification.type === 'query_complete') {
             this.ws.unsubscribeFromQuery(response.query_id);
@@ -119,10 +123,10 @@ export class PrologSDK {
           }
         }
       };
-      
+
       this.ws.on('queryProgress', progressHandler);
       this.ws.on('queryComplete', progressHandler);
-      
+
       return response;
     } else {
       // Fallback to regular query without notifications
@@ -138,17 +142,17 @@ export class PrologSDK {
     websocket: { connected: boolean; latency: number };
   }> {
     const apiTest = await this.api.testConnection();
-    
+
     const wsStart = Date.now();
     const wsConnected = this.ws.isConnectedToServer();
     const wsLatency = wsConnected ? Date.now() - wsStart : -1;
-    
+
     return {
       api: apiTest,
       websocket: {
         connected: wsConnected,
-        latency: wsLatency
-      }
+        latency: wsLatency,
+      },
     };
   }
 }
@@ -167,12 +171,12 @@ export function createPrologSDK(config: {
 }): PrologSDK {
   const apiConfig = {
     baseUrl: config.baseUrl,
-    auth: config.auth
+    auth: config.auth,
   };
 
   const wsConfig = {
     url: config.wsUrl || config.baseUrl.replace(/^https?:/, 'ws:') + ':8081',
-    auth: config.auth
+    auth: config.auth,
   };
 
   return new PrologSDK({ apiConfig, wsConfig });
@@ -188,43 +192,35 @@ export function createLocalSDK(
   return createPrologSDK({
     baseUrl: apiUrl,
     wsUrl,
-    auth: { type: 'none' }
+    auth: { type: 'none' },
   });
 }
 
 /**
  * Convenience function to create SDK with API key authentication
  */
-export function createApiKeySDK(
-  baseUrl: string,
-  apiKey: string,
-  wsUrl?: string
-): PrologSDK {
+export function createApiKeySDK(baseUrl: string, apiKey: string, wsUrl?: string): PrologSDK {
   return createPrologSDK({
     baseUrl,
     wsUrl,
     auth: {
       type: 'api_key',
-      apiKey
-    }
+      apiKey,
+    },
   });
 }
 
 /**
  * Convenience function to create SDK with JWT authentication
  */
-export function createJwtSDK(
-  baseUrl: string,
-  jwtToken: string,
-  wsUrl?: string
-): PrologSDK {
+export function createJwtSDK(baseUrl: string, jwtToken: string, wsUrl?: string): PrologSDK {
   return createPrologSDK({
     baseUrl,
     wsUrl,
     auth: {
       type: 'jwt_token',
-      jwtToken
-    }
+      jwtToken,
+    },
   });
 }
 
@@ -240,7 +236,7 @@ export const DEFAULT_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
   HEARTBEAT_INTERVAL: 30000,
-  MAX_RECONNECT_ATTEMPTS: 5
+  MAX_RECONNECT_ATTEMPTS: 5,
 };
 
 /**
@@ -263,7 +259,7 @@ export const utils = {
     // Basic syntax checks
     const openParens = (trimmed.match(/\(/g) || []).length;
     const closeParens = (trimmed.match(/\)/g) || []).length;
-    
+
     if (openParens !== closeParens) {
       return { valid: false, error: 'Mismatched parentheses' };
     }
@@ -279,16 +275,18 @@ export const utils = {
       return 'No results found.';
     }
 
-    return results.map((result, index) => {
-      if (typeof result === 'object' && result !== null) {
-        const bindings = Object.entries(result)
-          .map(([variable, value]) => `${variable} = ${value}`)
-          .join(', ');
-        return `Solution ${index + 1}: ${bindings}`;
-      } else {
-        return `Solution ${index + 1}: ${result}`;
-      }
-    }).join('\n');
+    return results
+      .map((result, index) => {
+        if (typeof result === 'object' && result !== null) {
+          const bindings = Object.entries(result)
+            .map(([variable, value]) => `${variable} = ${value}`)
+            .join(', ');
+          return `Solution ${index + 1}: ${bindings}`;
+        } else {
+          return `Solution ${index + 1}: ${result}`;
+        }
+      })
+      .join('\n');
   },
 
   /**
@@ -307,14 +305,14 @@ export const utils = {
       return {
         message: error.response.data.message || error.response.data.error || 'Unknown API error',
         code: error.response.data.code,
-        status: error.response.status
+        status: error.response.status,
       };
     } else if (error.message) {
       return { message: error.message };
     } else {
       return { message: 'Unknown error occurred' };
     }
-  }
+  },
 };
 
 // Export default SDK class

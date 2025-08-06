@@ -1,0 +1,140 @@
+{
+  "phase": 6,
+  "description": "Fix all 'Expected a break statement before default' and 'no-fallthrough' errors in switch statements",
+  "status": "partially_completed",
+  "completed_fixes": [
+    {
+      "file": "src/features/prologFormatter.ts",
+      "issue": "Missing default case in switch statement",
+      "fix": "Added default: break; case"
+    },
+    {
+      "file": "src/features/prologDebugger.ts", 
+      "issue": "Missing default case in switch statement",
+      "fix": "Added default: break; case"
+    },
+    {
+      "file": "src/features/prologRefactor.ts",
+      "issue": "Missing break statement before default case",
+      "fix": "Added missing break statement"
+    },
+    {
+      "file": "src/extension.ts",
+      "issue": "Missing default case in switch statement", 
+      "fix": "Added default: break; case"
+    },
+    {
+      "file": "src/utils/utils.ts",
+      "issue": "Extra closing brace causing syntax error",
+      "fix": "Removed duplicate closing brace"
+    },
+    {
+      "file": "src/features/prologTerminal.ts",
+      "issue": "Missing break statement in default case",
+      "fix": "Added break statement to default case"
+    }
+  ],
+  "remaining_issues": [
+    {
+      "file": "src/features/configurationMigration.ts",
+      "line": 394,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces: case 'Migrate Now': { const migrationResult = ... }"
+    },
+    {
+      "file": "src/features/definitionProvider.ts", 
+      "line": 67,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/definitionProvider.ts",
+      "line": 68, 
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/hoverProvider.ts",
+      "line": 48,
+      "issue": "Unexpected lexical declaration in case block", 
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/hoverProvider.ts",
+      "line": 52,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations", 
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/installationGuide.ts",
+      "line": 105,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/prologDebugger.ts",
+      "line": 153,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations", 
+      "fix_needed": "Wrap case block in curly braces: case 'frame': { const frame = ... }"
+    },
+    {
+      "file": "src/features/prologRefactor.ts",
+      "line": 191,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    },
+    {
+      "file": "src/features/prologRefactor.ts", 
+      "line": 201,
+      "issue": "Unexpected lexical declaration in case block",
+      "rule": "no-case-declarations",
+      "fix_needed": "Wrap case block in curly braces around variable declarations"
+    }
+  ],
+  "syntax_errors_to_fix": [
+    {
+      "file": "src/features/prologFormatter.ts",
+      "line": 321,
+      "issue": "Parsing error: Invalid character",
+      "fix_needed": "Check for invalid Unicode or special characters"
+    },
+    {
+      "file": "src/features/prologLinter.ts", 
+      "line": 380,
+      "issue": "Parsing error: Declaration or statement expected",
+      "fix_needed": "Check for syntax errors in switch statement structure"
+    },
+    {
+      "file": "src/utils/utils.ts",
+      "line": 305,
+      "issue": "Parsing error: Declaration or statement expected", 
+      "fix_needed": "Check for syntax errors in switch statement structure"
+    }
+  ],
+  "fix_pattern": {
+    "problem": "no-case-declarations - Unexpected lexical declaration in case block",
+    "solution": "Wrap case blocks that contain variable declarations in curly braces",
+    "example": {
+      "before": "case 'example': const variable = value; break;",
+      "after": "case 'example': { const variable = value; break; }"
+    }
+  },
+  "total_fallthrough_issues": 9,
+  "completed": 6,
+  "remaining": 3,
+  "syntax_errors": 3,
+  "next_steps": [
+    "Fix remaining no-case-declarations errors by wrapping case blocks in curly braces",
+    "Fix syntax errors in prologFormatter.ts, prologLinter.ts, and utils.ts", 
+    "Re-run linting to verify all Phase 6 issues are resolved",
+    "Test functionality to ensure changes don't break existing behavior"
+  ]
+}

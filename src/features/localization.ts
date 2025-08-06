@@ -33,56 +33,56 @@ export class LocalizationManager {
       code: 'en',
       name: 'English',
       nativeName: 'English',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('es', {
       code: 'es',
       name: 'Spanish',
       nativeName: 'Español',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('fr', {
       code: 'fr',
       name: 'French',
       nativeName: 'Français',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('de', {
       code: 'de',
       name: 'German',
       nativeName: 'Deutsch',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('it', {
       code: 'it',
       name: 'Italian',
       nativeName: 'Italiano',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('pt', {
       code: 'pt',
       name: 'Portuguese',
       nativeName: 'Português',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('ja', {
       code: 'ja',
       name: 'Japanese',
       nativeName: '日本語',
-      direction: 'ltr'
+      direction: 'ltr',
     });
 
     this.availableLocales.set('zh', {
       code: 'zh',
       name: 'Chinese',
       nativeName: '中文',
-      direction: 'ltr'
+      direction: 'ltr',
     });
   }
 
@@ -104,7 +104,7 @@ export class LocalizationManager {
         loading: 'Loading...',
         processing: 'Processing...',
         complete: 'Complete',
-        failed: 'Failed'
+        failed: 'Failed',
       },
 
       // Query results
@@ -125,7 +125,7 @@ export class LocalizationManager {
         streamingResults: 'Streaming results',
         streamingComplete: 'Streaming complete',
         loadingMore: 'Loading more results...',
-        outputTruncated: '... (output truncated)'
+        outputTruncated: '... (output truncated)',
       },
 
       // Package management
@@ -151,7 +151,7 @@ export class LocalizationManager {
         configuredServers: 'Configured Pack Servers',
         addServer: 'Add Server',
         removeServer: 'Remove Server',
-        defaultServer: 'default'
+        defaultServer: 'default',
       },
 
       // Error messages
@@ -168,12 +168,13 @@ export class LocalizationManager {
         invalidCommand: 'Invalid or unrecognized command',
         missingArgument: 'Required argument is missing',
         invalidFilePath: 'Invalid file path specified',
-        unknownError: 'An unknown error occurred'
+        unknownError: 'An unknown error occurred',
       },
 
       // Error suggestions
       suggestions: {
-        checkSyntax: 'Check your Prolog syntax for missing periods, unmatched parentheses, or incorrect operators',
+        checkSyntax:
+          'Check your Prolog syntax for missing periods, unmatched parentheses, or incorrect operators',
         checkTypes: 'Check the types of your arguments using var/1, atom/1, number/1, etc.',
         checkPermissions: 'Check file permissions or predicate access rights',
         restartBackend: 'Try restarting the extension or check your SWI-Prolog installation',
@@ -181,7 +182,7 @@ export class LocalizationManager {
         checkCommand: 'Check the command syntax. Use /help to see available commands',
         checkFilePath: 'Check if the file path exists and is accessible',
         simplifyQuery: 'Try simplifying your query or using call_with_time_limit/2',
-        checkInstallation: 'Check your SWI-Prolog installation and version compatibility'
+        checkInstallation: 'Check your SWI-Prolog installation and version compatibility',
       },
 
       // Help system
@@ -195,7 +196,7 @@ export class LocalizationManager {
         options: 'Options',
         seeAlso: 'See Also',
         documentation: 'Documentation',
-        noHelpAvailable: 'No help available for this topic'
+        noHelpAvailable: 'No help available for this topic',
       },
 
       // Commands
@@ -209,7 +210,7 @@ export class LocalizationManager {
         uninstall: 'Uninstall a package',
         update: 'Update packages',
         search: 'Search for packages',
-        info: 'Get information about a package'
+        info: 'Get information about a package',
       },
 
       // Status messages
@@ -221,7 +222,7 @@ export class LocalizationManager {
         restarting: 'Restarting Prolog backend...',
         connecting: 'Connecting to Prolog server...',
         connected: 'Connected to Prolog server',
-        disconnected: 'Disconnected from Prolog server'
+        disconnected: 'Disconnected from Prolog server',
       },
 
       // Progress messages
@@ -233,8 +234,8 @@ export class LocalizationManager {
         uninstalling: 'Uninstalling package...',
         updating: 'Updating package...',
         searching: 'Searching packages...',
-        analyzing: 'Analyzing results...'
-      }
+        analyzing: 'Analyzing results...',
+      },
     };
 
     this.strings.set('en', defaultStrings);
@@ -265,7 +266,7 @@ export class LocalizationManager {
   private async loadLocaleStrings(locale: string): Promise<void> {
     try {
       const localeFile = path.join(this.extensionPath, 'locales', `${locale}.json`);
-      
+
       if (fs.existsSync(localeFile)) {
         const content = fs.readFileSync(localeFile, 'utf8');
         const strings = JSON.parse(content) as LocalizationStrings;
@@ -282,9 +283,10 @@ export class LocalizationManager {
    * Get localized string
    */
   getString(key: string, ...args: any[]): string {
-    const value = this.getStringValue(key, this.currentLocale) || 
-                  this.getStringValue(key, this.fallbackLocale) || 
-                  key;
+    const value =
+      this.getStringValue(key, this.currentLocale) ||
+      this.getStringValue(key, this.fallbackLocale) ||
+      key;
 
     // Simple placeholder replacement
     if (args.length > 0) {
@@ -361,7 +363,7 @@ export class LocalizationManager {
   getErrorMessage(errorCode: string, context?: any): string {
     const key = `errors.${errorCode.toLowerCase()}`;
     let message = this.getString(key);
-    
+
     if (message === key) {
       // Fallback to generic error message
       message = this.getString('errors.unknownError');
@@ -388,7 +390,7 @@ export class LocalizationManager {
   getPlural(key: string, count: number, ...args: any[]): string {
     const singularKey = `${key}`;
     const pluralKey = `${key}s`;
-    
+
     const selectedKey = count === 1 ? singularKey : pluralKey;
     return this.getString(selectedKey, count, ...args);
   }
@@ -435,15 +437,15 @@ export class LocalizationManager {
   /**
    * Merge string objects recursively
    */
-  private mergeStrings(target: LocalizationStrings, source: LocalizationStrings): LocalizationStrings {
+  private mergeStrings(
+    target: LocalizationStrings,
+    source: LocalizationStrings
+  ): LocalizationStrings {
     const result = { ...target };
 
     for (const [key, value] of Object.entries(source)) {
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        result[key] = this.mergeStrings(
-          (result[key] as LocalizationStrings) || {},
-          value as LocalizationStrings
-        );
+        result[key] = this.mergeStrings((result[key] as LocalizationStrings) || {}, value);
       } else {
         result[key] = value;
       }
@@ -490,13 +492,12 @@ export class LocalizationManager {
       if (!(key in target)) {
         missing.push(fullKey);
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        if (typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])) {
-          this.findMissingKeys(
-            value as LocalizationStrings,
-            target[key] as LocalizationStrings,
-            fullKey,
-            missing
-          );
+        if (
+          typeof target[key] === 'object' &&
+          target[key] !== null &&
+          !Array.isArray(target[key])
+        ) {
+          this.findMissingKeys(value, target[key], fullKey, missing);
         } else {
           missing.push(fullKey);
         }

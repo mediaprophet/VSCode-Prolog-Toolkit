@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2020",
+    "module": "NodeNext",
+    "target": "es2023",
     "outDir": "out",
-    "lib": ["es2020"],
+    "lib": [
+      "es2023"
+    ],
     "sourceMap": true,
-    "rootDir": ".",
+    "downlevelIteration": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -23,7 +25,8 @@
     "declarationMap": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": true
   },
   "include": [
     "src/**/*",
@@ -33,9 +36,8 @@
     "node_modules",
     ".vscode-test",
     "typings",
-    "out",
     "dist",
-    "**/*.js",
-    "src/extension_backup.ts"
+    "out",
+    "**/*.js"
   ]
 }

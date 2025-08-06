@@ -1,0 +1,66 @@
+[
+  {
+    "phase": 1,
+    "description": "Remove all unnecessary escape characters (no-useless-escape) in all TypeScript source files.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 2,
+    "description": "Fix all 'Unexpected lexical declaration in case block' errors (no-case-declarations) in all TypeScript source files.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 3,
+    "description": "Fix all 'NodeJS is not defined' and 'Thenable is not defined' errors by adding appropriate type imports or global type references.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 4,
+    "description": "Fix all 'A require() style import is forbidden' errors by replacing require() with import statements or using dynamic import as needed.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 5,
+    "description": "Fix all 'Empty block statement' and 'Empty class' errors by removing or filling empty blocks/classes.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 6,
+    "description": "Fix all 'Expected a break statement before default' and 'no-fallthrough' errors in switch statements.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 7,
+    "description": "Fix all 'no-unused-vars' warnings and errors by removing or using unused variables, or prefixing with _ if intentionally unused.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  {
+    "phase": 8,
+    "description": "Fix all remaining lint errors and warnings, including module syntax, namespace, and other rule violations.",
+    "files": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  }
+]

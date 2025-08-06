@@ -1,6 +1,6 @@
+import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { workspace, window, Uri } from 'vscode';
 
 /**
  * Multi-IDE Support for Prolog LSP
@@ -17,7 +17,7 @@ export class MultiIDESupport {
     'intellij',
     'eclipse',
     'theia',
-    'coc-nvim'
+    'coc-nvim',
   ];
 
   /**
@@ -27,30 +27,30 @@ export class MultiIDESupport {
     const configs = {
       // VS Code configuration (already handled by extension)
       vscode: this.generateVSCodeConfig(),
-      
+
       // Vim/Neovim with coc.nvim
       'coc-settings': this.generateCocNvimConfig(),
-      
+
       // Neovim with built-in LSP
       neovim: this.generateNeovimConfig(),
-      
+
       // Vim with vim-lsp
       vim: this.generateVimLspConfig(),
-      
+
       // Emacs with lsp-mode
       emacs: this.generateEmacsConfig(),
-      
+
       // Sublime Text with LSP package
       sublime: this.generateSublimeConfig(),
-      
+
       // IntelliJ IDEA configuration
       intellij: this.generateIntelliJConfig(),
-      
+
       // Eclipse configuration
       eclipse: this.generateEclipseConfig(),
-      
+
       // Theia configuration
-      theia: this.generateTheiaConfig()
+      theia: this.generateTheiaConfig(),
     };
 
     // Create .lsp directory for configurations
@@ -69,51 +69,51 @@ export class MultiIDESupport {
 
     // Generate setup scripts
     await this.generateSetupScripts(lspDir);
-    
+
     // Generate documentation
     await this.generateIDEDocumentation(lspDir);
   }
 
   private static generateVSCodeConfig() {
     return {
-      "name": "Prolog LSP for VS Code",
-      "description": "Already configured through the VSCode Prolog Toolkit extension",
-      "status": "native_support",
-      "setup": "Install the VSCode Prolog Toolkit extension from the marketplace"
+      name: 'Prolog LSP for VS Code',
+      description: 'Already configured through the VSCode Prolog Toolkit extension',
+      status: 'native_support',
+      setup: 'Install the VSCode Prolog Toolkit extension from the marketplace',
     };
   }
 
   private static generateCocNvimConfig() {
     return {
-      "languageserver": {
-        "prolog": {
-          "command": "node",
-          "args": ["./out/pub/features/prologLSPServer.js", "--stdio"],
-          "filetypes": ["prolog"],
-          "rootPatterns": [".git", "*.pl", "*.pro", "*.prolog"],
-          "settings": {
-            "prolog": {
-              "executablePath": "swipl",
-              "dialect": "swi",
-              "linter": {
-                "run": "onType",
-                "delay": 500
-              }
-            }
+      languageserver: {
+        prolog: {
+          command: 'node',
+          args: ['./out/pub/features/prologLSPServer.js', '--stdio'],
+          filetypes: ['prolog'],
+          rootPatterns: ['.git', '*.pl', '*.pro', '*.prolog'],
+          settings: {
+            prolog: {
+              executablePath: 'swipl',
+              dialect: 'swi',
+              linter: {
+                run: 'onType',
+                delay: 500,
+              },
+            },
           },
-          "initializationOptions": {
-            "enableSnippets": true,
-            "enableFormatting": true,
-            "enableDiagnostics": true
-          }
-        }
-      }
+          initializationOptions: {
+            enableSnippets: true,
+            enableFormatting: true,
+            enableDiagnostics: true,
+          },
+        },
+      },
     };
   }
 
   private static generateNeovimConfig() {
     return {
-      "setup_function": `
+      setup_function: `
 -- Neovim built-in LSP setup for Prolog
 local lspconfig = require('lspconfig')
 local configs = require('lspconfig.configs')
@@ -160,7 +160,7 @@ lspconfig.prolog_lsp.setup({
   capabilities = require('cmp_nvim_lsp').update_capabilities(vim.lsp.protocol.make_client_capabilities())
 })
       `,
-      "filetype_detection": `
+      filetype_detection: `
 -- Add Prolog filetype detection
 vim.cmd([[
   augroup PrologFiletype
@@ -168,13 +168,13 @@ vim.cmd([[
     autocmd BufRead,BufNewFile *.pl,*.pro,*.prolog,*.plt,*.ecl set filetype=prolog
   augroup END
 ]])
-      `
+      `,
     };
   }
 
   private static generateVimLspConfig() {
     return {
-      "vim_script": `
+      vim_script: `
 " Vim-LSP configuration for Prolog
 if executable('node')
   augroup LspProlog
@@ -215,13 +215,13 @@ augroup lsp_install
   au!
   autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 augroup END
-      `
+      `,
     };
   }
 
   private static generateEmacsConfig() {
     return {
-      "elisp_config": `
+      elisp_config: `
 ;; Emacs LSP configuration for Prolog
 (use-package lsp-mode
   :hook (prolog-mode . lsp)
@@ -261,37 +261,37 @@ augroup END
   :commands company-lsp
   :config
   (push 'company-lsp company-backends))
-      `
+      `,
     };
   }
 
   private static generateSublimeConfig() {
     return {
-      "LSP.sublime-settings": {
-        "clients": {
-          "prolog-lsp": {
-            "enabled": true,
-            "command": ["node", "./out/pub/features/prologLSPServer.js", "--stdio"],
-            "selector": "source.prolog",
-            "settings": {
-              "prolog": {
-                "executablePath": "swipl",
-                "dialect": "swi",
-                "linter": {
-                  "run": "onType",
-                  "delay": 500
-                }
-              }
+      'LSP.sublime-settings': {
+        clients: {
+          'prolog-lsp': {
+            enabled: true,
+            command: ['node', './out/pub/features/prologLSPServer.js', '--stdio'],
+            selector: 'source.prolog',
+            settings: {
+              prolog: {
+                executablePath: 'swipl',
+                dialect: 'swi',
+                linter: {
+                  run: 'onType',
+                  delay: 500,
+                },
+              },
             },
-            "initializationOptions": {
-              "enableSnippets": true,
-              "enableFormatting": true,
-              "enableDiagnostics": true
-            }
-          }
-        }
+            initializationOptions: {
+              enableSnippets: true,
+              enableFormatting: true,
+              enableDiagnostics: true,
+            },
+          },
+        },
       },
-      "Prolog.sublime-syntax": `
+      'Prolog.sublime-syntax': `
 %YAML 1.2
 ---
 name: Prolog
@@ -349,13 +349,13 @@ contexts:
   operators:
     - match: ':-|->|;|,|\\+|\\-|\\*|/|=|\\\\=|==|\\\\==|@<|@>|@=<|@>='
       scope: keyword.operator.prolog
-      `
+      `,
     };
   }
 
   private static generateIntelliJConfig() {
     return {
-      "plugin_xml": `
+      plugin_xml: `
 <idea-plugin>
   <id>com.example.prolog-lsp</id>
   <name>Prolog LSP Support</name>
@@ -387,7 +387,7 @@ contexts:
   </extensions>
 </idea-plugin>
       `,
-      "server_factory": `
+      server_factory: `
 public class PrologLanguageServerFactory implements LanguageServerFactory {
     @Override
     public LanguageServerDefinition createLanguageServerDefinition(@NotNull Project project) {
@@ -399,13 +399,13 @@ public class PrologLanguageServerFactory implements LanguageServerFactory {
         );
     }
 }
-      `
+      `,
     };
   }
 
   private static generateEclipseConfig() {
     return {
-      "plugin_xml": `
+      plugin_xml: `
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin>
    <extension point="org.eclipse.lsp4e.languageServer">
@@ -433,29 +433,29 @@ public class PrologLanguageServerFactory implements LanguageServerFactory {
                     file-extensions="pl,pro,prolog,plt,ecl"/>
    </extension>
 </plugin>
-      `
+      `,
     };
   }
 
   private static generateTheiaConfig() {
     return {
-      "package.json": {
-        "name": "prolog-lsp-theia",
-        "version": "1.0.0",
-        "description": "Prolog LSP support for Theia",
-        "dependencies": {
-          "@theia/core": "latest",
-          "@theia/languages": "latest",
-          "vscode-languageserver-protocol": "latest"
+      'package.json': {
+        name: 'prolog-lsp-theia',
+        version: '1.0.0',
+        description: 'Prolog LSP support for Theia',
+        dependencies: {
+          '@theia/core': 'latest',
+          '@theia/languages': 'latest',
+          'vscode-languageserver-protocol': 'latest',
         },
-        "theiaExtensions": [
+        theiaExtensions: [
           {
-            "frontend": "lib/browser/prolog-frontend-module",
-            "backend": "lib/node/prolog-backend-module"
-          }
-        ]
+            frontend: 'lib/browser/prolog-frontend-module',
+            backend: 'lib/node/prolog-backend-module',
+          },
+        ],
       },
-      "frontend_module": `
+      frontend_module: `
 import { ContainerModule } from 'inversify';
 import { LanguageClientContribution } from '@theia/languages/lib/browser';
 import { PrologLanguageClientContribution } from './prolog-language-client-contribution';
@@ -464,7 +464,7 @@ export default new ContainerModule(bind => {
     bind(LanguageClientContribution).to(PrologLanguageClientContribution).inSingletonScope();
 });
       `,
-      "client_contribution": `
+      client_contribution: `
 import { injectable } from 'inversify';
 import { LanguageClientContribution, ILanguageClient } from '@theia/languages/lib/browser';
 import { PROLOG_LANGUAGE_ID, PROLOG_LANGUAGE_NAME } from '../common';
@@ -485,7 +485,7 @@ export class PrologLanguageClientContribution implements LanguageClientContribut
         });
     }
 }
-      `
+      `,
     };
   }
 
@@ -571,7 +571,7 @@ Write-Host "Setup complete!" -ForegroundColor Green
     // Make bash script executable on Unix systems
     try {
       fs.chmodSync(path.join(lspDir, 'setup.sh'), 0o755);
-    } catch (error) {
+    } catch (_error) {
       // Ignore chmod errors on Windows
     }
   }
@@ -721,7 +721,7 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
    */
   public static async detectAvailableIDEs(): Promise<string[]> {
     const available: string[] = [];
-    
+
     // Check for common IDE executables
     const ideChecks = [
       { name: 'vscode', commands: ['code', 'code-insiders'] },
@@ -729,13 +729,12 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
       { name: 'neovim', commands: ['nvim'] },
       { name: 'emacs', commands: ['emacs'] },
       { name: 'sublime', commands: ['subl', 'sublime_text'] },
-      { name: 'intellij', commands: ['idea', 'intellij-idea-ultimate'] }
+      { name: 'intellij', commands: ['idea', 'intellij-idea-ultimate'] },
     ];
 
     for (const ide of ideChecks) {
       for (const command of ide.commands) {
         try {
-          const { exec } = require('child_process');
           await new Promise((resolve, reject) => {
             exec(`which ${command}`, (error: unknown) => {
               if (!error) {
@@ -761,35 +760,35 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
    */
   public static generateLaunchConfigurations(workspaceRoot: string): void {
     const launchConfig = {
-      "version": "0.2.0",
-      "configurations": [
+      version: '0.2.0',
+      configurations: [
         {
-          "name": "Launch Prolog LSP Server",
-          "type": "node",
-          "request": "launch",
-          "program": "${workspaceFolder}/out/pub/features/prologLSPServer.js",
-          "args": ["--stdio"],
-          "console": "integratedTerminal",
-          "internalConsoleOptions": "neverOpen",
-          "env": {
-            "NODE_ENV": "development"
-          }
+          name: 'Launch Prolog LSP Server',
+          type: 'node',
+          request: 'launch',
+          program: '${workspaceFolder}/out/pub/features/prologLSPServer.js',
+          args: ['--stdio'],
+          console: 'integratedTerminal',
+          internalConsoleOptions: 'neverOpen',
+          env: {
+            NODE_ENV: 'development',
+          },
         },
         {
-          "name": "Debug Prolog LSP Server",
-          "type": "node",
-          "request": "launch",
-          "program": "${workspaceFolder}/out/pub/features/prologLSPServer.js",
-          "args": ["--stdio"],
-          "console": "integratedTerminal",
-          "internalConsoleOptions": "neverOpen",
-          "env": {
-            "NODE_ENV": "development"
+          name: 'Debug Prolog LSP Server',
+          type: 'node',
+          request: 'launch',
+          program: '${workspaceFolder}/out/pub/features/prologLSPServer.js',
+          args: ['--stdio'],
+          console: 'integratedTerminal',
+          internalConsoleOptions: 'neverOpen',
+          env: {
+            NODE_ENV: 'development',
           },
-          "sourceMaps": true,
-          "outFiles": ["${workspaceFolder}/out/**/*.js"]
-        }
-      ]
+          sourceMaps: true,
+          outFiles: ['${workspaceFolder}/out/**/*.js'],
+        },
+      ],
     };
 
     const vscodeDir = path.join(workspaceRoot, '.vscode');
@@ -797,9 +796,6 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
       fs.mkdirSync(vscodeDir, { recursive: true });
     }
 
-    fs.writeFileSync(
-      path.join(vscodeDir, 'launch.json'),
-      JSON.stringify(launchConfig, null, 2)
-    );
+    fs.writeFileSync(path.join(vscodeDir, 'launch.json'), JSON.stringify(launchConfig, null, 2));
   }
 }

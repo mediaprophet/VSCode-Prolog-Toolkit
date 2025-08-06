@@ -65,23 +65,24 @@ export function authMiddleware(config: AuthConfig) {
       // Local-only mode: restrict to localhost
       if (config.localOnly || config.method === 'local_only') {
         const clientIP = req.ip || req.connection?.remoteAddress || '';
-        const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(clientIP) ||
-                           clientIP.startsWith('127.') ||
-                           clientIP === 'localhost';
-        
+        const isLocalhost =
+          ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(clientIP) ||
+          clientIP.startsWith('127.') ||
+          clientIP === 'localhost';
+
         if (isLocalhost) {
           // Grant admin permissions for localhost in local-only mode
           req.user = {
             id: 'localhost',
             role: 'admin',
             permissions: ['*'],
-            method: 'local_only'
+            method: 'local_only',
           };
           return next();
         } else if (config.localOnly) {
           return res.status(403).json({
             error: 'Forbidden',
-            message: 'API access restricted to localhost only'
+            message: 'API access restricted to localhost only',
           });
         }
       }
@@ -124,15 +125,14 @@ export function authMiddleware(config: AuthConfig) {
         hints: {
           api_key: 'Include X-API-Key header',
           jwt_token: 'Include Authorization: Bearer <token> header',
-          local_only: 'Access from localhost only'
-        }
+          local_only: 'Access from localhost only',
+        },
       });
-
     } catch (error: unknown) {
       console.error('[AuthMiddleware] Authentication error:', error);
       return res.status(500).json({
         error: 'Internal Server Error',
-        message: 'Authentication system error'
+        message: 'Authentication system error',
       });
     }
   };
@@ -151,7 +151,7 @@ async function tryApiKeyAuth(req: Request, config: AuthConfig): Promise<Authenti
       id: `api_key_${apiKey.substring(0, 8)}`,
       role: 'agent', // Default role for API key users
       permissions: getDefaultPermissions('agent'),
-      method: 'api_key'
+      method: 'api_key',
     };
   }
 
@@ -166,15 +166,17 @@ async function tryJwtAuth(req: Request, config: AuthConfig): Promise<Authenticat
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
 
   const token = authHeader.substring(7);
-  
+
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as Record<string, unknown>;
-    
+
     return {
       id: (decoded.sub as string) || (decoded.id as string) || 'jwt_user',
       role: (decoded.role as string) || 'agent',
-      permissions: (decoded.permissions as string[]) || getDefaultPermissions((decoded.role as string) || 'agent'),
-      method: 'jwt_token'
+      permissions:
+        (decoded.permissions as string[]) ||
+        getDefaultPermissions((decoded.role as string) || 'agent'),
+      method: 'jwt_token',
     };
   } catch (error: unknown) {
     console.error('[AuthMiddleware] JWT verification failed:', error);
@@ -192,7 +194,7 @@ async function tryOAuth2Auth(req: Request, config: AuthConfig): Promise<Authenti
   // 2. Validate the token with the OAuth2 provider
   // 3. Extract user information from the token or provider API
   // 4. Map provider roles to internal permissions
-  
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
 
@@ -213,18 +215,10 @@ function getDefaultPermissions(role: string): string[] {
       'session:read',
       'session:delete_own',
       'reasoning:*',
-      'history:read_own'
-    ],
-    readonly: [
-      'query:execute_readonly',
-      'session:read',
       'history:read_own',
-      'status:read'
     ],
-    limited: [
-      'query:execute_simple',
-      'session:read_own'
-    ]
+    readonly: ['query:execute_readonly', 'session:read', 'history:read_own', 'status:read'],
+    limited: ['query:execute_simple', 'session:read_own'],
   };
 
   return rolePermissions[role] || rolePermissions['limited'] || [];
@@ -251,7 +245,7 @@ export function generateJwtToken(payload: any, config: AuthConfig): string {
   return jwt.sign(payload, config.jwtSecret, {
     expiresIn: '1h',
     issuer: 'vscode-prolog-toolkit',
-    audience: 'ai-agents'
+    audience: 'ai-agents',
   });
 }
 
@@ -271,27 +265,29 @@ export function verifyJwtToken(token: string, config: AuthConfig): Record<string
  */
 export function hasPermission(user: AuthenticatedUser | undefined, permission: string): boolean {
   if (!user) return false;
-  
+
   // Admin role has all permissions
   if (user.role === 'admin' || user.permissions.includes('*')) return true;
-  
+
   // Check exact permission
   if (user.permissions.includes(permission)) return true;
-  
+
   // Check wildcard permissions (e.g., 'reasoning:*' matches 'reasoning:clp')
   const wildcardPermissions = user.permissions.filter(p => p.endsWith(':*'));
   for (const wildcardPerm of wildcardPermissions) {
     const prefix = wildcardPerm.slice(0, -1); // Remove '*'
     if (permission.startsWith(prefix)) return true;
   }
-  
+
   return false;
 }
 
 /**
  * Resource quota middleware
  */
-export function resourceQuotaMiddleware(quotas: { [role: string]: { requests_per_minute?: number; maxConcurrentSessions?: number } }) {
+export function resourceQuotaMiddleware(quotas: {
+  [role: string]: { requests_per_minute?: number; maxConcurrentSessions?: number };
+}) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const user = req.user;
     if (!user) return next();
@@ -301,12 +297,12 @@ export function resourceQuotaMiddleware(quotas: { [role: string]: { requests_per
 
     // Add quota information to request for later use
     (req as AuthenticatedRequest & { quota?: typeof userQuota }).quota = userQuota;
-    
+
     // Add quota headers to response
     res.set({
       'X-Rate-Limit-Limit': userQuota.requests_per_minute?.toString() || '60',
       'X-Rate-Limit-Remaining': '60', // This would be calculated based on actual usage
-      'X-Rate-Limit-Reset': (Date.now() + 60000).toString()
+      'X-Rate-Limit-Reset': (Date.now() + 60000).toString(),
     });
 
     next();
@@ -319,27 +315,33 @@ export function resourceQuotaMiddleware(quotas: { [role: string]: { requests_per
 export function auditMiddleware() {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const start = Date.now();
-    
+
     // Log request
-    console.log(`[Audit] ${req.method} ${req.path} - User: ${req.user?.id || 'anonymous'} (${req.user?.role || 'none'})`);
-    
+    console.log(
+      `[Audit] ${req.method} ${req.path} - User: ${req.user?.id || 'anonymous'} (${req.user?.role || 'none'})`
+    );
+
     // Log response when finished
     res.on('finish', () => {
       const duration = Date.now() - start;
       const logLevel = res.statusCode >= 400 ? 'WARN' : 'INFO';
-      
-      console.log(`[Audit] ${logLevel} ${req.method} ${req.path} - ${res.statusCode} (${duration}ms) - User: ${req.user?.id || 'anonymous'}`);
-      
+
+      console.log(
+        `[Audit] ${logLevel} ${req.method} ${req.path} - ${res.statusCode} (${duration}ms) - User: ${req.user?.id || 'anonymous'}`
+      );
+
       // Log security events
       if (res.statusCode === 401) {
         console.log(`[Security] Authentication failed - ${req.ip} - ${req.method} ${req.path}`);
       } else if (res.statusCode === 403) {
-        console.log(`[Security] Authorization denied - User: ${req.user?.id} - ${req.method} ${req.path}`);
+        console.log(
+          `[Security] Authorization denied - User: ${req.user?.id} - ${req.method} ${req.path}`
+        );
       } else if (res.statusCode === 429) {
         console.log(`[Security] Rate limit exceeded - User: ${req.user?.id} - ${req.ip}`);
       }
     });
-    
+
     next();
   };
 }

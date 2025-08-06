@@ -2,19 +2,21 @@ module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    ecmaVersion: 2020,
+    ecmaVersion: 'latest',
     sourceType: 'module',
     project: './tsconfig.json',
   },
   plugins: [
     '@typescript-eslint',
-    'prettier'
+    'prettier',
   ],
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
-    '@typescript-eslint/recommended-requiring-type-checking',
-    'prettier'
+    'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/stylistic',
+    'plugin:@typescript-eslint/strict-type-checked',
+    'plugin:@typescript-eslint/strict',
+    'plugin:prettier/recommended',
   ],
   rules: {
     'prettier/prettier': 'error',
@@ -26,18 +28,18 @@ module.exports = {
     '@typescript-eslint/prefer-optional-chain': 'error',
     'no-console': 'warn',
     'prefer-const': 'error',
-    'no-var': 'error'
+    'no-var': 'error',
   },
   env: {
     node: true,
     es6: true,
-    mocha: true
+    mocha: true,
   },
   ignorePatterns: [
     'out',
     'dist',
     '**/*.d.ts',
     'node_modules',
-    '.vscode-test'
-  ]
+    '.vscode-test',
+  ],
 };

@@ -1,22 +1,11 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 echo "Running pre-commit checks..."
 
 # Format check
 echo "Checking code formatting..."
-npm run format:check
-if [ $? -ne 0 ]; then
-  echo "❌ Code formatting issues found. Run 'npm run format' to fix them."
-  exit 1
-fi
-
 # Lint check
 echo "Running linter..."
-npm run lint
-if [ $? -ne 0 ]; then
-  echo "❌ Linting issues found. Run 'npm run lint:fix' to fix them."
-  exit 1
-fi
+# Only run the Node.js pre-commit script for all checks (lint, format, test)
+node scripts/precommit.cjs
 
 echo "✅ Pre-commit checks passed!"

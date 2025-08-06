@@ -1,0 +1,247 @@
+[
+  {
+    "phase": 2,
+    "category": "Syntax Errors",
+    "description": "Fix critical syntax errors that break code functionality",
+    "priority": "high",
+    "estimated_effort": "medium",
+    "tasks": [
+      {
+        "task": "Fix undefined 'args' variable",
+        "description": "Define or import the 'args' variable in prologDebugSession.ts",
+        "files": [
+          "src/features/prologDebugSession.ts"
+        ],
+        "error_type": "no-undef",
+        "line": 204,
+        "solution": "Add proper variable declaration or import"
+      },
+      {
+        "task": "Fix invalid regular expression",
+        "description": "Correct the regex pattern with unmatched parenthesis",
+        "files": [
+          "src/features/prologFormatter.ts"
+        ],
+        "error_type": "no-invalid-regexp",
+        "line": 461,
+        "solution": "Fix regex pattern: /\\[[^\\[\\]]*?\\]|\\([^()]*?\\)|{\\|[\\w\\W]*?\\|}/",
+        "current_pattern": "/\\[[^\\[\\]]*?\\]|\\([^(]*?)|{\\|[\\w\\W]*?\\|}/"
+      }
+    ]
+  },
+  {
+    "phase": 3,
+    "category": "Variable Redeclaration",
+    "description": "Fix variable redeclaration errors that cause conflicts",
+    "priority": "high",
+    "estimated_effort": "low",
+    "tasks": [
+      {
+        "task": "Fix ITraceCmds redeclaration",
+        "description": "Rename or remove duplicate ITraceCmds interface declaration",
+        "files": [
+          "src/features/prologDebugger.ts"
+        ],
+        "error_type": "no-redeclare",
+        "line": 38,
+        "solution": "Rename one of the ITraceCmds declarations"
+      },
+      {
+        "task": "Fix variable redeclarations in prologFormatter.ts",
+        "description": "Rename duplicate variable declarations for regexp, array, and offset",
+        "files": [
+          "src/features/prologFormatter.ts"
+        ],
+        "error_type": "no-redeclare",
+        "lines": [
+          271,
+          272,
+          437
+        ],
+        "variables": [
+          "regexp",
+          "array",
+          "offset"
+        ],
+        "solution": "Use different variable names or combine declarations"
+      }
+    ]
+  },
+  {
+    "phase": 4,
+    "category": "Unused Variables - Critical",
+    "description": "Fix unused variables that indicate potential bugs or incomplete implementations",
+    "priority": "medium",
+    "estimated_effort": "medium",
+    "tasks": [
+      {
+        "task": "Fix unused imports",
+        "description": "Remove or use imported modules that are never referenced",
+        "files": [
+          "src/features/installationChecker.ts",
+          "src/features/multiIDESupport.ts",
+          "src/features/packageManagerIntegration.ts",
+          "src/features/prologDebugger.ts",
+          "src/features/prologTerminal.ts",
+          "src/features/settingsWebviewProvider.ts",
+          "src/features/updateSnippets.ts",
+          "src/prologBackend.ts"
+        ],
+        "unused_imports": [
+          "fs",
+          "which",
+          "Uri",
+          "os",
+          "basename",
+          "resolve",
+          "path",
+          "InstallationStatus",
+          "Variable",
+          "verify",
+          "ScheduledQuery"
+        ],
+        "solution": "Remove unused imports or implement their usage"
+      },
+      {
+        "task": "Fix unused assigned variables",
+        "description": "Address variables that are assigned but never used, indicating incomplete logic",
+        "files": [
+          "src/features/apiServer.ts",
+          "src/features/apiRoutes.ts",
+          "src/features/prologActivityProvider.ts",
+          "src/features/prologDashboardProvider.ts",
+          "src/features/prologDebugger.ts",
+          "src/features/prologLSPClient.ts",
+          "src/features/prologLSPExtension.ts",
+          "src/features/prologLSPServer.ts",
+          "src/features/prologLinter.ts",
+          "src/features/prologRefactor.ts",
+          "src/prologBackend.ts"
+        ],
+        "solution": "Either use the variables or remove the assignments"
+      }
+    ]
+  },
+  {
+    "phase": 5,
+    "category": "Unused Parameters",
+    "description": "Fix unused function parameters by prefixing with underscore or removing",
+    "priority": "low",
+    "estimated_effort": "low",
+    "tasks": [
+      {
+        "task": "Fix unused callback parameters",
+        "description": "Prefix unused callback parameters with underscore to indicate intentional non-use",
+        "files": [
+          "src/features/apiMiddleware.ts",
+          "src/features/apiRoutes.ts",
+          "src/features/apiServer.ts",
+          "src/features/externalWebSocketManager.ts",
+          "src/features/outputFormatter.ts",
+          "src/features/prologDashboardProvider.ts",
+          "src/features/prologLSPExtension.ts",
+          "src/features/settingsWebviewProvider.ts",
+          "src/features/uiHandler.ts",
+          "src/features/updateSnippets.ts"
+        ],
+        "parameters": [
+          "config",
+          "status",
+          "next",
+          "message",
+          "chunkSize",
+          "context",
+          "items",
+          "rest",
+          "document",
+          "position",
+          "token"
+        ],
+        "solution": "Prefix with underscore: _config, _status, _next, etc."
+      }
+    ]
+  },
+  {
+    "phase": 6,
+    "category": "Unused Error Variables",
+    "description": "Fix unused error variables in catch blocks",
+    "priority": "low",
+    "estimated_effort": "low",
+    "tasks": [
+      {
+        "task": "Fix unused error variables in catch blocks",
+        "description": "Prefix unused error variables with underscore or implement proper error handling",
+        "files": [
+          "src/features/configurationMigration.ts",
+          "src/features/installationChecker.ts",
+          "src/features/multiIDESupport.ts",
+          "src/features/packageManagerIntegration.ts",
+          "src/features/prologActivityProvider.ts",
+          "src/features/prologDebugger.ts",
+          "src/features/prologLSPExtension.ts",
+          "src/features/prologLSPServer.ts",
+          "src/features/prologLinter.ts",
+          "src/features/prologTerminal.ts",
+          "src/features/queryHistoryManager.ts",
+          "src/features/queryScheduler.ts"
+        ],
+        "solution": "Prefix with underscore: _error, _e or implement proper error logging"
+      }
+    ]
+  },
+  {
+    "phase": 7,
+    "category": "Code Quality Improvements",
+    "description": "Address remaining code quality issues and potential improvements",
+    "priority": "low",
+    "estimated_effort": "medium",
+    "tasks": [
+      {
+        "task": "Review and optimize unused assigned variables",
+        "description": "Analyze variables that are assigned but never used to determine if they represent incomplete features",
+        "files": [
+          "src/features/securityManager.ts",
+          "src/features/queryHistoryManager.ts"
+        ],
+        "variables": [
+          "queryId",
+          "QueryStatus"
+        ],
+        "solution": "Complete implementation or remove unused assignments"
+      },
+      {
+        "task": "Validate error handling completeness",
+        "description": "Ensure all error variables are properly handled or logged",
+        "files": [
+          "src/features/multiIDESupport.ts"
+        ],
+        "solution": "Add proper error logging or handling for caught errors"
+      }
+    ]
+  },
+  {
+    "phase": 8,
+    "category": "Configuration Cleanup",
+    "description": "Clean up ESLint configuration and project structure",
+    "priority": "low",
+    "estimated_effort": "low",
+    "tasks": [
+      {
+        "task": "Update .eslintignore",
+        "description": "Add files that should be excluded from linting",
+        "files": [
+          ".eslintignore"
+        ],
+        "solution": "Add src/extension.ts and other backup/generated files"
+      },
+      {
+        "task": "Review tsconfig.json inclusion",
+        "description": "Ensure all TypeScript files that should be linted are included in tsconfig.json",
+        "files": [
+          "tsconfig.json"
+        ],
+        "solution": "Update include/exclude patterns as needed"
+      }
+    ]
+  }
+]

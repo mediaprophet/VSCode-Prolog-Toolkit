@@ -412,7 +412,7 @@ export interface ApiError extends Error {
 export class ValidationError extends Error implements ApiError {
   statusCode = 400;
   code = 'VALIDATION_ERROR';
-  
+
   constructor(
     message: string,
     public field?: string,
@@ -427,7 +427,7 @@ export class ValidationError extends Error implements ApiError {
 export class AuthenticationError extends Error implements ApiError {
   statusCode = 401;
   code = 'AUTHENTICATION_ERROR';
-  
+
   constructor(message: string = 'Authentication required') {
     super(message);
     this.name = 'AuthenticationError';
@@ -437,7 +437,7 @@ export class AuthenticationError extends Error implements ApiError {
 export class AuthorizationError extends Error implements ApiError {
   statusCode = 403;
   code = 'AUTHORIZATION_ERROR';
-  
+
   constructor(message: string = 'Insufficient permissions') {
     super(message);
     this.name = 'AuthorizationError';
@@ -447,7 +447,7 @@ export class AuthorizationError extends Error implements ApiError {
 export class RateLimitError extends Error implements ApiError {
   statusCode = 429;
   code = 'RATE_LIMIT_ERROR';
-  
+
   constructor(
     message: string = 'Rate limit exceeded',
     public retryAfter?: number
@@ -460,7 +460,7 @@ export class RateLimitError extends Error implements ApiError {
 export class ResourceNotFoundError extends Error implements ApiError {
   statusCode = 404;
   code = 'RESOURCE_NOT_FOUND';
-  
+
   constructor(resource: string, id?: string) {
     super(`${resource}${id ? ` with id '${id}'` : ''} not found`);
     this.name = 'ResourceNotFoundError';
@@ -470,7 +470,7 @@ export class ResourceNotFoundError extends Error implements ApiError {
 export class InternalServerError extends Error implements ApiError {
   statusCode = 500;
   code = 'INTERNAL_SERVER_ERROR';
-  
+
   constructor(message: string = 'Internal server error') {
     super(message);
     this.name = 'InternalServerError';

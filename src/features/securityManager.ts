@@ -58,13 +58,16 @@ export interface SecurityViolation {
 export class SecurityManager extends EventEmitter {
   private config: SecurityConfig;
   private activeProcesses: Map<string, ChildProcess> = new Map();
-  private userResourceUsage: Map<string, {
-    activeQueries: number;
-    activeSessions: number;
-    lastActivity: Date;
-    requestCount: number;
-    requestWindow: Date;
-  }> = new Map();
+  private userResourceUsage: Map<
+    string,
+    {
+      activeQueries: number;
+      activeSessions: number;
+      lastActivity: Date;
+      requestCount: number;
+      requestWindow: Date;
+    }
+  > = new Map();
 
   constructor(config: SecurityConfig) {
     super();
@@ -75,7 +78,10 @@ export class SecurityManager extends EventEmitter {
   /**
    * Validate a query before execution
    */
-  async validateQuery(query: string, context: QuerySecurityContext): Promise<{
+  async validateQuery(
+    query: string,
+    context: QuerySecurityContext
+  ): Promise<{
     valid: boolean;
     violations: SecurityViolation[];
   }> {
@@ -89,7 +95,7 @@ export class SecurityManager extends EventEmitter {
         query,
         userId: context.userId,
         timestamp: new Date(),
-        severity: 'medium'
+        severity: 'medium',
       });
     }
 
@@ -104,7 +110,7 @@ export class SecurityManager extends EventEmitter {
             query,
             userId: context.userId,
             timestamp: new Date(),
-            severity: 'high'
+            severity: 'high',
           });
         }
       }
@@ -127,7 +133,7 @@ export class SecurityManager extends EventEmitter {
 
     return {
       valid: violations.length === 0,
-      violations
+      violations,
     };
   }
 
@@ -135,14 +141,16 @@ export class SecurityManager extends EventEmitter {
    * Execute query in sandbox if required
    */
   async executeSecureQuery(
-    query: string, 
+    query: string,
     context: QuerySecurityContext,
     originalExecutor: (query: string) => Promise<any>
   ): Promise<any> {
     // Validate query first
     const validation = await this.validateQuery(query, context);
     if (!validation.valid) {
-      throw new Error(`Security validation failed: ${validation.violations.map(v => v.message).join(', ')}`);
+      throw new Error(
+        `Security validation failed: ${validation.violations.map(v => v.message).join(', ')}`
+      );
     }
 
     // Update resource usage tracking
@@ -160,53 +168,49 @@ export class SecurityManager extends EventEmitter {
   /**
    * Execute query in isolated sandbox process
    */
-  private async executeSandboxedQuery(
-    query: string, 
-    context: QuerySecurityContext
-  ): Promise<any> {
+  private async executeSandboxedQuery(query: string, context: QuerySecurityContext): Promise<any> {
     const queryId = `sandbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return new Promise((resolve, reject) => {
       // Create sandbox configuration
       const sandboxConfig = {
         query,
         resourceLimits: this.config.resourceLimits,
         allowedPredicates: this.getAllowedPredicates(context),
-        timeout: context.resourceQuota.maxQueryTime
+        timeout: context.resourceQuota.maxQueryTime,
       };
 
       // Spawn isolated Prolog process
-      const sandboxProcess = spawn('swipl', [
-        '-g', 'halt',
-        '--quiet',
-        '--no-tty',
-        '-t', 'halt(1)'
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: context.resourceQuota.maxQueryTime,
-        env: {
-          ...process.env,
-          PROLOG_STACK_LIMIT: `${context.resourceQuota.maxMemoryPerQuery}M`,
-          PROLOG_TABLE_SPACE: `${Math.floor(context.resourceQuota.maxMemoryPerQuery / 4)}M`
+      const sandboxProcess = spawn(
+        'swipl',
+        ['-g', 'halt', '--quiet', '--no-tty', '-t', 'halt(1)'],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          timeout: context.resourceQuota.maxQueryTime,
+          env: {
+            ...process.env,
+            PROLOG_STACK_LIMIT: `${context.resourceQuota.maxMemoryPerQuery}M`,
+            PROLOG_TABLE_SPACE: `${Math.floor(context.resourceQuota.maxMemoryPerQuery / 4)}M`,
+          },
         }
-      });
+      );
 
       this.activeProcesses.set(queryId, sandboxProcess);
 
       let output = '';
       let errorOutput = '';
 
-      sandboxProcess.stdout?.on('data', (data) => {
+      sandboxProcess.stdout?.on('data', data => {
         output += data.toString();
       });
 
-      sandboxProcess.stderr?.on('data', (data) => {
+      sandboxProcess.stderr?.on('data', data => {
         errorOutput += data.toString();
       });
 
-      sandboxProcess.on('close', (code) => {
+      sandboxProcess.on('close', code => {
         this.activeProcesses.delete(queryId);
-        
+
         if (code === 0) {
           try {
             const result = this.parseSandboxOutput(output);
@@ -219,7 +223,7 @@ export class SecurityManager extends EventEmitter {
         }
       });
 
-      sandboxProcess.on('error', (error) => {
+      sandboxProcess.on('error', error => {
         this.activeProcesses.delete(queryId);
         reject(new Error(`Sandbox process error: ${error.message}`));
       });
@@ -261,19 +265,21 @@ export class SecurityManager extends EventEmitter {
     // Execute with resource monitoring
     const executionPromise = originalExecutor(query).then(result => {
       const executionTime = Date.now() - startTime;
-      
+
       // Log resource usage
       this.emit('resourceUsage', {
         queryId,
         userId: context.userId,
         executionTime,
         memoryUsage: process.memoryUsage(),
-        resultCount: Array.isArray(result.results) ? result.results.length : 0
+        resultCount: Array.isArray(result.results) ? result.results.length : 0,
       });
 
       // Check result limits
-      if (Array.isArray(result.results) && 
-          result.results.length > context.resourceQuota.maxResultsPerQuery) {
+      if (
+        Array.isArray(result.results) &&
+        result.results.length > context.resourceQuota.maxResultsPerQuery
+      ) {
         result.results = result.results.slice(0, context.resourceQuota.maxResultsPerQuery);
         result.truncated = true;
         result.truncatedAt = context.resourceQuota.maxResultsPerQuery;
@@ -300,7 +306,7 @@ export class SecurityManager extends EventEmitter {
         message: `Maximum concurrent queries exceeded: ${usage.activeQueries}/${quota.maxConcurrentQueries}`,
         userId: context.userId,
         timestamp: new Date(),
-        severity: 'medium'
+        severity: 'medium',
       });
     }
 
@@ -311,14 +317,14 @@ export class SecurityManager extends EventEmitter {
         message: `Maximum sessions exceeded: ${usage.activeSessions}/${quota.maxSessionsPerUser}`,
         userId: context.userId,
         timestamp: new Date(),
-        severity: 'medium'
+        severity: 'medium',
       });
     }
 
     // Check rate limiting
     const now = new Date();
     const windowStart = new Date(now.getTime() - 60000); // 1 minute window
-    
+
     if (usage.requestWindow < windowStart) {
       // Reset window
       usage.requestCount = 0;
@@ -331,7 +337,7 @@ export class SecurityManager extends EventEmitter {
         message: `Rate limit exceeded: ${usage.requestCount}/${quota.rateLimitPerMinute} requests per minute`,
         userId: context.userId,
         timestamp: new Date(),
-        severity: 'high'
+        severity: 'high',
       });
     }
 
@@ -353,7 +359,7 @@ export class SecurityManager extends EventEmitter {
           message: 'Unbalanced parentheses in query',
           query,
           timestamp: new Date(),
-          severity: 'medium'
+          severity: 'medium',
         });
       }
 
@@ -364,17 +370,16 @@ export class SecurityManager extends EventEmitter {
           message: 'Invalid Prolog syntax structure',
           query,
           timestamp: new Date(),
-          severity: 'medium'
+          severity: 'medium',
         });
       }
-
     } catch (error) {
       violations.push({
         type: 'syntax_error',
         message: `Syntax validation error: ${error}`,
         query,
         timestamp: new Date(),
-        severity: 'low'
+        severity: 'low',
       });
     }
 
@@ -391,7 +396,7 @@ export class SecurityManager extends EventEmitter {
         activeSessions: 0,
         lastActivity: new Date(),
         requestCount: 0,
-        requestWindow: new Date()
+        requestWindow: new Date(),
       });
     }
     return this.userResourceUsage.get(userId)!;
@@ -412,12 +417,34 @@ export class SecurityManager extends EventEmitter {
    */
   private getAllowedPredicates(context: QuerySecurityContext): string[] {
     const basePredicate = [
-      'member/2', 'append/3', 'length/2', 'reverse/2', 'sort/2',
-      'findall/3', 'bagof/3', 'setof/3', 'forall/2',
-      'between/3', 'succ/2', 'plus/3', 'is/2',
-      '=/2', '\\=/2', '==/2', '\\==/2', '@</2', '@>/2',
-      'var/1', 'nonvar/1', 'atom/1', 'number/1', 'compound/1',
-      'functor/3', 'arg/3', '=../2', 'copy_term/2'
+      'member/2',
+      'append/3',
+      'length/2',
+      'reverse/2',
+      'sort/2',
+      'findall/3',
+      'bagof/3',
+      'setof/3',
+      'forall/2',
+      'between/3',
+      'succ/2',
+      'plus/3',
+      'is/2',
+      '=/2',
+      '\\=/2',
+      '==/2',
+      '\\==/2',
+      '@</2',
+      '@>/2',
+      'var/1',
+      'nonvar/1',
+      'atom/1',
+      'number/1',
+      'compound/1',
+      'functor/3',
+      'arg/3',
+      '=../2',
+      'copy_term/2',
     ];
 
     if (context.role === 'admin') {
@@ -468,7 +495,7 @@ export class SecurityManager extends EventEmitter {
       // Simple parsing - in production, this would be more sophisticated
       const lines = output.trim().split('\n');
       const results = [];
-      
+
       for (const line of lines) {
         if (line.startsWith('ERROR:')) {
           throw new Error(line.substring(6).trim());
@@ -477,11 +504,11 @@ export class SecurityManager extends EventEmitter {
           results.push({ solution: line.trim() });
         }
       }
-      
+
       return {
         status: 'ok',
         results,
-        sandboxed: true
+        sandboxed: true,
       };
     } catch (error) {
       throw new Error(`Failed to parse sandbox output: ${error}`);
@@ -508,9 +535,10 @@ export class SecurityManager extends EventEmitter {
     // Very basic validation - in production, use proper Prolog parser
     const trimmed = query.trim();
     if (!trimmed) return false;
-    
+
     // Check for basic Prolog patterns
-    const prologPattern = /^[a-zA-Z_][a-zA-Z0-9_]*(\([^)]*\))?(,\s*[a-zA-Z_][a-zA-Z0-9_]*(\([^)]*\))?)*\.?$/;
+    const prologPattern =
+      /^[a-zA-Z_][a-zA-Z0-9_]*(\([^)]*\))?(,\s*[a-zA-Z_][a-zA-Z0-9_]*(\([^)]*\))?)*\.?$/;
     return prologPattern.test(trimmed.replace(/\s+/g, ' '));
   }
 
@@ -555,7 +583,7 @@ export class SecurityManager extends EventEmitter {
       activeProcesses: this.activeProcesses.size,
       trackedUsers: this.userResourceUsage.size,
       totalViolations: this.listenerCount('securityViolation'),
-      resourceUsage: this.userResourceUsage
+      resourceUsage: this.userResourceUsage,
     };
   }
 
@@ -583,29 +611,51 @@ export const defaultSecurityConfig: SecurityConfig = {
     fileSystemRestrictions: ['/tmp', '/var/tmp'],
     networkAccess: false,
     dangerousPredicates: [
-      'shell/1', 'system/1', 'exec/1',
-      'open/3', 'close/1', 'read/2', 'write/2',
-      'see/1', 'tell/1', 'seen/0', 'told/0',
-      'halt/0', 'halt/1', 'abort/0',
-      'load_files/1', 'consult/1', 'include/1',
-      'use_module/1', 'use_module/2'
-    ]
+      'shell/1',
+      'system/1',
+      'exec/1',
+      'open/3',
+      'close/1',
+      'read/2',
+      'write/2',
+      'see/1',
+      'tell/1',
+      'seen/0',
+      'told/0',
+      'halt/0',
+      'halt/1',
+      'abort/0',
+      'load_files/1',
+      'consult/1',
+      'include/1',
+      'use_module/1',
+      'use_module/2',
+    ],
   },
   resourceLimits: {
     maxInferenceSteps: 100000,
     maxCallDepth: 1000,
     maxChoicePoints: 10000,
     maxMemoryPerQuery: 100, // MB
-    maxExecutionTime: 30000 // 30 seconds
+    maxExecutionTime: 30000, // 30 seconds
   },
   queryValidation: {
     syntaxChecking: true,
     predicateBlacklist: [
-      'shell', 'system', 'exec', 'halt', 'abort',
-      'open', 'close', 'read', 'write', 'see', 'tell'
+      'shell',
+      'system',
+      'exec',
+      'halt',
+      'abort',
+      'open',
+      'close',
+      'read',
+      'write',
+      'see',
+      'tell',
     ],
-    maxQueryLength: 10000
-  }
+    maxQueryLength: 10000,
+  },
 };
 
 /**
@@ -619,7 +669,7 @@ export function getDefaultResourceQuota(role: string): ResourceQuota {
       maxQueryTime: 300000, // 5 minutes
       maxMemoryPerQuery: 500, // MB
       maxResultsPerQuery: 10000,
-      rateLimitPerMinute: 1000
+      rateLimitPerMinute: 1000,
     },
     agent: {
       maxConcurrentQueries: 10,
@@ -627,7 +677,7 @@ export function getDefaultResourceQuota(role: string): ResourceQuota {
       maxQueryTime: 60000, // 1 minute
       maxMemoryPerQuery: 100, // MB
       maxResultsPerQuery: 1000,
-      rateLimitPerMinute: 60
+      rateLimitPerMinute: 60,
     },
     readonly: {
       maxConcurrentQueries: 5,
@@ -635,7 +685,7 @@ export function getDefaultResourceQuota(role: string): ResourceQuota {
       maxQueryTime: 30000, // 30 seconds
       maxMemoryPerQuery: 50, // MB
       maxResultsPerQuery: 500,
-      rateLimitPerMinute: 30
+      rateLimitPerMinute: 30,
     },
     limited: {
       maxConcurrentQueries: 2,
@@ -643,8 +693,8 @@ export function getDefaultResourceQuota(role: string): ResourceQuota {
       maxQueryTime: 10000, // 10 seconds
       maxMemoryPerQuery: 25, // MB
       maxResultsPerQuery: 100,
-      rateLimitPerMinute: 10
-    }
+      rateLimitPerMinute: 10,
+    },
   };
 
   return quotas[role] || quotas['limited'];
