@@ -219,6 +219,10 @@ export class PrologDebugger extends NodeEventEmitter<PrologDebuggerEventMap> {
   // Initialize Prolog debugger
   public initPrologDebugger() {
     // Obtain the directory path for the 'debugger' module and escape special characters
+    const { fileURLToPath } = await import('node:url');
+    const { dirname } = await import('node:path');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
     const dbg = jsesc(PlatformUtils.resolvePath(__dirname, 'debugger'));
     console.log(dbg);
     // Write Prolog commands to the process stdin for initialization
@@ -226,8 +230,8 @@ export class PrologDebugger extends NodeEventEmitter<PrologDebuggerEventMap> {
       this._prologProc.stdin.write(`
             use_module('${dbg}').\n
             prolog_debugger:load_source_file('${jsesc(
-              PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
-            )}').
+        PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
+      )}').
               `);
     }
   }
@@ -280,9 +284,8 @@ export class PrologDebugger extends NodeEventEmitter<PrologDebuggerEventMap> {
           'code' in error &&
           (error as any).code === 'ENOENT'
         ) {
-          message = `Cannot debug the prolog file. The Prolog executable '${
-            this._launchRequestArguments.runtimeExecutable || ''
-          }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
+          message = `Cannot debug the prolog file. The Prolog executable '${this._launchRequestArguments.runtimeExecutable || ''
+            }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
 
           // Show enhanced error message with installation guidance
           const action = await window.showErrorMessage(
@@ -313,13 +316,12 @@ export class PrologDebugger extends NodeEventEmitter<PrologDebuggerEventMap> {
         } else {
           message =
             error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof (error as any).message === 'string'
+              typeof error === 'object' &&
+              'message' in error &&
+              typeof (error as any).message === 'string'
               ? (error as any).message
-              : `Failed to run swipl using path: ${
-                  this._launchRequestArguments.runtimeExecutable || ''
-                }. Reason is unknown.`;
+              : `Failed to run swipl using path: ${this._launchRequestArguments.runtimeExecutable || ''
+              }. Reason is unknown.`;
         }
         // Output the error message to the debug session and throw an error
         this._debugSession.debugOutput('\n' + message);

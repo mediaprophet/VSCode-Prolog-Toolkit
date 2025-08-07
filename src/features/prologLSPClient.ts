@@ -3,8 +3,8 @@
 import * as path from 'path';
 import type { ExtensionContext } from 'vscode';
 import { window, workspace } from 'vscode';
-import type { LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
-import { LanguageClient, RevealOutputChannelOn, TransportKind } from 'vscode-languageclient/node';
+import type { LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node.js';
+import { LanguageClient, RevealOutputChannelOn, TransportKind } from 'vscode-languageclient/node.js';
 
 export class PrologLSPClient {
   private client: LanguageClient | null = null;
@@ -22,7 +22,7 @@ export class PrologLSPClient {
     try {
       // The server is implemented as a separate Node.js module
       const serverModule = this.context.asAbsolutePath(
-        path.join('out', 'pub', 'features', 'prologLSPServer.js')
+        path.join('out', 'pub', 'features', 'prologLSPServerRefactored.js')
       );
 
       // The debug options for the server
@@ -266,10 +266,10 @@ export class PrologLSPClient {
     let start = char;
     let end = char;
 
-    while (start > 0 && /[a-zA-Z0-9_]/.test((line[start - 1]) ?? '')) {
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1] ?? '')) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test((line[end]) ?? '')) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end] ?? '')) {
       end++;
     }
 

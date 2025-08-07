@@ -130,6 +130,40 @@ export class ExtensionManager {
   private registerExtensionCommands(context: ExtensionContext): void {
     const myCommands = [
       {
+        command: 'prolog.dumpState',
+        callback: () => {
+          const state = {
+            backendReady: !!this.prologBackend,
+            lspClientReady: !!this.prologLSPClient,
+            apiServerReady: !!this.apiServer,
+            externalWebSocketManagerReady: !!this.externalWebSocketManager,
+            chatHandlerReady: !!this.chatHandler,
+            telemetryReady: !!this.telemetry,
+            installationManagerReady: !!this.installationManager,
+            configurationManagerReady: !!this.configurationManager,
+            workspaceFolders: workspace.workspaceFolders?.map(f => f.uri.fsPath) || [],
+            extensionUri: context.extensionUri?.fsPath,
+            activationTime: new Date().toISOString(),
+          };
+          const output = JSON.stringify(state, null, 2);
+          const channel = window.createOutputChannel('Prolog Extension Debug');
+          channel.appendLine('--- Prolog Extension State Dump ---');
+          channel.appendLine(output);
+          channel.show(true);
+        },
+      },
+      {
+        command: 'prolog.showActivationLog',
+        callback: () => {
+          const channel = window.createOutputChannel('Prolog Extension Debug');
+          channel.appendLine('--- Activation Log ---');
+          channel.appendLine('Extension activated at: ' + new Date().toISOString());
+          channel.appendLine('Workspace folders: ' + (workspace.workspaceFolders?.map(f => f.uri.fsPath).join(', ') || 'none'));
+          channel.appendLine('Extension URI: ' + context.extensionUri?.fsPath);
+          channel.show(true);
+        },
+      },
+      {
         command: 'prolog.load.document',
         callback: () => {
           PrologTerminal.loadDocument();

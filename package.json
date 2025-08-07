@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "vscode-prolog-toolkit",
   "displayName": "VSCode Prolog Toolkit",
   "description": "Advanced Prolog language support, debugging, and tooling for Visual Studio Code.",
@@ -6,7 +7,6 @@
   "publisher": "mediaprophet",
   "icon": "images/vsplogo.png",
   "license": "MIT",
-  "type": "module",
   "engines": {
     "vscode": "^1.102.0",
     "node": ">=18.0.0"
@@ -65,23 +65,7 @@
     "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues"
   },
   "main": "./out/pub/extension.js",
-  "activationEvents": [
-    "onView:prologActivity",
-    "onView:prologDashboard",
-    "onView:prologQueries",
-    "onView:prologFiles",
-    "onLanguage:prolog",
-    "onCommand:prolog.openSettings",
-    "onCommand:prolog.setupWizard",
-    "onCommand:prolog.refreshInstallation",
-    "onCommand:prolog.testInstallation",
-    "onCommand:prolog.autoDetectPath",
-    "onCommand:prolog.newFile",
-    "onCommand:prolog.rerunQuery",
-    "onCommand:prolog.clearQueryHistory",
-    "onCommand:prolog.viewLogs",
-    "onCommand:prolog.reportIssue"
-  ],
+  "activationEvents": [],
   "contributes": {
     "languages": [
       {
@@ -764,16 +748,13 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "build": "npm run esbuild && npm run copy-webview-assets && npm --prefix mcp-server run build || true",
-    "build:watch": "npm run esbuild-watch",
+    "vscode:prepublish": "npm run build",
+    "build": "node ./esbuild.mjs && npm run copy-webview-assets && npm --prefix mcp-server run build || true",
+    "build:watch": "node ./esbuild.mjs --watch",
     "lint": "eslint src --ext ts",
     "lint:fix": "eslint src --ext ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
-    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServerRefactored.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --external:events --external:node:events --external:child_process --external:node:child_process --external:fs --external:node:fs --external:path --external:node:path --external:os --external:node:os --external:crypto --external:node:crypto --external:util --external:node:util --external:stream --external:node:stream --external:url --external:node:url --external:querystring --external:node:querystring --external:http --external:node:http --external:https --external:node:https --external:net --external:node:net --external:tls --external:node:tls --external:zlib --external:node:zlib --format=esm --platform=node",
-    "esbuild": "npm run -S esbuild-base -- --sourcemap",
-    "esbuild-watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "compile": "tsc -p tsconfig.build.json && npm run copy-webview-assets && npm --prefix mcp-server run compile || true",
     "postcompile": "if not exist out\\pub mkdir out\\pub && copy src\\prolog_json_server.pl out\\pub\\prolog_json_server.pl && copy prolog.configuration.json out\\pub\\prolog.configuration.json",
     "compile:watch": "tsc -watch -p tsconfig.build.json",

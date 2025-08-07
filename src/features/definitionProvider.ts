@@ -1,18 +1,14 @@
 import * as cp from 'child_process';
 import jsesc from 'jsesc';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as path from 'path';
-import type {
-  CancellationToken,
-  DefinitionProvider,
-  TextDocument
-} from 'vscode';
-import {
-  Location,
-  Position,
-  Uri,
-  workspace
-} from 'vscode';
+import type { CancellationToken, DefinitionProvider, TextDocument } from 'vscode';
+import { Location, Position, Uri, workspace } from 'vscode';
 import { Utils } from '../utils/utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 export class PrologDefinitionProvider implements DefinitionProvider {
   public provideDefinition(
     doc: TextDocument,

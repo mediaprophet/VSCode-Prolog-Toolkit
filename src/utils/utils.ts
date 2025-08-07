@@ -337,6 +337,8 @@ export class Utils {
         let mod: string[];
         switch (Utils.DIALECT) {
           case "swi": {
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = dirname(__filename);
             const fm = path.resolve(`${__dirname}/findmodule.pl`);
             mod = Utils.execPrologSync(
               ["-q", fm],
@@ -506,9 +508,9 @@ export class Utils {
     } else {
       console.log(
         'UtilsExecSyncError: ' +
-          (prologProcess && prologProcess.stderr
-            ? prologProcess.stderr.toString()
-            : 'Unknown error')
+        (prologProcess && prologProcess.stderr
+          ? prologProcess.stderr.toString()
+          : 'Unknown error')
       );
       return [];
     }

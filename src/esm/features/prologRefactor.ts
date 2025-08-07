@@ -1,0 +1,457 @@
+import fg from 'fast-glob';
+import * as fs from 'fs';
+import jsesc from 'jsesc';
+import { spawn } from 'process-promises';
+import {
+  Location,
+  type OutputChannel,
+  type Position,
+  Range,
+  type TextDocument,
+  Uri,
+  WorkspaceEdit,
+  window,
+  workspace,
+} from 'vscode';
+import type { IPredicate } from '../utils/utils.js';
+import { Utils } from '../utils/utils.js';
+// import { resolve } from 'path';
+import * as path from 'path';
+
+interface IClauseRefs {
+  [file: string]: { [clauseLine: number]: number };
+}
+
+export class PrologRefactor {
+  private _executable: string;
+  private _locations: Location[] = [];
+  private _clauseRefs: IClauseRefs = {};
+  private _outputChannel: OutputChannel;
+  private _isBuiltin: boolean = false;
+  private _defLocFound: boolean = false;
+
+  // pick predicate at pos in doc
+  constructor() {
+    this._executable = Utils.RUNTIMEPATH || '';
+    this._outputChannel = window.createOutputChannel('PrologFormatter');
+    this._locations = [];
+    this._clauseRefs = {};
+  }
+
+  // Initiates the refactoring process for the predicate currently under the cursor
+  public refactorPredUnderCursor() {
+    // Get the current document and cursor position
+    if (!window.activeTextEditor) {
+      return;
+    }
+    const doc: TextDocument = window.activeTextEditor.document;
+    const pos: Position = window.activeTextEditor.selection.active;
+
+    const pred: IPredicate = Utils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    // Find all references to the predicate
+    this.findFilesAndRefs(pred, true, doc).then(refLocs => {
+      // Check if the predicate is a built-in predicate
+      if (this._isBuiltin) {
+        // If built-in, ask for confirmation before refactoring references
+        window
+          .showInformationMessage(
+            `'${pred.pi}' is a builtin predicate, so its definition cannot be refactored. Are you still SURE to refactor its all references?`,
+            'yes',
+            'no'
+          )
+          .then(answer => {
+            // If the user confirms, apply the refactoring
+            if (answer !== 'yes') {
+              return;
+            }
+            this.applyRefactoring(pred, refLocs);
+          });
+      } else {
+        // If not built-in, ask for confirmation to refactor both definition and references
+        window
+          .showInformationMessage(
+            `'Are you SURE to refactor '${pred.pi}' in all its references and definition? You'd better to commit current stage of the VCS to rollback refactoring if necessary.`,
+            'yes',
+            'no'
+          )
+          .then(answer => {
+            // If the user confirms, apply the refactoring
+            if (answer !== 'yes') {
+              return;
+            }
+            this.applyRefactoring(pred, refLocs);
+          });
+      }
+    });
+  }
+
+  // Applies the refactoring by replacing all occurrences of the predicate with a new name in the given reference locations
+  private async applyRefactoring(pred: IPredicate, refLocs: Location[]) {
+    // Prompt the user to input a new predicate name
+    const newPredName = await window.showInputBox({
+      prompt: `Input new predicate name to replace ${pred.functor}`,
+      placeHolder: pred.functor,
+      ignoreFocusOut: true,
+      validateInput: value => {
+        // Validate the input for the new predicate name
+        if (/\s/.test(value) && !/^'[^']+'$/.test(value)) {
+          return 'Predicate name must not contain any spaces, tab and new line.';
+        }
+        if (/^[^a-z']/.test(value) || (/^'[^a-z]/.test(value) && !/'$/.test(value))) {
+          return 'Illegal starting letter in predicate name.';
+        }
+        return null; // Input is valid
+      },
+    });
+    // Replace occurrences of the old predicate with the new name in each reference location
+    await Promise.all(
+      refLocs.map(async refLoc => {
+        if (newPredName) {
+          const edit = new WorkspaceEdit();
+          edit.replace(refLoc.uri, refLoc.range, newPredName);
+          return await Promise.resolve(workspace.applyEdit(edit));
+        }
+        return Promise.resolve(true);
+      })
+    );
+    // Save all open documents after refactoring
+    await Promise.all(
+      workspace.textDocuments.map(async doc => {
+        return await doc.save();
+      })
+    );
+
+    return;
+  }
+
+  // Finds all references to the predicate currently under the cursor
+  public findAllRefs(): Promise<Location[]> {
+    // Get the current document and cursor position
+    if (!window.activeTextEditor) {
+      return Promise.resolve([]);
+    }
+    const doc: TextDocument = window.activeTextEditor.document;
+    const pos: Position = window.activeTextEditor.selection.active;
+
+    const pred: IPredicate = Utils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    return this.findFilesAndRefs(pred, false, doc); // Call the findFilesAndRefs method to find references and return the result
+  }
+
+  // Finds references to the given predicate in multiple files
+  public async findFilesAndRefs(
+    pred: IPredicate,
+    includingDefLoc = false,
+    doc: TextDocument
+  ): Promise<Location[]> {
+    // Call the findFilesAndRefs1 method to perform the actual search
+    return await this.findFilesAndRefs1(pred, includingDefLoc, doc);
+  }
+
+  // Performs the search for references to the given predicate in multiple files
+  public async findFilesAndRefs1(
+    pred: IPredicate,
+    includingDefLoc = false,
+    doc: TextDocument
+  ): Promise<Location[]> {
+    // Save all open documents before searching
+    await Promise.all(
+      workspace.textDocuments.map(async doc => {
+        return await doc.save();
+      })
+    );
+    // Use fast-glob to locate files containing references to the predicate
+    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+      return this._locations;
+    }
+    const root =
+      workspace.workspaceFolders &&
+      workspace.workspaceFolders.length > 0 &&
+      workspace.workspaceFolders[0]?.uri?.fsPath
+        ? workspace.workspaceFolders[0].uri.fsPath
+        : '';
+    const patterns = ['**/*.pl', '**/*.ecl'];
+    const filePaths = await fg(patterns, { cwd: root, absolute: true });
+    for (const file of filePaths) {
+      // Read file and check if it contains the predicate functor
+      const content = await fs.promises.readFile(file, 'utf8');
+      if (content.includes(pred.functor)) {
+        const defLoc = includingDefLoc && !this._defLocFound;
+        await this.loadFileAndFindRefs(pred, file, defLoc, doc);
+      }
+    }
+    return this._locations; // Return the array of reference locations
+  }
+
+  // Loads the Prolog file and finds references based on the Prolog dialect
+  private async loadFileAndFindRefs(
+    pred: IPredicate,
+    file: string,
+    includingDefLoc = false,
+    doc: TextDocument
+  ) {
+    let input: string = '';
+    let args: string[] = [];
+    // Construct the appropriate input and arguments based on the Prolog dialect
+    switch (Utils.DIALECT) {
+      case 'swi': {
+        const pfile = jsesc(path.resolve(`${__dirname}/features/findallrefs_swi`));
+        input = `
+          use_module('${pfile}').
+          load_files('${file}').
+          findrefs:findrefs(${pred.pi}, ${includingDefLoc}).
+          halt.
+        `;
+        args = ['-q'];
+        break;
+      }
+      case 'ecl': {
+        const efile = jsesc(path.resolve(`${__dirname}/features/findallrefs`));
+        args = ['-f', efile];
+        input = `digout_predicate('${file}', ${pred.pi}). `;
+        break;
+      }
+      default:
+        break;
+    }
+
+    try {
+      // Spawn a child process to execute Prolog queries
+      if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+        return;
+      }
+      const cwd =
+        workspace.workspaceFolders &&
+        workspace.workspaceFolders.length > 0 &&
+        workspace.workspaceFolders[0]?.uri?.fsPath
+          ? workspace.workspaceFolders[0].uri.fsPath
+          : '';
+      let stdout = '';
+      let stderr = '';
+      await new Promise<void>((resolve, reject) => {
+        spawn(this._executable, args, { cwd })
+          .on('stdout', (line: string) => {
+            stdout += line;
+          })
+          .on('stderr', (line: string) => {
+            stderr += line;
+          })
+          .then(() => {
+            switch (Utils.DIALECT) {
+              case 'swi':
+                this.findRefsFromOutputSwi(pred, stdout, doc);
+                break;
+              case 'ecl':
+                this.findRefsFromOutputEcl(file, pred.pi, stdout);
+                break;
+              default:
+                break;
+            }
+            if (stderr.length > 0) {
+              this._outputChannel.append(stderr + '\n');
+              this._outputChannel.show(true);
+            }
+            resolve();
+          })
+          .catch(err => {
+            reject(err);
+          });
+      });
+    } catch (error: unknown) {
+      // Handle specific error cases (e.g., executable not found) and display error messages
+      let message: string = '';
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as any).code === 'ENOENT'
+      ) {
+        message = `Cannot debug the prolog file. The Prolog executable was not found. Correct the 'prolog.executablePath' configure please.`;
+      } else {
+        message =
+          error &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof (error as any).message === 'string'
+            ? (error as any).message
+            : `Failed to run swipl using path: ${this._executable}. Reason is unknown.`;
+      }
+    }
+  }
+
+  // Parses the output from SWI-Prolog and extracts reference information
+  private findRefsFromOutputSwi(pred: IPredicate, output: string, doc: TextDocument) {
+    // Check if the predicate is a built-in or foreign predicate
+    const docContent = doc.getText();
+    if (/{"reference":"built_in or foreign"}/.test(output)) {
+      this._isBuiltin = true;
+    }
+    // Check if a definition location is found in the output
+    if (/{"reference":"definition location found"}/.test(output)) {
+      this._defLocFound = true;
+    }
+
+    let pred_void = pred.functor + '(?=\\(';
+    for (let i = 0; i < pred.arity; i++) {
+      pred_void = pred_void + "[a-zA-Z0-9_,$&+,:;=?@#|'<>.^*()%!-:[\\]\\s]*";
+      if (i < pred.arity - 1) {
+        pred_void = pred_void + ',';
+      }
+    }
+    pred_void = pred_void + '\\))|' + pred.functor + '(?=/' + pred.arity + ')';
+    const regexp = new RegExp(pred_void, 'gm');
+    const array = [...docContent.matchAll(regexp)]; // Extract occurrences of the predicate in the document
+    let locations = array.map(
+      elem =>
+        new Location(
+          Uri.file(doc.fileName),
+          new Range(
+            doc.positionAt(elem.index || 0),
+            doc.positionAt((elem.index || 0) + (elem[0]?.length || 0))
+          )
+        )
+    ); // Create an array to store Location objects
+
+    const regexpModule =
+      /^\s*:-\s*use_module\(([a-zA-Z0-9_/]*|("|')[a-zA-Z0-9_/.]*("|'))\s*((,\s*[/a-zA-Z0-9[\]]*\s*\)|\))\s*\.)/gm; // Define a regular expression for finding "use_module" declarations in the document
+    const arrayModule = [...docContent.matchAll(regexpModule)]; // Extract "use_module" declarations from the document
+    const filenameParts = doc.fileName.split('.');
+    const prolog = filenameParts.length > 1 ? filenameParts[1] : 'pl'; // Extract the Prolog dialect from the file extension
+    // Iterate through "use_module" declarations
+    for (let i = 0; i < arrayModule.length; i++) {
+      const modArr = arrayModule[i];
+      if (!modArr || !Array.isArray(modArr) || typeof modArr[1] !== 'string') {
+        continue;
+      }
+      var modpath = modArr[1].replace(new RegExp("'", 'gm'), '');
+      modpath = modpath.replace(new RegExp('"', 'gm'), '');
+      var text = '';
+      try {
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+          continue;
+        }
+        text = fs.readFileSync(
+          (workspace.workspaceFolders &&
+          workspace.workspaceFolders.length > 0 &&
+          workspace.workspaceFolders[0]?.uri?.fsPath
+            ? workspace.workspaceFolders[0].uri.fsPath
+            : '') +
+            '/' +
+            modpath +
+            '.' +
+            prolog,
+          'utf8'
+        ); // Read the content of the referenced module file
+      } catch (error: unknown) {
+        console.error('Error reading file:', error);
+      }
+      const array = [...text.matchAll(regexp)]; // Extract occurrences of the predicate in the referenced module file
+      if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
+        locations = locations.concat(
+          array.map(
+            elem =>
+              new Location(
+                Uri.file(
+                  (workspace.workspaceFolders &&
+                  workspace.workspaceFolders.length > 0 &&
+                  workspace.workspaceFolders[0]?.uri?.fsPath
+                    ? workspace.workspaceFolders[0].uri.fsPath
+                    : '') +
+                    '/' +
+                    modpath +
+                    '.' +
+                    prolog
+                ),
+                new Range(
+                  Utils.findLineColForByte(text, elem.index),
+                  Utils.findLineColForByte(text, elem.index + elem[0].length)
+                )
+              )
+          )
+        ); // Append the new occurrences to the locations array
+      }
+    }
+
+    this._locations = locations;
+    /*let refReg = /\{"reference":\s*(\{.+?\})\}/g;// Regular expression to match reference information in the output
+    // Attempt to match and parse each reference in the output
+    let match: RegExpExecArray = refReg.exec(output);
+    while (match) {
+      // Parse the reference information from the matched JSON
+      let ref: { file: string; line: number; char: number } = JSON.parse(
+        match[1]
+      );
+      // Relocate if the reference points to the start of the clause
+      let lines = fs
+        .readFileSync(ref.file)
+        .toString()
+        .split("\n");
+      let predName = pi.split("/")[0];
+      // Extract the predicate name in case of a module
+      if (predName.indexOf(":") > -1) {
+        predName = predName.split(":")[1];
+      }
+      // Check if the reference is not at the beginning of the clause
+      if (!new RegExp("^" + predName).test(lines[ref.line].slice(ref.char))) {
+        let clauseStart = ref.line;
+        let start = ref.line;
+        // Adjust the start based on previous clause references
+        if (
+          this._clauseRefs[ref.file] &&
+          this._clauseRefs[ref.file][clauseStart]
+        ) {
+          start = this._clauseRefs[ref.file][clauseStart] + 1;
+        }
+        let str = lines.slice(start).join("\n");
+        let index = str.indexOf(predName);
+        // If the predicate name is found, adjust the reference location
+        if (index > -1) {
+          str = str.slice(0, index);
+          let strLines = str.split("\n");
+          ref.line = start + strLines.length - 1;
+          ref.char = strLines[strLines.length - 1].length;
+          // Update the clause references with the adjusted location
+          if (this._clauseRefs[ref.file]) {
+            this._clauseRefs[ref.file][clauseStart] = ref.line;
+          } else {
+            this._clauseRefs[ref.file] = {};
+            this._clauseRefs[ref.file][clauseStart] = ref.line;
+          }
+        }
+      }
+      // Add the adjusted reference location to the _locations array
+      this._locations.push(
+        new Location(
+          Uri.file(jsesc(path.resolve(ref.file))),
+          new Range(ref.line, ref.char, ref.line, ref.char + predName.length)
+        )
+      );
+      match = refReg.exec(output);// Attempt to find the next reference in the output
+    }*/
+  }
+
+  //Parses the output from ECLiPSe Prolog and extracts reference information
+  private findRefsFromOutputEcl(file: string, pi: string, output: string) {
+    const match = output.match(/references:\[(.*)\]/); // Extract references information from the output using a regular expression
+    // Return if no matches are found or the references array is empty
+    if (!match || match[1] === '') {
+      return;
+    }
+    const predSplit = pi.split(':');
+    const predLen =
+      predSplit.length > 1 && predSplit[1] ? (predSplit[1].split('/')[0]?.length ?? 0) : 0; // Extract the length of the predicate name
+    const locs = match && match[1] ? match[1].split(',') : []; // Split the references string into an array of location strings
+    workspace.openTextDocument(Uri.file(file)).then(doc => {
+      // Open the Prolog document to map character positions to positions in the file
+      // Iterate through each location string and create Location objects
+      locs.forEach(fromS => {
+        const from = parseInt(fromS);
+        this._locations.push(
+          new Location(
+            Uri.file(file),
+            new Range(doc.positionAt(from), doc.positionAt(from + predLen))
+          )
+        );
+      });
+    });
+  }
+}

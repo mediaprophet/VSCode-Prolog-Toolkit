@@ -1,0 +1,99 @@
+import * as cp from 'child_process';
+import jsesc from 'jsesc';
+import * as path from 'path';
+import type { CancellationToken, DefinitionProvider, TextDocument } from 'vscode';
+import { Location, Position, Uri, workspace } from 'vscode';
+import { Utils } from '../utils/utils.js';
+export class PrologDefinitionProvider implements DefinitionProvider {
+  public provideDefinition(
+    doc: TextDocument,
+    position: Position,
+    _token: CancellationToken
+  ): Location | undefined | Promise<Location | undefined> {
+    let location: Location | undefined = undefined;
+    const pred = Utils.getPredicateUnderCursor(doc, position);
+    if (!pred) {
+      return undefined;
+    }
+    let args: string[] = [],
+      prologCode: string,
+      result: string[] = [],
+      predToFind: string,
+      runOptions: cp.SpawnSyncOptions;
+    const fileLineRe = /File:(.+);Line:(\d+)/;
+    switch (Utils.DIALECT) {
+      case 'swi': {
+        let pred_void = pred.functor + '(';
+        for (let i = 0; i < pred.arity; i++) {
+          pred_void = pred_void + '_';
+          if (i < pred.arity - 1) {
+            pred_void = pred_void + ',';
+          }
+        }
+        pred_void = pred_void + ')';
+        args = ['-q', doc.fileName];
+        prologCode = `
+        source_location:-
+          predicate_property(${pred_void}, file(File)),
+          predicate_property(${pred_void}, line_count(Line)),
+          format("File:~s;Line:~d~n", [File, Line]).
+          `;
+        if (doc.isDirty) {
+          doc.save().then(_ => {
+            result = Utils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
+          });
+        } else {
+          result = Utils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
+        }
+        break;
+      }
+      case 'ecl': {
+        args = [];
+        const lc = path.resolve(`${__dirname}/locate_clause`);
+        const piParts = pred.pi.split(':');
+        predToFind = piParts.length > 1 ? piParts[1]! : pred.pi;
+        if (!predToFind) {
+          return undefined;
+        }
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+          return undefined;
+        }
+        if (!Utils.RUNTIMEPATH) {
+          return undefined;
+        }
+        prologCode = `ensure_loaded(['${lc}']),
+          source_location('${jsesc(doc.fileName)}', ${predToFind}).
+          `;
+        runOptions = {
+          cwd: workspace.workspaceFolders[0]!.uri.fsPath,
+          encoding: 'utf8',
+          input: prologCode,
+        };
+        if (doc.isDirty) {
+          doc.save().then(_ => {
+            const syncPro = cp.spawnSync(Utils.RUNTIMEPATH!, args, runOptions);
+            if (syncPro.status === 0) {
+              const matchResult = syncPro.stdout.toString().match(fileLineRe);
+              result = matchResult ? Array.from(matchResult) : [];
+            }
+          });
+        } else {
+          const syncPro = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions);
+          if (syncPro.status === 0) {
+            const matchResult = syncPro.stdout.toString().match(fileLineRe);
+            result = matchResult ? Array.from(matchResult) : [];
+          }
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    if (result && result.length >= 3 && result[1] && result[2]) {
+      const fileName: string = result[1];
+      const lineNum: number = parseInt(result[2]);
+      location = new Location(Uri.file(fileName), new Position(lineNum - 1, 0));
+    }
+    return location;
+  }
+}

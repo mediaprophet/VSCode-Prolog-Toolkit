@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "nodenext",
     "target": "es2022",
-    "outDir": "out",
+    "outDir": "out/esm",
     "lib": [
       "es2022"
     ],
     "sourceMap": true,
-    "rootDir": ".",
+    "rootDir": "src/esm",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "downlevelIteration": true,
@@ -22,18 +22,19 @@
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "nodenext",
     "verbatimModuleSyntax": true,
     "types": [
       "node"
     ],
+    "noEmit": false
   },
   "include": [
-    "src/**/*"
+    "src/esm/**/*"
   ],
   "exclude": [
     "node_modules",

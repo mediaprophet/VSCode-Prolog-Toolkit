@@ -1,3 +1,8 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 // Interface for predicate help result
 export interface PredicateHelpResult {
   summary?: string;
@@ -254,11 +259,11 @@ export class PrologBackend extends NodeEventEmitter<BackendEventMap> {
   stop(intentional = true) {
     this.log(
       '[DEBUG] stop() called. this.process=' +
-        !!this.process +
-        ', intentionalStop=' +
-        this.intentionalStop +
-        ', param=' +
-        intentional
+      !!this.process +
+      ', intentionalStop=' +
+      this.intentionalStop +
+      ', param=' +
+      intentional
     );
     if (this.process) {
       this.intentionalStop = intentional;
@@ -1185,6 +1190,10 @@ export class PrologBackend extends NodeEventEmitter<BackendEventMap> {
       }
     }
 
+    const { fileURLToPath } = await import('node:url');
+    const { dirname } = await import('node:path');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
     const serverPath = PlatformUtils.resolvePath(__dirname, 'prolog_json_server.pl');
     // Use proper escaping for cross-platform paths in Prolog
     const prologPath = serverPath.replace(/\\/g, '/').replace(/'/g, "''");
