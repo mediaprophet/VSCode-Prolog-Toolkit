@@ -1,13 +1,17 @@
-import { createConnection, DidChangeConfigurationNotification } from 'vscode-languageserver/node';
-import { PrologSettings, defaultSettings } from './types';
+import type { PrologSettings } from './types.js';
+import { defaultSettings } from './types.js';
+// Use type-only import for createConnection type
+import type { Connection } from 'vscode-languageserver';
+// DidChangeConfigurationNotification is a value, import from 'vscode-languageserver' (ESM-compatible)
+import { DidChangeConfigurationNotification } from 'vscode-languageserver';
 
 export class ConfigurationManager {
   private globalSettings: PrologSettings = defaultSettings;
   private documentSettings: Map<string, Promise<PrologSettings>> = new Map();
   private hasConfigurationCapability = false;
-  private connection: ReturnType<typeof createConnection>;
+  private connection: Connection;
 
-  constructor(connection: ReturnType<typeof createConnection>) {
+  constructor(connection: Connection) {
     this.connection = connection;
   }
 
@@ -47,7 +51,8 @@ export class ConfigurationManager {
       });
       this.documentSettings.set(resource, result);
     }
-    return result;
+    // Always return a Promise<PrologSettings>
+    return result ?? Promise.resolve(this.globalSettings);
   }
 
   public getGlobalSettings(): Promise<PrologSettings> {

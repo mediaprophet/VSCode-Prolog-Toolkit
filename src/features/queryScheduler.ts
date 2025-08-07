@@ -1,6 +1,7 @@
-import { EventEmitter } from 'events';
-import { ConcurrencyManager, QueryPriority } from './concurrencyManager';
-import { QueryHistoryManager } from './queryHistoryManager';
+import * as vscode from 'vscode';
+import type { QueryPriority } from './concurrencyManager.js';
+import { ConcurrencyManager } from './concurrencyManager.js';
+import { QueryHistoryManager } from './queryHistoryManager.js';
 
 export interface ScheduledQuery {
   id: string;
@@ -49,10 +50,67 @@ export interface SchedulerStats {
 /**
  * Advanced query scheduling and queuing system
  */
-export class QueryScheduler extends EventEmitter {
+export class QueryScheduler {
+  /**
+   * Node.js-style event API compatibility: .on(eventName, handler)
+   */
+  public on(eventName: string, handler: (...args: any[]) => void): void {
+    switch (eventName) {
+      case 'queryScheduled':
+        this.onQueryScheduled(handler);
+        break;
+      case 'queryScheduleCancelled':
+        this.onQueryScheduleCancelled(handler);
+        break;
+      case 'querySchedulePaused':
+        this.onQuerySchedulePaused(handler);
+        break;
+      case 'queryScheduleResumed':
+        this.onQueryScheduleResumed(handler);
+        break;
+      case 'queryScheduleExecutionStarted':
+        this.onQueryScheduleExecutionStarted(handler);
+        break;
+      case 'queryScheduleExecutionFailed':
+        this.onQueryScheduleExecutionFailed(handler);
+        break;
+      case 'queryScheduleCompleted':
+        this.onQueryScheduleCompleted(handler);
+        break;
+      case 'queryScheduleRecurring':
+        this.onQueryScheduleRecurring(handler);
+        break;
+      case 'queryScheduleError':
+        this.onQueryScheduleError(handler);
+        break;
+      default:
+        throw new Error(`Unknown event: ${eventName}`);
+    }
+  }
+  private _onQueryScheduled = new vscode.EventEmitter<ScheduledQuery>();
+  public readonly onQueryScheduled = this._onQueryScheduled.event;
+  private _onQueryScheduleCancelled = new vscode.EventEmitter<string>();
+  public readonly onQueryScheduleCancelled = this._onQueryScheduleCancelled.event;
+  private _onQuerySchedulePaused = new vscode.EventEmitter<string>();
+  public readonly onQuerySchedulePaused = this._onQuerySchedulePaused.event;
+  private _onQueryScheduleResumed = new vscode.EventEmitter<string>();
+  public readonly onQueryScheduleResumed = this._onQueryScheduleResumed.event;
+  private _onQueryScheduleExecutionStarted = new vscode.EventEmitter<ScheduledQuery>();
+  public readonly onQueryScheduleExecutionStarted = this._onQueryScheduleExecutionStarted.event;
+  private _onQueryScheduleExecutionFailed = new vscode.EventEmitter<{
+    query: ScheduledQuery;
+    error: unknown;
+  }>();
+  public readonly onQueryScheduleExecutionFailed = this._onQueryScheduleExecutionFailed.event;
+  private _onQueryScheduleCompleted = new vscode.EventEmitter<ScheduledQuery>();
+  public readonly onQueryScheduleCompleted = this._onQueryScheduleCompleted.event;
+  private _onQueryScheduleRecurring = new vscode.EventEmitter<ScheduledQuery>();
+  public readonly onQueryScheduleRecurring = this._onQueryScheduleRecurring.event;
+  private _onQueryScheduleError = new vscode.EventEmitter<{ queryId: string; error: unknown }>();
+  public readonly onQueryScheduleError = this._onQueryScheduleError.event;
   private options: SchedulerOptions;
   private concurrencyManager: ConcurrencyManager;
-  private historyManager?: QueryHistoryManager;
+  private historyManager: QueryHistoryManager | undefined;
   private scheduledQueries: Map<string, ScheduledQuery> = new Map();
   private schedulerInterval?: ReturnType<typeof setInterval>;
   private dependencyGraph: Map<string, Set<string>> = new Map(); // queryId -> dependents
@@ -63,7 +121,7 @@ export class QueryScheduler extends EventEmitter {
     historyManager?: QueryHistoryManager,
     options: Partial<SchedulerOptions> = {}
   ) {
-    super();
+    // no super();
 
     this.concurrencyManager = concurrencyManager;
     this.historyManager = historyManager;
@@ -116,7 +174,7 @@ export class QueryScheduler extends EventEmitter {
       createdAt: Date.now(),
       executionCount: 0,
       status: 'scheduled',
-      metadata,
+      metadata: metadata || {},
     };
 
     // Validate schedule configuration
@@ -134,7 +192,7 @@ export class QueryScheduler extends EventEmitter {
 
     this.scheduledQueries.set(id, scheduledQuery);
 
-    this.emit('queryScheduled', scheduledQuery);
+    this._onQueryScheduled.fire(scheduledQuery);
     console.log(`[QueryScheduler] Scheduled query ${id} (type: ${scheduleType})`);
 
     // If it's an immediate query, try to execute it right away
@@ -163,7 +221,7 @@ export class QueryScheduler extends EventEmitter {
     // Clean up dependencies
     this.cleanupDependencies(queryId);
 
-    this.emit('queryScheduleCancelled', queryId);
+    this._onQueryScheduleCancelled.fire(queryId);
     console.log(`[QueryScheduler] Cancelled scheduled query ${queryId}`);
     return true;
   }
@@ -178,7 +236,7 @@ export class QueryScheduler extends EventEmitter {
     }
 
     scheduledQuery.status = 'paused';
-    this.emit('querySchedulePaused', queryId);
+    this._onQuerySchedulePaused.fire(queryId);
     console.log(`[QueryScheduler] Paused recurring query ${queryId}`);
     return true;
   }
@@ -193,7 +251,7 @@ export class QueryScheduler extends EventEmitter {
     }
 
     scheduledQuery.status = 'scheduled';
-    this.emit('queryScheduleResumed', queryId);
+    this._onQueryScheduleResumed.fire(queryId);
     console.log(`[QueryScheduler] Resumed recurring query ${queryId}`);
     return true;
   }
@@ -244,7 +302,7 @@ export class QueryScheduler extends EventEmitter {
       recurringQueries: queries.filter(q => q.scheduleType === 'recurring').length,
       conditionalQueries: queries.filter(q => q.scheduleType === 'conditional').length,
       dependentQueries: queries.filter(q => q.scheduleConfig.dependencies?.length).length,
-      nextExecutionTime: nextExecution,
+      nextExecutionTime: nextExecution ?? 0,
     };
   }
 
@@ -362,7 +420,7 @@ export class QueryScheduler extends EventEmitter {
       } catch (error: unknown) {
         console.error(`[QueryScheduler] Error processing query ${query.id}:`, error);
         query.status = 'failed';
-        this.emit('queryScheduleError', { queryId: query.id, error });
+        this._onQueryScheduleError.fire({ queryId: query.id, error });
       }
     }
 
@@ -436,13 +494,13 @@ export class QueryScheduler extends EventEmitter {
       query.lastExecutedAt = Date.now();
       query.executionCount++;
 
-      this.emit('queryScheduleExecutionStarted', query);
+      this._onQueryScheduleExecutionStarted.fire(query);
 
       // Queue the query in the concurrency manager
       await this.concurrencyManager.queueQuery(query.id, query.cmd, query.params, query.priority);
     } catch (error: unknown) {
       query.status = 'failed';
-      this.emit('queryScheduleExecutionFailed', { query, error });
+      this._onQueryScheduleExecutionFailed.fire({ query, error });
       console.error(`[QueryScheduler] Failed to execute query ${query.id}:`, error);
     }
   }
@@ -461,13 +519,18 @@ export class QueryScheduler extends EventEmitter {
    * Set up listeners for concurrency manager events
    */
   private setupConcurrencyManagerListeners(): void {
-    this.concurrencyManager.on('queryCompleted', event => {
-      this.handleQueryCompletion(event.queryId, event.success, event.error);
-    });
-
-    this.concurrencyManager.on('queryCancelled', event => {
-      this.handleQueryCancellation(event.queryId);
-    });
+    if (typeof (this.concurrencyManager as any).onQueryCompleted === 'function') {
+      (this.concurrencyManager as any).onQueryCompleted(
+        (event: { queryId: string; success: boolean; error?: string }) => {
+          this.handleQueryCompletion(event.queryId, event.success, event.error);
+        }
+      );
+    }
+    if (typeof (this.concurrencyManager as any).onQueryCancelled === 'function') {
+      (this.concurrencyManager as any).onQueryCancelled((event: { queryId: string }) => {
+        this.handleQueryCancellation(event.queryId);
+      });
+    }
   }
 
   /**
@@ -488,22 +551,22 @@ export class QueryScheduler extends EventEmitter {
           query.executionCount >= query.scheduleConfig.maxExecutions
         ) {
           query.status = 'completed';
-          this.emit('queryScheduleCompleted', query);
+          this._onQueryScheduleCompleted.fire(query);
         } else {
           // Reset to scheduled for next execution
           query.status = 'scheduled';
-          this.emit('queryScheduleRecurring', query);
+          this._onQueryScheduleRecurring.fire(query);
         }
       } else {
         query.status = 'completed';
-        this.emit('queryScheduleCompleted', query);
+        this._onQueryScheduleCompleted.fire(query);
       }
 
       // Trigger dependent queries
       this.triggerDependentQueries(queryId);
     } else {
       query.status = 'failed';
-      this.emit('queryScheduleFailed', { query, error });
+      this._onQueryScheduleExecutionFailed.fire({ query, error });
     }
 
     // Add to history if history manager is available
@@ -518,7 +581,7 @@ export class QueryScheduler extends EventEmitter {
         error: error,
         priority: query.priority.level,
         metadata: {
-          tags: query.metadata?.tags,
+          tags: query.metadata?.tags ?? [],
           sessionId: 'scheduler',
         },
       });
@@ -532,7 +595,7 @@ export class QueryScheduler extends EventEmitter {
     const query = this.scheduledQueries.get(queryId);
     if (query) {
       query.status = 'cancelled';
-      this.emit('queryScheduleCancelled', queryId);
+      this._onQueryScheduleCancelled.fire(queryId);
     }
   }
 
@@ -603,7 +666,16 @@ export class QueryScheduler extends EventEmitter {
     this.scheduledQueries.clear();
     this.dependencyGraph.clear();
     this.conditionEvaluator.clear();
-    this.removeAllListeners();
+    // Dispose all event emitters
+    this._onQueryScheduled.dispose();
+    this._onQueryScheduleCancelled.dispose();
+    this._onQuerySchedulePaused.dispose();
+    this._onQueryScheduleResumed.dispose();
+    this._onQueryScheduleExecutionStarted.dispose();
+    this._onQueryScheduleExecutionFailed.dispose();
+    this._onQueryScheduleCompleted.dispose();
+    this._onQueryScheduleRecurring.dispose();
+    this._onQueryScheduleError.dispose();
 
     console.log('[QueryScheduler] Disposed');
   }

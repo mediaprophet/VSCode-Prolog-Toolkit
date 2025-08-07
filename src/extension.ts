@@ -1,7 +1,7 @@
 'use strict';
 
-import { ExtensionContext } from 'vscode';
-import { ExtensionManager } from './modules/extensionManager';
+import type { ExtensionContext } from 'vscode';
+import { ExtensionManager } from './modules/extensionManager.js';
 
 // Global extension manager instance
 let extensionManager: ExtensionManager | null = null;
@@ -12,7 +12,7 @@ export async function activate(context: ExtensionContext) {
   try {
     // Get the singleton extension manager instance
     extensionManager = ExtensionManager.getInstance();
-    
+
     // Activate the extension through the manager
     await extensionManager.activate(context);
   } catch (error) {

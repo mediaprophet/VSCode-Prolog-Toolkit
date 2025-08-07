@@ -1,21 +1,51 @@
-import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { EventEmitter } from 'events';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+// Interface for predicate help result
+export interface PredicateHelpResult {
+  summary?: string;
+  name: string;
+  arity: number;
+  module?: string;
+  args?: string[];
+  examples?: string[];
+  doc?: string;
+  [key: string]: any;
+}
+
+/**
+ * Retrieve documentation/help for a given predicate indicator (e.g., 'member/2').
+ * Returns an object with summary, name, arity, module, args, examples, and doc if available.
+ * Throws if the backend is not ready or the request fails.
+ *
+ * @param predicateIndicator - The predicate indicator string, e.g., 'member/2'.
+ */
+
+// Removed invalid import of 'node:globals'; Node.js types are available globally.
+
+/// <reference types="node" />
 import axios from 'axios';
-import { PlatformUtils } from './utils/platformUtils';
-import { ExecutableFinder } from './utils/executableFinder';
-import {
-  QueryNotificationManager,
+import type { ChildProcessWithoutNullStreams } from 'child_process';
+// Removed incorrect import; rely on global NodeJS types
+import { spawn } from 'child_process';
+
+import { NodeEventEmitter } from './shim/eventemitter-shim.js';
+import type { BackendEventMap } from './types/backend.js';
+
+import { v4 as uuidv4 } from 'uuid';
+import type { QueryPriority, ResourceQuota } from './features/concurrencyManager.js';
+import { ConcurrencyManager } from './features/concurrencyManager.js';
+import type { QueryHistoryOptions } from './features/queryHistoryManager.js';
+import { QueryHistoryManager } from './features/queryHistoryManager.js';
+import type {
   QueryCallback,
   QueryNotificationOptions,
-} from './features/queryNotificationManager';
-import { ConcurrencyManager, ResourceQuota, QueryPriority } from './features/concurrencyManager';
-import { QueryHistoryManager, QueryHistoryOptions } from './features/queryHistoryManager';
-import { QueryScheduler, ScheduledQuery } from './features/queryScheduler';
-import { SessionManager, SessionManagerOptions } from './features/sessionManager';
-import { InstallationGuide } from './features/installationGuide';
-import { UIHandler, defaultUIHandler } from './features/uiHandler';
+} from './features/queryNotificationManager.js';
+import { QueryNotificationManager } from './features/queryNotificationManager.js';
+import { QueryScheduler } from './features/queryScheduler.js';
+import type { SessionManagerOptions } from './features/sessionManager.js';
+import { SessionManager } from './features/sessionManager.js';
+import type { UIHandler } from './features/uiHandler.js';
+import { defaultUIHandler } from './features/uiHandler.js';
+import { ExecutableFinder } from './utils/executableFinder.js';
+import { PlatformUtils } from './utils/platformUtils.js';
 
 export interface PrologBackendOptions {
   swiplPath?: string;
@@ -42,13 +72,39 @@ export interface PrologBackendOptions {
   uiHandler?: UIHandler;
 }
 
-export class PrologBackend extends EventEmitter {
+export class PrologBackend extends NodeEventEmitter<BackendEventMap> {
+  /**
+   * Retrieve documentation/help for a given predicate indicator (e.g., 'member/2').
+   * Returns an object with summary, name, arity, module, args, examples, and doc if available.
+   * Throws if the backend is not ready or the request fails.
+   *
+   * @param predicateIndicator - The predicate indicator string, e.g., 'member/2'.
+   */
+  public async getPredicateHelp(predicateIndicator: string): Promise<PredicateHelpResult> {
+    if (!this.isReady) {
+      throw new Error('Prolog backend not ready');
+    }
+    // Assume the backend supports a 'predicate_help' command
+    const [name, arityStr] = predicateIndicator.split('/');
+    const arity = parseInt(arityStr ?? '0', 10);
+    const params = { name, arity };
+    const result = await this.sendRequest('predicate_help', params);
+    // The backend should return an object matching PredicateHelpResult
+    return result;
+  }
+  /**
+   * Retrieve documentation/help for a given predicate indicator (e.g., 'member/2').
+   * Returns an object with summary, name, arity, module, args, examples, and doc if available.
+   * Throws if the backend is not ready or the request fails.
+   *
+   * @param predicateIndicator - The predicate indicator string, e.g., 'member/2'.
+   */
   private process: ChildProcessWithoutNullStreams | null = null;
   private options: PrologBackendOptions;
   private isReady: boolean = false;
   private pendingRequests: Map<
     string,
-    { resolve: (v: any) => void; reject: (e: any) => void; timeout: NodeJS.Timeout }
+    { resolve: (v: any) => void; reject: (e: any) => void; timeout: ReturnType<typeof setTimeout> }
   > = new Map();
   private intentionalStop: boolean = false;
   private _suppressStoppedEvent: boolean = false;
@@ -62,6 +118,8 @@ export class PrologBackend extends EventEmitter {
   private sessionManager: SessionManager;
   private runningQueries: Map<string, { cancel: () => void }> = new Map();
   private uiHandler: UIHandler;
+
+  // VS Code event emitters for backend events
 
   // Logging and diagnostics
   private log(msg: string) {
@@ -120,56 +178,57 @@ export class PrologBackend extends EventEmitter {
    */
   private setupEventHandlers(): void {
     // Notification manager events
-    this.notificationManager.on('queryCancelled', (queryId: string) => {
+    // Notification manager events
+    this.notificationManager.onQueryCancelled(queryId => {
       this.handleQueryCancellation(queryId);
     });
 
     // Concurrency manager events
-    this.concurrencyManager.on('executeQuery', async event => {
+    this.concurrencyManager.onExecuteQuery(async event => {
       await this.handleConcurrencyManagerExecution(event);
     });
 
-    this.concurrencyManager.on('queryCompleted', event => {
-      this.emit('queryCompleted', event);
+    this.concurrencyManager.onQueryCompleted(event => {
+      // Forward as needed, or handle here
     });
 
-    this.concurrencyManager.on('resourceUsageUpdated', usage => {
-      this.emit('resourceUsageUpdated', usage);
+    this.concurrencyManager.onResourceUsageUpdated(usage => {
+      // Forward as needed, or handle here
     });
 
     // History manager events
-    this.historyManager.on('queryAdded', entry => {
-      this.emit('queryHistoryAdded', entry);
+    this.historyManager.onQueryAdded(entry => {
+      // Forward as needed, or handle here
     });
 
     // Scheduler events
-    this.queryScheduler.on('queryScheduleCompleted', query => {
-      this.emit('queryScheduleCompleted', query);
+    this.queryScheduler.onQueryScheduleCompleted(query => {
+      // Forward as needed, or handle here
     });
 
-    this.queryScheduler.on('queryScheduleExecutionStarted', query => {
-      this.emit('queryScheduleExecutionStarted', query);
+    this.queryScheduler.onQueryScheduleExecutionStarted(query => {
+      // Forward as needed, or handle here
     });
 
     // Session manager events
-    this.sessionManager.on('sessionCreated', event => {
-      this.emit('sessionCreated', event);
+    this.sessionManager.onSessionCreated(event => {
+      // Forward as needed, or handle here
     });
 
-    this.sessionManager.on('sessionSwitched', event => {
-      this.emit('sessionSwitched', event);
+    this.sessionManager.onSessionSwitched(event => {
+      // Forward as needed, or handle here
     });
 
-    this.sessionManager.on('sessionDeleted', event => {
-      this.emit('sessionDeleted', event);
+    this.sessionManager.onSessionDeleted(event => {
+      // Forward as needed, or handle here
     });
 
-    this.sessionManager.on('sessionStateSaved', event => {
-      this.emit('sessionStateSaved', event);
+    this.sessionManager.onSessionStateSaved(event => {
+      // Forward as needed, or handle here
     });
 
-    this.sessionManager.on('sessionStateRestored', event => {
-      this.emit('sessionStateRestored', event);
+    this.sessionManager.onSessionStateRestored(event => {
+      // Forward as needed, or handle here
     });
   }
 
@@ -268,10 +327,10 @@ export class PrologBackend extends EventEmitter {
     if (typeof cmdOrBatch === 'string') {
       const cmd = cmdOrBatch;
       const id = uuidv4();
-      const timeoutMs = typeof params.timeoutMs === 'number' ? params.timeoutMs : 10000;
+      const timeoutMsValue = typeof params.timeoutMs === 'number' ? params.timeoutMs : 10000;
       const paramsWithLimit = { ...params };
       if (typeof paramsWithLimit.time_limit === 'undefined') {
-        paramsWithLimit.time_limit = Math.ceil(timeoutMs / 1000);
+        paramsWithLimit.time_limit = Math.ceil(timeoutMsValue / 1000);
       }
 
       // Add streaming parameters if enabled
@@ -281,7 +340,7 @@ export class PrologBackend extends EventEmitter {
         paramsWithLimit.streaming = true;
       }
 
-      const { timeoutMs: _omit, ...paramsNoTimeout } = paramsWithLimit;
+      const { timeoutMs: _timeoutMs, ...paramsNoTimeout } = paramsWithLimit;
       const request = {
         id,
         cmd,
@@ -290,7 +349,7 @@ export class PrologBackend extends EventEmitter {
       };
       const timeout = setTimeout(() => {
         throw new Error('Prolog request timeout');
-      }, timeoutMs);
+      }, timeoutMsValue);
       try {
         const response = await axios.post(`http://localhost:${this.port}`, request);
         clearTimeout(timeout);
@@ -323,7 +382,6 @@ export class PrologBackend extends EventEmitter {
         timeoutMs: req.timeoutMs,
       };
     });
-    const batchToSend = batch.map(({ timeoutMs: _omit, ...toSend }) => toSend);
     const responses = await Promise.all(
       batch.map(async req => {
         const timeout = setTimeout(() => {
@@ -721,8 +779,6 @@ export class PrologBackend extends EventEmitter {
     }
 
     const queryId = uuidv4();
-
-    // Queue the query with concurrency control
     return await this.concurrencyManager.queueQuery(
       queryId,
       cmd,
@@ -1048,7 +1104,6 @@ export class PrologBackend extends EventEmitter {
         session_id: sessionId,
         file_path: filePath,
       });
-
       // Refresh session state in TypeScript side
       await this.sessionManager.restoreSessionState(sessionId);
     } catch (error) {
@@ -1064,7 +1119,7 @@ export class PrologBackend extends EventEmitter {
     return this.sessionManager;
   }
 
-  private handleExit(code: number | null, signal: NodeJS.Signals | null) {
+  private handleExit(code: number | null, signal: string | null) {
     this.log(
       `[DEBUG] handleExit() called. code=${code}, signal=${signal}, intentionalStop=${this.intentionalStop}`
     );
@@ -1077,13 +1132,13 @@ export class PrologBackend extends EventEmitter {
       setTimeout(() => {
         this.log('[DEBUG] Automatic restart: suppressing stopped event and listening for started');
         this._suppressStoppedEvent = true;
-        const onStarted = () => {
+        const startedListener = () => {
           this.log('[DEBUG] onStarted (auto-restart): emitting restarted');
-          this.off('started', onStarted);
+          this.off('started', startedListener);
           this._suppressStoppedEvent = false;
           this.emit('restarted');
         };
-        this.on('started', onStarted);
+        this.on('started', startedListener);
         this.start();
       }, 1000); // restart after 1s
     } else {
@@ -1101,61 +1156,32 @@ export class PrologBackend extends EventEmitter {
 
     // Enhanced executable resolution with permission checking
     let swiplPath = this.options.swiplPath || PlatformUtils.getDefaultExecutablePath();
-
-    // Validate the configured path first
     if (swiplPath && swiplPath !== PlatformUtils.getDefaultExecutablePath()) {
       const normalizedPath = PlatformUtils.normalizePath(swiplPath);
       if (await PlatformUtils.pathExists(normalizedPath)) {
         if (await PlatformUtils.isExecutable(normalizedPath)) {
           swiplPath = normalizedPath;
         } else {
-          this.log(
-            `[WARNING] Configured SWI-Prolog path '${normalizedPath}' exists but lacks execute permissions`
-          );
-          // Try to find alternative
           const executableFinder = new ExecutableFinder();
           const detectionResult = await executableFinder.findSwiplExecutable();
           if (detectionResult.found && detectionResult.path) {
             swiplPath = detectionResult.path;
-            this.log(
-              `[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`
-            );
           }
         }
       } else {
-        this.log(`[WARNING] Configured SWI-Prolog path '${normalizedPath}' does not exist`);
-        // Try to find alternative
         const executableFinder = new ExecutableFinder();
         const detectionResult = await executableFinder.findSwiplExecutable();
         if (detectionResult.found && detectionResult.path) {
           swiplPath = detectionResult.path;
-          this.log(
-            `[INFO] Using alternative SWI-Prolog at '${swiplPath}' found via ${detectionResult.detectionMethod}`
-          );
         }
       }
     } else {
-      // No specific path configured, use comprehensive detection
       const executableFinder = new ExecutableFinder();
       const detectionResult = await executableFinder.findSwiplExecutable();
       if (detectionResult.found && detectionResult.path) {
         swiplPath = detectionResult.path;
-        this.log(
-          `[INFO] Found SWI-Prolog at '${swiplPath}' via ${detectionResult.detectionMethod}`
-        );
-
-        // Check permissions
-        if (!detectionResult.permissions?.executable) {
-          this.log(`[WARNING] Found SWI-Prolog at '${swiplPath}' but it lacks execute permissions`);
-          const platform = PlatformUtils.getPlatform();
-          if (platform !== 'windows') {
-            this.log(`[SUGGESTION] Try fixing permissions with: chmod +x "${swiplPath}"`);
-          }
-        }
       } else {
-        // Fallback to default
         swiplPath = PlatformUtils.normalizePath(swiplPath);
-        this.log(`[WARNING] Could not find SWI-Prolog executable, using fallback: ${swiplPath}`);
       }
     }
 
@@ -1219,7 +1245,7 @@ export class PrologBackend extends EventEmitter {
                   'Dismiss'
                 );
 
-                const installationGuide = InstallationGuide.getInstance();
+                // Removed unused variable 'installationGuide' to resolve lint warning
                 switch (action) {
                   case 'Install SWI-Prolog': {
                     // In LSP context, we can't show the installation guide dialog

@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { ConcurrencyManager, ResourceQuota, QueryPriority } from '../src/features/concurrencyManager';
-import { QueryHistoryManager } from '../src/features/queryHistoryManager';
-import { QueryScheduler } from '../src/features/queryScheduler';
+import { ConcurrencyManager, ResourceQuota } from '../src/features/concurrencyManager.js';
+import { QueryHistoryManager } from '../src/features/queryHistoryManager.js';
+import { QueryScheduler } from '../src/features/queryScheduler.js';
 
 describe('Advanced Concurrency Features', () => {
   let concurrencyManager: ConcurrencyManager;
@@ -14,14 +14,14 @@ describe('Advanced Concurrency Features', () => {
       maxMemoryUsageMB: 256,
       maxCpuUsagePercent: 70,
       maxQueryDurationMs: 5000,
-      maxQueueSize: 10
+      maxQueueSize: 10,
     };
 
     concurrencyManager = new ConcurrencyManager(resourceQuota);
     historyManager = new QueryHistoryManager({
       storageDir: './test-history',
       maxHistorySize: 100,
-      retentionDays: 1
+      retentionDays: 1,
     });
     queryScheduler = new QueryScheduler(concurrencyManager, historyManager);
   });
@@ -60,7 +60,7 @@ describe('Advanced Concurrency Features', () => {
 
       const status = concurrencyManager.getStatus();
       expect(status.queuedQueries).to.have.length(3);
-      
+
       // High priority should be first
       expect(status.queuedQueries[0].priority).to.equal('high');
       expect(status.queuedQueries[1].priority).to.equal('normal');
@@ -83,9 +83,9 @@ describe('Advanced Concurrency Features', () => {
 
     it('should cancel queued queries', async () => {
       const queryPromise = concurrencyManager.queueQuery('cancel-test', 'test_query');
-      
+
       await new Promise(resolve => setTimeout(resolve, 50));
-      
+
       const cancelled = concurrencyManager.cancelQuery('cancel-test');
       expect(cancelled).to.be.true;
 
@@ -100,19 +100,19 @@ describe('Advanced Concurrency Features', () => {
     it('should update resource quotas', () => {
       const newQuota: Partial<ResourceQuota> = {
         maxConcurrentQueries: 5,
-        maxMemoryUsageMB: 512
+        maxMemoryUsageMB: 512,
       };
 
       concurrencyManager.updateResourceQuota(newQuota);
       const status = concurrencyManager.getStatus();
-      
+
       expect(status.resourceQuota.maxConcurrentQueries).to.equal(5);
       expect(status.resourceQuota.maxMemoryUsageMB).to.equal(512);
     });
 
     it('should provide resource usage statistics', () => {
       const status = concurrencyManager.getStatus();
-      
+
       expect(status.resourceUsage).to.have.property('activeConcurrentQueries');
       expect(status.resourceUsage).to.have.property('memoryUsageMB');
       expect(status.resourceUsage).to.have.property('cpuUsagePercent');
@@ -130,11 +130,11 @@ describe('Advanced Concurrency Features', () => {
         status: 'completed' as const,
         startTime: Date.now() - 1000,
         endTime: Date.now(),
-        results: { success: true }
+        results: { success: true },
       };
 
       await historyManager.addQuery(queryEntry);
-      
+
       const history = await historyManager.getHistory();
       expect(history.entries).to.have.length(1);
       expect(history.entries[0].id).to.equal('test-query-1');
@@ -150,7 +150,7 @@ describe('Advanced Concurrency Features', () => {
           params: {},
           status: 'completed' as const,
           startTime: Date.now() - 2000,
-          endTime: Date.now() - 1000
+          endTime: Date.now() - 1000,
         },
         {
           id: 'error-1',
@@ -159,8 +159,8 @@ describe('Advanced Concurrency Features', () => {
           status: 'error' as const,
           startTime: Date.now() - 1000,
           endTime: Date.now(),
-          error: 'Test error'
-        }
+          error: 'Test error',
+        },
       ];
 
       for (const query of queries) {
@@ -169,13 +169,13 @@ describe('Advanced Concurrency Features', () => {
 
       // Filter by status
       const completedHistory = await historyManager.getHistory({
-        status: ['completed']
+        status: ['completed'],
       });
       expect(completedHistory.entries).to.have.length(1);
       expect(completedHistory.entries[0].status).to.equal('completed');
 
       const errorHistory = await historyManager.getHistory({
-        status: ['error']
+        status: ['error'],
       });
       expect(errorHistory.entries).to.have.length(1);
       expect(errorHistory.entries[0].status).to.equal('error');
@@ -191,7 +191,7 @@ describe('Advanced Concurrency Features', () => {
           status: 'completed' as const,
           startTime: Date.now() - 2000,
           endTime: Date.now() - 1500,
-          priority: 'high'
+          priority: 'high',
         },
         {
           id: 'stat-2',
@@ -200,8 +200,8 @@ describe('Advanced Concurrency Features', () => {
           status: 'error' as const,
           startTime: Date.now() - 1000,
           endTime: Date.now() - 500,
-          priority: 'normal'
-        }
+          priority: 'normal',
+        },
       ];
 
       for (const query of queries) {
@@ -209,7 +209,7 @@ describe('Advanced Concurrency Features', () => {
       }
 
       const stats = await historyManager.getStatistics();
-      
+
       expect(stats.totalQueries).to.equal(2);
       expect(stats.completedQueries).to.equal(1);
       expect(stats.errorQueries).to.equal(1);
@@ -226,16 +226,16 @@ describe('Advanced Concurrency Features', () => {
         cmd: 'test_predicate',
         params: {},
         status: 'running' as const,
-        startTime: Date.now()
+        startTime: Date.now(),
       };
 
       await historyManager.addQuery(queryEntry);
-      
+
       // Update the query
       await historyManager.updateQuery('update-test', {
         status: 'completed',
         endTime: Date.now(),
-        results: { success: true }
+        results: { success: true },
       });
 
       const query = await historyManager.getQuery('update-test');
@@ -251,11 +251,11 @@ describe('Advanced Concurrency Features', () => {
         params: {},
         status: 'completed' as const,
         startTime: Date.now() - 1000,
-        endTime: Date.now()
+        endTime: Date.now(),
       };
 
       await historyManager.addQuery(queryEntry);
-      
+
       let query = await historyManager.getQuery('delete-test');
       expect(query).to.not.be.undefined;
 
@@ -281,18 +281,13 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         setTimeout(() => {
           event.resolve({ success: true });
         }, 100);
       });
 
-      await queryScheduler.scheduleQuery(
-        'immediate-test',
-        'test_predicate',
-        {},
-        'immediate'
-      );
+      await queryScheduler.scheduleQuery('immediate-test', 'test_predicate', {}, 'immediate');
 
       // Wait for execution
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -310,17 +305,13 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         event.resolve({ success: true });
       });
 
-      await queryScheduler.scheduleQuery(
-        'delayed-test',
-        'test_predicate',
-        {},
-        'delayed',
-        { executeAt }
-      );
+      await queryScheduler.scheduleQuery('delayed-test', 'test_predicate', {}, 'delayed', {
+        executeAt,
+      });
 
       // Should not execute immediately
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -339,22 +330,16 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         setTimeout(() => {
           event.resolve({ success: true });
         }, 50);
       });
 
-      await queryScheduler.scheduleQuery(
-        'recurring-test',
-        'test_predicate',
-        {},
-        'recurring',
-        { 
-          interval: 200, // Every 200ms
-          maxExecutions: 3
-        }
-      );
+      await queryScheduler.scheduleQuery('recurring-test', 'test_predicate', {}, 'recurring', {
+        interval: 200, // Every 200ms
+        maxExecutions: 3,
+      });
 
       // Wait for multiple executions
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -371,17 +356,13 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         event.resolve({ success: true });
       });
 
-      await queryScheduler.scheduleQuery(
-        'conditional-test',
-        'test_predicate',
-        {},
-        'conditional',
-        { condition: 'condition' }
-      );
+      await queryScheduler.scheduleQuery('conditional-test', 'test_predicate', {}, 'conditional', {
+        condition: 'condition',
+      });
 
       // Register condition evaluator
       queryScheduler.registerConditionEvaluator('conditional-test', () => condition);
@@ -397,13 +378,9 @@ describe('Advanced Concurrency Features', () => {
     });
 
     it('should cancel scheduled queries', async () => {
-      await queryScheduler.scheduleQuery(
-        'cancel-scheduled-test',
-        'test_predicate',
-        {},
-        'delayed',
-        { executeAt: Date.now() + 1000 }
-      );
+      await queryScheduler.scheduleQuery('cancel-scheduled-test', 'test_predicate', {}, 'delayed', {
+        executeAt: Date.now() + 1000,
+      });
 
       const queries = queryScheduler.getScheduledQueries();
       expect(queries).to.have.length(1);
@@ -417,11 +394,15 @@ describe('Advanced Concurrency Features', () => {
 
     it('should provide scheduler statistics', async () => {
       await queryScheduler.scheduleQuery('stat-test-1', 'test_predicate', {}, 'immediate');
-      await queryScheduler.scheduleQuery('stat-test-2', 'test_predicate', {}, 'recurring', { interval: 1000 });
-      await queryScheduler.scheduleQuery('stat-test-3', 'test_predicate', {}, 'conditional', { condition: 'true' });
+      await queryScheduler.scheduleQuery('stat-test-2', 'test_predicate', {}, 'recurring', {
+        interval: 1000,
+      });
+      await queryScheduler.scheduleQuery('stat-test-3', 'test_predicate', {}, 'conditional', {
+        condition: 'true',
+      });
 
       const stats = queryScheduler.getStatistics();
-      
+
       expect(stats.totalScheduled).to.be.greaterThan(0);
       expect(stats.recurringQueries).to.equal(1);
       expect(stats.conditionalQueries).to.equal(1);
@@ -435,19 +416,15 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         setTimeout(() => {
           event.resolve({ success: true });
         }, 50);
       });
 
-      await queryScheduler.scheduleQuery(
-        'pause-resume-test',
-        'test_predicate',
-        {},
-        'recurring',
-        { interval: 200 }
-      );
+      await queryScheduler.scheduleQuery('pause-resume-test', 'test_predicate', {}, 'recurring', {
+        interval: 200,
+      });
 
       // Let it execute once
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -486,7 +463,7 @@ describe('Advanced Concurrency Features', () => {
       });
 
       // Mock the concurrency manager execution
-      concurrencyManager.on('executeQuery', (event) => {
+      concurrencyManager.on('executeQuery', event => {
         setTimeout(() => {
           event.resolve({ success: true, result: 'test_result' });
         }, 100);

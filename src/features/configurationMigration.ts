@@ -180,7 +180,10 @@ export class ConfigurationMigration {
       // Store backup in global state (VS Code's storage)
       const context = this.getExtensionContext();
       if (context) {
-        let existingBackups = context.globalState.get<ConfigurationBackup[]>('prologConfigBackups', []);
+        let existingBackups = context.globalState.get<ConfigurationBackup[]>(
+          'prologConfigBackups',
+          []
+        );
         if (!existingBackups) {
           existingBackups = [];
         }
@@ -283,10 +286,14 @@ export class ConfigurationMigration {
       ) {
         if (oldVersionParts[0] < 8 && newVersionParts[0] >= 8) {
           recommendations.push('SWI-Prolog 8.x introduced new features and some syntax changes');
-          recommendations.push('Consider updating your code to use new string syntax if applicable');
+          recommendations.push(
+            'Consider updating your code to use new string syntax if applicable'
+          );
         }
         if (oldVersionParts[0] < 9 && newVersionParts[0] >= 9) {
-          recommendations.push('SWI-Prolog 9.x has improved performance and new built-in predicates');
+          recommendations.push(
+            'SWI-Prolog 9.x has improved performance and new built-in predicates'
+          );
         }
       }
     } catch (_error) {

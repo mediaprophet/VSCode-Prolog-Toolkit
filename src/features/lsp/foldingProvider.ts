@@ -1,9 +1,16 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { FoldingRange, FoldingRangeKind } from 'vscode-languageserver/node';
-import { FoldingProvider, LSPContext } from './types';
+import type { FoldingProvider, LSPContext } from './types.js';
+type FoldingRange = any;
+enum FoldingRangeKind {
+  Comment = 'comment',
+  Region = 'region',
+}
 
 export class PrologFoldingProvider implements FoldingProvider {
-  async provideFoldingRanges(document: TextDocument, context: LSPContext): Promise<FoldingRange[]> {
+  async provideFoldingRanges(
+    document: TextDocument,
+    _context: LSPContext
+  ): Promise<FoldingRange[]> {
     const ranges: FoldingRange[] = [];
     const text = document.getText();
     const lines = text.split('\n');
@@ -15,6 +22,7 @@ export class PrologFoldingProvider implements FoldingProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const trimmed = line.trim();
 
       // Handle block comments /* ... */
@@ -174,8 +182,9 @@ export class PrologFoldingProvider implements FoldingProvider {
   }
 
   private extractPredicateName(line: string): string | null {
+    if (typeof line !== 'string') return null;
     const match = line.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
-    return match ? match[1] : null;
+    return match ? (match[1] ?? null) : null;
   }
 
   private isModuleDeclaration(line: string): boolean {
@@ -185,7 +194,9 @@ export class PrologFoldingProvider implements FoldingProvider {
   private findModuleEnd(lines: string[], start: number): number {
     // Find the end of module exports or the next non-directive line
     for (let i = start + 1; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
+      const line = lines[i];
+      if (typeof line !== 'string') continue;
+      const trimmed = line.trim();
       if (trimmed === '' || trimmed.startsWith('%')) {
         continue;
       }
@@ -203,7 +214,9 @@ export class PrologFoldingProvider implements FoldingProvider {
   private findDCGRuleEnd(lines: string[], start: number): number {
     // DCG rules can span multiple lines until a period
     for (let i = start; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
+      const line = lines[i];
+      if (typeof line !== 'string') continue;
+      const trimmed = line.trim();
       if (trimmed.endsWith('.')) {
         return i;
       }
@@ -220,27 +233,25 @@ export class PrologFoldingProvider implements FoldingProvider {
 
   private findListConstructEnd(lines: string[], start: number): number {
     let bracketCount = 0;
-    
     // Count brackets from start line
     const startLine = lines[start];
-    bracketCount += (startLine.match(/\[/g) || []).length;
-    bracketCount -= (startLine.match(/\]/g) || []).length;
-
+    if (typeof startLine === 'string') {
+      bracketCount += (startLine.match(/\[/g) || []).length;
+      bracketCount -= (startLine.match(/\]/g) || []).length;
+    }
     if (bracketCount <= 0) {
       return start;
     }
-
     // Continue counting in subsequent lines
     for (let i = start + 1; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       bracketCount += (line.match(/\[/g) || []).length;
       bracketCount -= (line.match(/\]/g) || []).length;
-      
       if (bracketCount <= 0) {
         return i;
       }
     }
-
     return start;
   }
 
@@ -250,14 +261,14 @@ export class PrologFoldingProvider implements FoldingProvider {
 
     // Remove overlapping ranges, keeping the larger ones
     const cleaned: FoldingRange[] = [];
-    
+
     for (const range of ranges) {
       // Check if this range overlaps with any existing range
       let shouldAdd = true;
-      
+
       for (let i = 0; i < cleaned.length; i++) {
         const existing = cleaned[i];
-        
+
         if (this.rangesOverlap(range, existing)) {
           // Keep the larger range
           if (this.getRangeSize(range) > this.getRangeSize(existing)) {
@@ -269,7 +280,7 @@ export class PrologFoldingProvider implements FoldingProvider {
           }
         }
       }
-      
+
       if (shouldAdd) {
         cleaned.push(range);
       }
@@ -295,21 +306,27 @@ export class PrologFoldingProvider implements FoldingProvider {
     context?: LSPContext
   ): Promise<FoldingRange[]> {
     const allRanges = await this.provideFoldingRanges(document, context!);
-    
+
     if (!kind) {
       return allRanges;
     }
-    
+
     return allRanges.filter(range => range.kind === kind);
   }
 
   // Get comment blocks only
-  public async getCommentBlocks(document: TextDocument, context: LSPContext): Promise<FoldingRange[]> {
+  public async getCommentBlocks(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<FoldingRange[]> {
     return this.getFoldableRegions(document, FoldingRangeKind.Comment, context);
   }
 
   // Get predicate clause groups
-  public async getPredicateGroups(document: TextDocument, context: LSPContext): Promise<FoldingRange[]> {
+  public async getPredicateGroups(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<FoldingRange[]> {
     const allRanges = await this.provideFoldingRanges(document, context);
     return allRanges.filter(range => !range.kind); // Ranges without kind are typically code blocks
   }

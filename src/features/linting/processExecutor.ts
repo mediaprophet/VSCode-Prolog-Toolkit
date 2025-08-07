@@ -1,10 +1,12 @@
-import * as path from 'path';
 import jsesc from 'jsesc';
+import * as path from 'path';
 import { spawn } from 'process-promises';
-import { TextDocument, workspace } from 'vscode';
-import { Utils } from '../../utils/utils';
-import { PlatformUtils } from '../../utils/platformUtils';
-import { IProcessExecutor, IProcessResult, ILinterConfiguration, RunTrigger } from './interfaces';
+import type { TextDocument } from 'vscode';
+import { workspace } from 'vscode';
+import { PlatformUtils } from '../../utils/platformUtils.js';
+import { Utils } from '../../utils/utils.js';
+import type { ILinterConfiguration, IProcessExecutor, IProcessResult } from './interfaces.js';
+import { RunTrigger } from './interfaces.js';
 
 /**
  * Handles execution of Prolog processes with dialect-specific configurations
@@ -41,10 +43,10 @@ export class ProcessExecutor implements IProcessExecutor {
 
       // Execute the Prolog process
       spawn(config.executable, args, options)
-        .on('process', process => {
+        .on('process', (process: { pid?: number; stdin?: { write: (data: string) => void; end: () => void } }) => {
           // Handle the Prolog process
           if (process.pid) {
-            if (config.trigger === RunTrigger.onType && goals) {
+            if (config.trigger === RunTrigger.onType && goals && process.stdin) {
               process.stdin.write(goals);
               process.stdin.end();
             }
@@ -127,7 +129,11 @@ export class ProcessExecutor implements IProcessExecutor {
         break;
     }
 
-    return { args, goals: trigger === RunTrigger.onType ? goals : undefined };
+    if (trigger === RunTrigger.onType) {
+      return { args, goals };
+    } else {
+      return { args };
+    }
   }
 
   /**

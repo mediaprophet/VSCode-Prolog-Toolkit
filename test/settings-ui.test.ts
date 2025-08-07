@@ -26,19 +26,15 @@ describe('Settings UI Tests', () => {
         webview: {
           options: {},
           html: '',
-          onDidReceiveMessage: () => ({ dispose: () => { } }),
+          onDidReceiveMessage: () => ({ dispose: () => {} }),
           postMessage: () => Promise.resolve(true),
-          asWebviewUri: (uri: vscode.Uri) => uri
-        }
+          asWebviewUri: (uri: vscode.Uri) => uri,
+        },
       } as any;
 
       // This should not throw
       expect(() => {
-        settingsProvider.resolveWebviewView(
-          mockWebviewView,
-          {} as any,
-          {} as any
-        );
+        settingsProvider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
       }).to.not.throw();
     });
   });

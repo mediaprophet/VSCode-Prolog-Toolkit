@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { PrologBackend } from '../prologBackend';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { PrologBackend } from '../prologBackend.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -50,14 +51,19 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
 
       // Execute query with notifications if callback provided
       const result = await prologBackend.sendRequestWithNotifications('query', params, {
-        onProgress: status => {
-          // In a full implementation, this would use WebSocket to notify client
-          console.log(`[ApiRoutes] Query ${queryId} progress: ${status.progress}%`);
+        onProgress: (status: any) => {
+          if (status.progress !== undefined) {
+            console.log(
+              `[ApiRoutes] Query ${queryId} progress: ${status.progress}% - ${status.message || ''}`
+            );
+          } else {
+            console.log(`[ApiRoutes] Query ${queryId} progress update:`, status);
+          }
         },
-        onComplete: status => {
-          console.log(`[ApiRoutes] Query ${queryId} completed`);
+        onComplete: (status: any) => {
+          console.log(`[ApiRoutes] Query ${queryId} completed. Results:`, status.results);
         },
-        onError: status => {
+        onError: (status: any) => {
           console.error(`[ApiRoutes] Query ${queryId} error:`, status.error);
         },
       });
@@ -166,7 +172,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
       const sessions = prologBackend.listSessions(listOptions);
 
       res.json({
-        sessions: sessions.map(session => ({
+        sessions: sessions.map((session: any) => ({
           session_id: session.sessionId,
           name: session.config.name,
           description: session.config.description,
@@ -518,7 +524,7 @@ export function apiRoutes(prologBackend: PrologBackend): Router {
 
   router.post('/reasoning/n3', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { rules, data, query } = req.body;
+      const { data, query } = req.body;
 
       if (!query) {
         res.status(400).json({

@@ -6,6 +6,7 @@
   "publisher": "mediaprophet",
   "icon": "images/vsplogo.png",
   "license": "MIT",
+  "type": "module",
   "engines": {
     "vscode": "^1.102.0",
     "node": ">=18.0.0"
@@ -64,7 +65,23 @@
     "url": "https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues"
   },
   "main": "./out/pub/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:prologActivity",
+    "onView:prologDashboard",
+    "onView:prologQueries",
+    "onView:prologFiles",
+    "onLanguage:prolog",
+    "onCommand:prolog.openSettings",
+    "onCommand:prolog.setupWizard",
+    "onCommand:prolog.refreshInstallation",
+    "onCommand:prolog.testInstallation",
+    "onCommand:prolog.autoDetectPath",
+    "onCommand:prolog.newFile",
+    "onCommand:prolog.rerunQuery",
+    "onCommand:prolog.clearQueryHistory",
+    "onCommand:prolog.viewLogs",
+    "onCommand:prolog.reportIssue"
+  ],
   "contributes": {
     "languages": [
       {
@@ -108,6 +125,14 @@
       {
         "language": "prolog",
         "path": "./snippets/prolog.json"
+      },
+      {
+        "language": "prolog",
+        "path": "./snippets/prolog.swi.json"
+      },
+      {
+        "language": "prolog",
+        "path": "./snippets/prolog.ecl.json"
       }
     ],
     "commands": [
@@ -670,6 +695,17 @@
           "type": "boolean",
           "default": true,
           "description": "Enable automatic expansion of environment variables and home directory (~) in paths."
+        },
+        "prolog.mcp": {
+          "type": "object",
+          "default": {},
+          "description": "Model Context Protocol configuration (used by AI assistants like Claude).",
+          "additionalProperties": true
+        },
+        "GitHub.copilot.manageExtension": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow GitHub Copilot to manage extension settings."
         }
       }
     },
@@ -694,7 +730,6 @@
         {
           "id": "prologActivity",
           "name": "Prolog Explorer",
-          "type": "webview",
           "icon": "images/prolog-activity-icon.svg",
           "when": "true"
         },
@@ -730,19 +765,20 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "build": "npm run esbuild",
+    "build": "npm run esbuild && npm run copy-webview-assets && npm --prefix mcp-server run build || true",
     "build:watch": "npm run esbuild-watch",
     "lint": "eslint src --ext ts",
     "lint:fix": "eslint src --ext ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
-    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServerRefactored.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --format=cjs --platform=node",
+    "esbuild-base": "esbuild ./src/extension.ts ./src/features/prologDebugSession.ts ./src/features/prologDebugger.ts ./src/features/prologLSPServerRefactored.ts --bundle --outdir=out/pub/ --tsconfig=./tsconfig.json --external:vscode --external:events --external:node:events --external:child_process --external:node:child_process --external:fs --external:node:fs --external:path --external:node:path --external:os --external:node:os --external:crypto --external:node:crypto --external:util --external:node:util --external:stream --external:node:stream --external:url --external:node:url --external:querystring --external:node:querystring --external:http --external:node:http --external:https --external:node:https --external:net --external:node:net --external:tls --external:node:tls --external:zlib --external:node:zlib --format=esm --platform=node",
     "esbuild": "npm run -S esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run -S esbuild-base -- --sourcemap --watch",
-    "compile": "tsc -p tsconfig.build.json",
+    "compile": "tsc -p tsconfig.build.json && npm run copy-webview-assets && npm --prefix mcp-server run compile || true",
+    "postcompile": "if not exist out\\pub mkdir out\\pub && copy src\\prolog_json_server.pl out\\pub\\prolog_json_server.pl && copy prolog.configuration.json out\\pub\\prolog.configuration.json",
     "compile:watch": "tsc -watch -p tsconfig.build.json",
     "compile:strict": "tsc -p ./",
-    "test": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.test.ts",
+    "test": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --loader ts-node/esm test/prologBackend.test.ts",
     "test:watch": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/prologBackend.test.ts --watch",
     "test:all": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register \"test/**/*.test.ts\"",
     "test:n3": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --bail --require ts-node/register test/n3-integration.test.ts",
@@ -770,11 +806,14 @@
     "test:clean": "rimraf test/logs/* test/temp/* coverage/*",
     "clean": "rimraf out dist *.vsix",
     "setup-test-env": "node test/setup-test-env.js",
-    "package": "vsce package",
+    "package": "npm run postcompile && vsce package",
     "syntax4swi": "yaml2json --pretty --save ./syntaxes/prolog.swi.tmLanguage.yaml",
     "syntax4ecl": "yaml2json --pretty --save ./syntaxes/prolog.ecl.tmLanguage.yaml",
     "pkgvars": "node ./node_modules/vscode/bin/install",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "copy-webview-assets": "node scripts/copy-webview-assets.cjs",
+    "prepackage": "npm run copy-webview-assets",
+    "prepublishOnly": "npm run copy-webview-assets"
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.42",
@@ -786,6 +825,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.0.0",
     "@types/sinon": "^17.0.4",
+    "@types/sinon-chai": "^4.0.0",
     "@types/uuid": "^10.0.0",
     "@types/vscode": "^1.102.0",
     "@types/which": "^3.0.4",
@@ -802,13 +842,19 @@
     "eslint-plugin-prettier": "^5.5.3",
     "husky": "^9.1.7",
     "mocha": "^11.7.1",
-    "nyc": "^17.1.0",
     "ovsx": "^0.10.5",
     "prettier": "^3.2.5",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
+    "sinon-chai": "^4.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vscode-jsonrpc": "^8.2.1",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-languageserver-types": "^3.17.5"
   },
   "dependencies": {
     "@vscode/debugadapter": "^1.68.0",
@@ -826,9 +872,6 @@
     "readline-promise": "1.0.5",
     "split": "^1.0.1",
     "uuid": "^11.1.0",
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.0.8",
     "which": "^5.0.0",
     "ws": "^8.18.0"

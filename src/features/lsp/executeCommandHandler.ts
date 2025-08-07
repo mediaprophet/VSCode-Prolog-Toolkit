@@ -1,26 +1,26 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { ExecuteCommandHandler, LSPContext, BackendResponse } from './types';
+import type { BackendResponse, ExecuteCommandHandler, LSPContext } from './types.js';
 
 export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
-  async executeCommand(command: string, args: any[], context: LSPContext): Promise<any> {
+  async executeCommand(command: string, args: any[], _context: LSPContext): Promise<any> {
     switch (command) {
       case 'prolog.executeQuery': {
-        return await this.executeQuery(args, context);
+        return await this.executeQuery(args, _context);
       }
       case 'prolog.consultFile': {
-        return await this.consultFile(args, context);
+        return await this.consultFile(args, _context);
       }
       case 'prolog.getHelp': {
-        return await this.getHelp(args, context);
+        return await this.getHelp(args, _context);
       }
       case 'prolog.runN3Diagnostics': {
-        return await this.runN3Diagnostics(args, context);
+        return await this.runN3Diagnostics(args, _context);
       }
       case 'prolog.formatDocument': {
-        return await this.formatDocument(args, context);
+        return await this.formatDocument(args, _context);
       }
       case 'prolog.organizeImports': {
-        return await this.organizeImports(args, context);
+        return await this.organizeImports(args, _context);
       }
       default: {
         throw new Error(`Unknown command: ${command}`);
@@ -35,11 +35,12 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           goal: args[0],
           timeoutMs: 10000,
         });
-        
-        const message = response.status === 'ok'
-          ? `Query result: ${JSON.stringify(response.results)}`
-          : `Query failed: ${response.error}`;
-        
+
+        const message =
+          response.status === 'ok'
+            ? `Query result: ${JSON.stringify(response.results)}`
+            : `Query failed: ${response.error}`;
+
         // Note: In a real implementation, you'd need to pass the connection object
         // to send window messages. For now, we'll return the response.
         return { success: response.status === 'ok', message, response };
@@ -57,11 +58,12 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           file: args[0],
           timeoutMs: 15000,
         });
-        
-        const message = response.status === 'ok'
-          ? `File consulted: ${args[0]}`
-          : `Consult failed: ${response.error}`;
-        
+
+        const message =
+          response.status === 'ok'
+            ? `File consulted: ${args[0]}`
+            : `Consult failed: ${response.error}`;
+
         return { success: response.status === 'ok', message, response };
       } catch (error: unknown) {
         return { success: false, message: `Consult error: ${error}`, error };
@@ -77,12 +79,12 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           predicate: args[0],
           timeoutMs: 5000,
         });
-        
+
         if (response.status === 'ok' && response.doc) {
           const message = `Help for ${args[0]}: ${response.doc.summary || 'No description'}`;
           return { success: true, message, doc: response.doc };
         }
-        
+
         return { success: false, message: `No help available for ${args[0]}` };
       } catch (error: unknown) {
         return { success: false, message: `Help error: ${error}`, error };
@@ -95,7 +97,7 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
     if (args.length > 0) {
       const documentUri = args[0];
       const document = context.documents.get(documentUri);
-      
+
       if (document) {
         try {
           // You would typically call the validation provider here
@@ -106,10 +108,10 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           return { success: false, message: `N3 diagnostics error: ${error}`, error };
         }
       }
-      
+
       return { success: false, message: 'Document not found' };
     }
-    
+
     return { success: false, message: 'No document URI provided' };
   }
 
@@ -117,7 +119,7 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
     if (args.length > 0) {
       const documentUri = args[0];
       const document = context.documents.get(documentUri);
-      
+
       if (document) {
         try {
           const formatted = await this.formatPrologDocument(document, context);
@@ -126,10 +128,10 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           return { success: false, message: `Format error: ${error}`, error };
         }
       }
-      
+
       return { success: false, message: 'Document not found' };
     }
-    
+
     return { success: false, message: 'No document URI provided' };
   }
 
@@ -137,7 +139,7 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
     if (args.length > 0) {
       const documentUri = args[0];
       const document = context.documents.get(documentUri);
-      
+
       if (document) {
         try {
           const organized = await this.organizeImportsInDocument(document, context);
@@ -146,21 +148,21 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
           return { success: false, message: `Organize imports error: ${error}`, error };
         }
       }
-      
+
       return { success: false, message: 'Document not found' };
     }
-    
+
     return { success: false, message: 'No document URI provided' };
   }
 
   private async formatPrologDocument(document: TextDocument, context: LSPContext): Promise<any[]> {
-    const settings = await context.getDocumentSettings(document.uri);
-    const text = document.getText();
+    const settings = await context.getDocumentSettings(document.uri) ?? {};
+    const text = document.getText() ?? '';
     const lines = text.split('\n');
     const edits: any[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i] ?? '';
       const formatted = this.formatPrologLine(line, settings);
 
       if (formatted !== line) {
@@ -201,7 +203,10 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
     return formatted;
   }
 
-  private async organizeImportsInDocument(document: TextDocument, context: LSPContext): Promise<any[]> {
+  private async organizeImportsInDocument(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<any[]> {
     const text = document.getText();
     const lines = text.split('\n');
     const imports: string[] = [];
@@ -225,10 +230,11 @@ export class PrologExecuteCommandHandler implements ExecuteCommandHandler {
     const newContent = [...imports, '', ...otherLines].join('\n');
 
     if (newContent !== text) {
+      const lastLine = lines[lines.length - 1] ?? '';
       edits.push({
         range: {
           start: { line: 0, character: 0 },
-          end: { line: lines.length - 1, character: lines[lines.length - 1].length },
+          end: { line: lines.length - 1, character: lastLine.length },
         },
         newText: newContent,
       });

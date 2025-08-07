@@ -57,7 +57,7 @@ suite('macOS Platform Tests', () => {
         '/opt/homebrew/bin/swipl',
         '../relative/path/file',
         '~/Documents/test.pl',
-        '/Applications/SWI-Prolog.app/Contents/MacOS/swipl'
+        '/Applications/SWI-Prolog.app/Contents/MacOS/swipl',
       ];
 
       testPaths.forEach(testPath => {
@@ -106,7 +106,11 @@ suite('macOS Platform Tests', () => {
       const executablePaths = PlatformUtils.getExecutablePaths();
       assert.ok(executablePaths.length > 0);
       assert.ok(executablePaths.every(path => !path.endsWith('.exe')));
-      assert.ok(executablePaths.some(path => path.includes('/usr/local/bin') || path.includes('/opt/homebrew/bin')));
+      assert.ok(
+        executablePaths.some(
+          path => path.includes('/usr/local/bin') || path.includes('/opt/homebrew/bin')
+        )
+      );
     });
 
     test('should find SWI-Prolog executable on macOS', async function () {
@@ -156,7 +160,7 @@ suite('macOS Platform Tests', () => {
         '/usr/local/bin/swipl',
         '/opt/homebrew/bin/swipl',
         '/Applications/SWI-Prolog.app/Contents/MacOS/swipl',
-        '/opt/local/bin/swipl' // MacPorts
+        '/opt/local/bin/swipl', // MacPorts
       ];
 
       const finder = new ExecutableFinder();
@@ -235,9 +239,18 @@ suite('macOS Platform Tests', () => {
     test('should expand Unix-style environment variables', () => {
       // Test Unix-style $VAR and ${VAR} expansion
       const testCases = [
-        { input: '$HOME/Documents', expected: process.env.HOME ? process.env.HOME + '/Documents' : '$HOME/Documents' },
-        { input: '${HOME}/test.txt', expected: process.env.HOME ? process.env.HOME + '/test.txt' : '${HOME}/test.txt' },
-        { input: '/tmp/$USER', expected: process.env.USER ? '/tmp/' + process.env.USER : '/tmp/$USER' }
+        {
+          input: '$HOME/Documents',
+          expected: process.env.HOME ? process.env.HOME + '/Documents' : '$HOME/Documents',
+        },
+        {
+          input: '${HOME}/test.txt',
+          expected: process.env.HOME ? process.env.HOME + '/test.txt' : '${HOME}/test.txt',
+        },
+        {
+          input: '/tmp/$USER',
+          expected: process.env.USER ? '/tmp/' + process.env.USER : '/tmp/$USER',
+        },
       ];
 
       testCases.forEach(testCase => {
@@ -257,7 +270,7 @@ suite('macOS Platform Tests', () => {
         '/bin/bash',
         '/bin/zsh',
         '/usr/bin/which',
-        '/System/Library/CoreServices/Finder.app'
+        '/System/Library/CoreServices/Finder.app',
       ];
 
       for (const file of systemFiles) {
@@ -269,11 +282,7 @@ suite('macOS Platform Tests', () => {
 
     test('should check executable permissions on macOS', async () => {
       // Test with macOS executables
-      const executables = [
-        '/bin/bash',
-        '/bin/zsh',
-        '/usr/bin/which'
-      ];
+      const executables = ['/bin/bash', '/bin/zsh', '/usr/bin/which'];
 
       for (const exe of executables) {
         if (await PlatformUtils.pathExists(exe)) {
@@ -285,10 +294,7 @@ suite('macOS Platform Tests', () => {
 
     test('should handle macOS file permissions correctly', async () => {
       // Test with files that should not be executable
-      const nonExecutables = [
-        '/etc/hosts',
-        '/etc/passwd'
-      ];
+      const nonExecutables = ['/etc/hosts', '/etc/passwd'];
 
       for (const file of nonExecutables) {
         if (await PlatformUtils.pathExists(file)) {
@@ -300,10 +306,7 @@ suite('macOS Platform Tests', () => {
 
     test('should handle macOS application bundles', async () => {
       // Test with common macOS applications
-      const apps = [
-        '/System/Library/CoreServices/Finder.app',
-        '/Applications/Safari.app'
-      ];
+      const apps = ['/System/Library/CoreServices/Finder.app', '/Applications/Safari.app'];
 
       for (const app of apps) {
         const exists = await PlatformUtils.pathExists(app);
@@ -320,7 +323,10 @@ suite('macOS Platform Tests', () => {
   suite('Configuration', () => {
     test('should provide macOS-specific configuration location', () => {
       const configLocation = PlatformUtils.getConfigurationLocation();
-      assert.ok(configLocation.includes('Library/Application Support') || configLocation.includes('~/Library'));
+      assert.ok(
+        configLocation.includes('Library/Application Support') ||
+          configLocation.includes('~/Library')
+      );
     });
 
     test('should provide macOS temp directory', () => {
@@ -363,10 +369,7 @@ suite('macOS Platform Tests', () => {
   suite('macOS-Specific Features', () => {
     test('should handle Gatekeeper and security restrictions', async () => {
       // Test that security-related operations don't throw errors
-      const restrictedPaths = [
-        '/System/Library/Extensions',
-        '/usr/libexec'
-      ];
+      const restrictedPaths = ['/System/Library/Extensions', '/usr/libexec'];
 
       for (const restrictedPath of restrictedPaths) {
         // These operations should not throw errors
@@ -390,13 +393,7 @@ suite('macOS Platform Tests', () => {
 
     test('should handle macOS-specific directories', async () => {
       // Test macOS-specific directory structure
-      const macOSDirs = [
-        '/Applications',
-        '/Library',
-        '/System',
-        '/Users',
-        '/Volumes'
-      ];
+      const macOSDirs = ['/Applications', '/Library', '/System', '/Users', '/Volumes'];
 
       for (const dir of macOSDirs) {
         const exists = await PlatformUtils.pathExists(dir);
@@ -411,7 +408,7 @@ suite('macOS Platform Tests', () => {
       const invalidPaths = [
         '/nonexistent/path/that/does/not/exist',
         '/System/Library/NonExistent/file',
-        '/private/var/nonexistent'
+        '/private/var/nonexistent',
       ];
 
       for (const invalidPath of invalidPaths) {
@@ -427,7 +424,7 @@ suite('macOS Platform Tests', () => {
       // Test with system files that might have restricted access
       const restrictedFiles = [
         '/private/var/db/dslocal/nodes/Default/users/root.plist',
-        '/System/Library/Extensions'
+        '/System/Library/Extensions',
       ];
 
       for (const file of restrictedFiles) {
@@ -443,10 +440,7 @@ suite('macOS Platform Tests', () => {
 
     test('should handle SIP (System Integrity Protection) restrictions', async () => {
       // Test with SIP-protected paths
-      const sipProtectedPaths = [
-        '/System/Library/Frameworks',
-        '/usr/bin/codesign'
-      ];
+      const sipProtectedPaths = ['/System/Library/Frameworks', '/usr/bin/codesign'];
 
       for (const sipPath of sipProtectedPaths) {
         // Operations should work but may have limited access

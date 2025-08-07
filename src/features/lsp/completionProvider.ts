@@ -1,13 +1,23 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CompletionItem, CompletionItemKind, Position } from 'vscode-languageserver/node';
-import { CompletionProvider, LSPContext, PredicateInfo, N3CompletionInfo, BackendResponse } from './types';
+import type { CompletionItem, Position } from 'vscode-languageserver-types';
+import { CompletionItemKind } from 'vscode-languageserver-types';
+import type {
+  BackendResponse,
+  CompletionProvider,
+  LSPContext,
+  N3CompletionInfo,
+  PredicateInfo,
+} from './types.js';
 
 export class PrologCompletionProvider implements CompletionProvider {
-  async provideCompletions(document: TextDocument, position: Position, context: LSPContext): Promise<CompletionItem[]> {
+  async provideCompletions(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<CompletionItem[]> {
     const text = document.getText();
-    const lines = text.split('\n');
-    const currentLine = lines[position.line] || '';
-    const _prefix = currentLine.substring(0, position.character);
+    // Removed unused variable currentLine
+    // Removed unused variable _prefix
 
     const completions: CompletionItem[] = [];
 
@@ -26,7 +36,7 @@ export class PrologCompletionProvider implements CompletionProvider {
       try {
         const dynamicCompletions = await this.getDynamicCompletions(document, position, context);
         completions.push(...dynamicCompletions);
-      } catch (error: unknown) {
+      } catch (_error) {
         // Ignore errors in dynamic completion
       }
     }
@@ -77,7 +87,7 @@ export class PrologCompletionProvider implements CompletionProvider {
       label: pred.name,
       kind: CompletionItemKind.Function,
       detail: `${pred.name}/${pred.arity}`,
-      documentation: pred.description,
+      documentation: pred.description ?? '',
       insertText: pred.arity > 0 ? `${pred.name}(` : pred.name,
     }));
   }
@@ -109,7 +119,7 @@ export class PrologCompletionProvider implements CompletionProvider {
       completions.push({
         label: prefix.name,
         kind: CompletionItemKind.Keyword,
-        detail: prefix.detail,
+        detail: prefix.detail ?? '',
         insertText: `${prefix.name} ${prefix.detail} .`,
       });
     });
@@ -138,6 +148,8 @@ export class PrologCompletionProvider implements CompletionProvider {
         label: prop,
         kind: CompletionItemKind.Property,
         detail: 'RDF property',
+        documentation: '',
+        insertText: prop,
       });
     });
 
@@ -173,13 +185,13 @@ export class PrologCompletionProvider implements CompletionProvider {
           }) => ({
             label: comp.label,
             kind: this.getCompletionItemKind(comp.kind),
-            detail: comp.detail,
-            documentation: comp.documentation,
+            detail: comp.detail ?? '',
+            documentation: comp.documentation ?? '',
             insertText: comp.insertText || comp.label,
           })
         );
       }
-    } catch (error: unknown) {
+    } catch (_error) {
       // Ignore errors
     }
 

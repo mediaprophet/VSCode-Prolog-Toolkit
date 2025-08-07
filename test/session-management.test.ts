@@ -22,7 +22,7 @@ describe('Session Management System', function () {
     // Initialize managers
     concurrencyManager = new ConcurrencyManager();
     historyManager = new QueryHistoryManager({
-      storageDir: path.join(testStorageDir, 'history')
+      storageDir: path.join(testStorageDir, 'history'),
     });
 
     sessionManager = new SessionManager({
@@ -30,18 +30,22 @@ describe('Session Management System', function () {
       maxSessions: 10,
       enablePersistence: true,
       enableAutoSave: false, // Disable for testing
-      autoCleanupInterval: 60000 // 1 minute for testing
+      autoCleanupInterval: 60000, // 1 minute for testing
     });
 
     sessionManager.setIntegrationManagers(concurrencyManager, historyManager);
 
     // Wait for initialization
+    // Wait for initialization (polling, since SessionManager does not have .once)
     await new Promise(resolve => {
-      if (sessionManager['isInitialized']) {
-        resolve(undefined);
-      } else {
-        sessionManager.once('initialized', resolve);
-      }
+      const check = () => {
+        if (sessionManager['isInitialized']) {
+          resolve(undefined);
+        } else {
+          setTimeout(check, 10);
+        }
+      };
+      check();
     });
   });
 
@@ -71,7 +75,7 @@ describe('Session Management System', function () {
       const sessionId = await sessionManager.createSession('Test Session', {
         description: 'A test session',
         userId: 'user123',
-        metadata: { test: true }
+        metadata: { test: true },
       });
 
       expect(sessionId).to.be.a('string');
@@ -190,11 +194,13 @@ describe('Session Management System', function () {
         prologFacts: ['fact(a)', 'fact(b)'],
         prologRules: ['rule(X) :- fact(X)'],
         variables: { testVar: 'testValue' },
-        rdfTriples: [{
-          subject: 'http://example.org/subject',
-          predicate: 'http://example.org/predicate',
-          object: 'http://example.org/object'
-        }]
+        rdfTriples: [
+          {
+            subject: 'http://example.org/subject',
+            predicate: 'http://example.org/predicate',
+            object: 'http://example.org/object',
+          },
+        ],
       };
 
       // Save state
@@ -213,7 +219,7 @@ describe('Session Management System', function () {
       // Create initial state
       const initialState = {
         prologFacts: ['initial_fact(1)'],
-        variables: { version: 1 }
+        variables: { version: 1 },
       };
       await sessionManager.saveSessionState(sessionId, initialState);
 
@@ -228,7 +234,7 @@ describe('Session Management System', function () {
       // Modify state
       const modifiedState = {
         prologFacts: ['modified_fact(2)'],
-        variables: { version: 2 }
+        variables: { version: 2 },
       };
       await sessionManager.saveSessionState(sessionId, modifiedState);
 
@@ -244,7 +250,7 @@ describe('Session Management System', function () {
     it('should persist state to disk', async function () {
       const testState = {
         prologFacts: ['persistent_fact(test)'],
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       await sessionManager.saveSessionState(sessionId, testState);
@@ -252,15 +258,19 @@ describe('Session Management System', function () {
       // Create new session manager to test persistence
       const newSessionManager = new SessionManager({
         storageDir: testStorageDir,
-        enablePersistence: true
+        enablePersistence: true,
       });
 
+      // Wait for initialization (polling)
       await new Promise(resolve => {
-        if (newSessionManager['isInitialized']) {
-          resolve(undefined);
-        } else {
-          newSessionManager.once('initialized', resolve);
-        }
+        const check = () => {
+          if (newSessionManager['isInitialized']) {
+            resolve(undefined);
+          } else {
+            setTimeout(check, 10);
+          }
+        };
+        check();
       });
 
       // Verify session was loaded from disk
@@ -279,8 +289,8 @@ describe('Session Management System', function () {
       sessionId = await sessionManager.createSession('Resource Test Session', {
         resourceQuota: {
           maxConcurrentQueries: 3,
-          maxMemoryUsageMB: 128
-        }
+          maxMemoryUsageMB: 128,
+        },
       });
     });
 
@@ -304,7 +314,7 @@ describe('Session Management System', function () {
         params: { goal: 'test(X)' },
         status: 'completed',
         startTime: Date.now(),
-        endTime: Date.now() + 1000
+        endTime: Date.now() + 1000,
       });
 
       const history = await sessionHistoryManager!.getHistory();
@@ -315,7 +325,7 @@ describe('Session Management System', function () {
     it('should update session resource quota', async function () {
       await sessionManager.updateSessionResourceQuota(sessionId, {
         maxConcurrentQueries: 5,
-        maxMemoryUsageMB: 256
+        maxMemoryUsageMB: 256,
       });
 
       const session = sessionManager.getSession(sessionId);
@@ -339,14 +349,14 @@ describe('Session Management System', function () {
         params: { goal: 'stats_test(X)' },
         status: 'completed',
         startTime: Date.now() - 5000,
-        endTime: Date.now() - 4000
+        endTime: Date.now() - 4000,
       });
 
-      const stats = sessionManager.getSessionStatistics(sessionId);
+      const stats = await sessionManager.getSessionStatistics(sessionId);
       expect(stats).to.not.be.null;
-      expect(stats!.config.id).to.equal(sessionId);
-      expect(stats!.uptime).to.be.greaterThan(0);
-      expect(stats!.idleTime).to.be.greaterThan(0);
+      expect(stats.config.id).to.equal(sessionId);
+      expect(stats.uptime).to.be.greaterThan(0);
+      expect(stats.idleTime).to.be.greaterThan(0);
     });
   });
 
@@ -357,8 +367,8 @@ describe('Session Management System', function () {
         port: 3061, // Use different port for testing
         sessionOptions: {
           storageDir: path.join(testStorageDir, 'backend-sessions'),
-          maxSessions: 5
-        }
+          maxSessions: 5,
+        },
       });
 
       // Start the backend
@@ -380,7 +390,7 @@ describe('Session Management System', function () {
     it('should create session through PrologBackend', async function () {
       const sessionId = await prologBackend.createSession('Backend Test Session', {
         description: 'Session created through PrologBackend',
-        userId: 'backend-user'
+        userId: 'backend-user',
       });
 
       expect(sessionId).to.be.a('string');
@@ -427,11 +437,11 @@ describe('Session Management System', function () {
       let sessionCreatedEvent: any = null;
       let sessionSwitchedEvent: any = null;
 
-      prologBackend.on('sessionCreated', (event) => {
+      prologBackend.on('sessionCreated', event => {
         sessionCreatedEvent = event;
       });
 
-      prologBackend.on('sessionSwitched', (event) => {
+      prologBackend.on('sessionSwitched', event => {
         sessionSwitchedEvent = event;
       });
 
@@ -459,8 +469,8 @@ describe('Session Management System', function () {
           userId: `user${i}`,
           resourceQuota: {
             maxConcurrentQueries: 2 + i,
-            maxMemoryUsageMB: 64 * (i + 1)
-          }
+            maxMemoryUsageMB: 64 * (i + 1),
+          },
         });
         sessions.push(sessionId);
       }
@@ -493,12 +503,12 @@ describe('Session Management System', function () {
       // Set different states for each session
       await sessionManager.saveSessionState(sessionId1, {
         prologFacts: ['session1_fact(a)'],
-        variables: { sessionId: 1 }
+        variables: { sessionId: 1 },
       });
 
       await sessionManager.saveSessionState(sessionId2, {
         prologFacts: ['session2_fact(b)'],
-        variables: { sessionId: 2 }
+        variables: { sessionId: 2 },
       });
 
       // Verify state isolation
@@ -518,15 +528,19 @@ describe('Session Management System', function () {
         storageDir: path.join(testStorageDir, 'cleanup-test'),
         maxIdleTime: 100, // 100ms for testing
         autoCleanupInterval: 200, // 200ms for testing
-        enablePersistence: false
+        enablePersistence: false,
       });
 
+      // Wait for initialization (polling)
       await new Promise(resolve => {
-        if (sessionManager2['isInitialized']) {
-          resolve(undefined);
-        } else {
-          sessionManager2.once('initialized', resolve);
-        }
+        const check = () => {
+          if (sessionManager2['isInitialized']) {
+            resolve(undefined);
+          } else {
+            setTimeout(check, 10);
+          }
+        };
+        check();
       });
 
       const sessionId = await sessionManager2.createSession('Cleanup Test Session');
@@ -572,16 +586,20 @@ describe('Session Management System', function () {
       // Create session manager with invalid storage directory
       const invalidSessionManager = new SessionManager({
         storageDir: '/invalid/path/that/does/not/exist',
-        enablePersistence: true
+        enablePersistence: true,
       });
 
       // Should still initialize but with warnings
+      // Wait for initialization (polling)
       await new Promise(resolve => {
-        if (invalidSessionManager['isInitialized']) {
-          resolve(undefined);
-        } else {
-          invalidSessionManager.once('initialized', resolve);
-        }
+        const check = () => {
+          if (invalidSessionManager['isInitialized']) {
+            resolve(undefined);
+          } else {
+            setTimeout(check, 10);
+          }
+        };
+        check();
       });
 
       // Should be able to create sessions in memory

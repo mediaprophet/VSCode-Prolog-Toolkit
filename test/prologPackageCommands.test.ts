@@ -5,8 +5,8 @@ import { PrologPackageCommands } from '../src/features/prologPackageCommands.js'
 import { PrologPack, PrologPackageManager } from '../src/features/prologPackageManager.js';
 
 describe('PrologPackageCommands', () => {
-  let packageCommands: PrologPackageCommands;
-  let mockPackageManager: sinon.SinonStubbedInstance<PrologPackageManager>;
+  let packageCommands: any;
+  let mockPackageManager: any;
   let windowStub: {
     showErrorMessage: sinon.SinonStub;
     showWarningMessage: sinon.SinonStub;
@@ -14,14 +14,14 @@ describe('PrologPackageCommands', () => {
     showQuickPick: sinon.SinonStub;
   };
 
-  const mockPacks: PrologPack[] = [
+  const mockPacks: any[] = [
     {
       name: 'http',
       title: 'HTTP client and server library',
       version: '1.0.0',
       author: 'Jan Wielemaker',
       home: 'https://swi-prolog.org',
-      installed: true
+      installed: true,
     },
     {
       name: 'clpfd',
@@ -29,8 +29,8 @@ describe('PrologPackageCommands', () => {
       version: '2.1.0',
       author: 'Markus Triska',
       home: 'https://swi-prolog.org',
-      installed: false
-    }
+      installed: false,
+    },
   ];
 
   beforeEach(() => {
@@ -43,11 +43,14 @@ describe('PrologPackageCommands', () => {
       showErrorMessage: sinon.stub(),
       showWarningMessage: sinon.stub(),
       showInformationMessage: sinon.stub(),
-      showQuickPick: sinon.stub()
+      showQuickPick: sinon.stub(),
     };
 
     // Mock the VS Code module
-    const vscode = require('vscode');
+    let vscode;
+    before(async () => {
+      vscode = await import('vscode');
+    });
     if (vscode && vscode.window) {
       Object.assign(vscode.window, windowStub);
     }
@@ -95,7 +98,7 @@ describe('PrologPackageCommands', () => {
           version: '1.0.0',
           title: `Pack ${i}`,
           author: 'Test Author',
-          installed: false
+          installed: false,
         }));
 
         mockPackageManager.listAvailablePacks.resolves(manyPacks);
@@ -116,7 +119,10 @@ describe('PrologPackageCommands', () => {
 
       it('should install a pack successfully', async () => {
         mockPackageManager.validatePackSecurity.resolves({ safe: true, warnings: [] });
-        mockPackageManager.installPack.resolves({ success: true, message: 'Pack installed successfully' });
+        mockPackageManager.installPack.resolves({
+          success: true,
+          message: 'Pack installed successfully',
+        });
 
         const result = await packageCommands.handlePackageCommand('install', ['http']);
 
@@ -129,7 +135,7 @@ describe('PrologPackageCommands', () => {
       it('should handle security warnings', async () => {
         mockPackageManager.validatePackSecurity.resolves({
           safe: false,
-          warnings: ['Pack is not from official repository']
+          warnings: ['Pack is not from official repository'],
         });
         windowStub.showWarningMessage.resolves('Cancel');
 
@@ -142,7 +148,7 @@ describe('PrologPackageCommands', () => {
       it('should proceed with installation despite warnings if user confirms', async () => {
         mockPackageManager.validatePackSecurity.resolves({
           safe: false,
-          warnings: ['Pack is not from official repository']
+          warnings: ['Pack is not from official repository'],
         });
         windowStub.showWarningMessage.resolves('Yes, Install Anyway');
         mockPackageManager.installPack.resolves({ success: true, message: 'Pack installed' });
@@ -158,7 +164,7 @@ describe('PrologPackageCommands', () => {
         mockPackageManager.installPack.resolves({
           success: false,
           message: 'Installation failed',
-          details: 'Network error'
+          details: 'Network error',
         });
 
         const result = await packageCommands.handlePackageCommand('install', ['http']);
@@ -211,13 +217,15 @@ describe('PrologPackageCommands', () => {
       it('should update all outdated packs when no pack specified', async () => {
         const outdatedPacks = [
           { name: 'http', version: '1.0.0', outdated: true },
-          { name: 'clpfd', version: '2.0.0', outdated: true }
+          { name: 'clpfd', version: '2.0.0', outdated: true },
         ];
 
         mockPackageManager.checkOutdatedPacks.resolves(outdatedPacks);
         windowStub.showInformationMessage.resolves('Yes, Update All');
         mockPackageManager.updatePack.onFirstCall().resolves({ success: true, message: 'Updated' });
-        mockPackageManager.updatePack.onSecondCall().resolves({ success: true, message: 'Updated' });
+        mockPackageManager.updatePack
+          .onSecondCall()
+          .resolves({ success: true, message: 'Updated' });
 
         const result = await packageCommands.handlePackageCommand('update', []);
 
@@ -271,7 +279,7 @@ describe('PrologPackageCommands', () => {
           description: 'A comprehensive HTTP library',
           home: 'https://swi-prolog.org',
           requires: ['ssl', 'uri'],
-          installed: true
+          installed: true,
         };
 
         mockPackageManager.getPackInfo.resolves(packInfo);
@@ -316,7 +324,7 @@ describe('PrologPackageCommands', () => {
 
         const result = await packageCommands.handlePackageCommand('search', ['http']);
 
-        expect(result).to.include('Search Results for \'http\'');
+        expect(result).to.include("Search Results for 'http'");
         expect(result).to.include('http');
         expect(result).to.include('v1.0.0');
         expect(mockPackageManager.searchPacks).to.have.been.calledWith('http');
@@ -344,7 +352,7 @@ describe('PrologPackageCommands', () => {
           version: '1.0.0',
           title: `Pack ${i}`,
           author: 'Test Author',
-          installed: false
+          installed: false,
         }));
 
         mockPackageManager.searchPacks.resolves(manyPacks);
@@ -358,7 +366,7 @@ describe('PrologPackageCommands', () => {
     describe('outdated command', () => {
       it('should list outdated packs', async () => {
         const outdatedPacks = [
-          { name: 'http', version: '1.0.0', outdated: true, title: 'HTTP library' }
+          { name: 'http', version: '1.0.0', outdated: true, title: 'HTTP library' },
         ];
 
         mockPackageManager.checkOutdatedPacks.resolves(outdatedPacks);
@@ -393,7 +401,10 @@ describe('PrologPackageCommands', () => {
       });
 
       it('should add a new server', async () => {
-        const result = await packageCommands.handlePackageCommand('servers', ['add', 'https://new-server.com']);
+        const result = await packageCommands.handlePackageCommand('servers', [
+          'add',
+          'https://new-server.com',
+        ]);
 
         expect(result).to.include('Added pack server');
         expect(result).to.include('https://new-server.com');
@@ -401,16 +412,24 @@ describe('PrologPackageCommands', () => {
       });
 
       it('should reject invalid URLs when adding', async () => {
-        const result = await packageCommands.handlePackageCommand('servers', ['add', 'invalid-url']);
+        const result = await packageCommands.handlePackageCommand('servers', [
+          'add',
+          'invalid-url',
+        ]);
 
         expect(result).to.include('Invalid URL');
       });
 
       it('should remove a server', async () => {
-        const result = await packageCommands.handlePackageCommand('servers', ['remove', 'https://old-server.com']);
+        const result = await packageCommands.handlePackageCommand('servers', [
+          'remove',
+          'https://old-server.com',
+        ]);
 
         expect(result).to.include('Removed pack server');
-        expect(mockPackageManager.removePackServer).to.have.been.calledWith('https://old-server.com');
+        expect(mockPackageManager.removePackServer).to.have.been.calledWith(
+          'https://old-server.com'
+        );
       });
     });
 
@@ -447,7 +466,7 @@ describe('PrologPackageCommands', () => {
 
       windowStub.showQuickPick.resolves({
         label: 'clpfd',
-        pack: mockPacks[1]
+        pack: mockPacks[1],
       });
 
       await packageCommands.showPackPicker();
@@ -464,7 +483,7 @@ describe('PrologPackageCommands', () => {
 
       windowStub.showQuickPick.resolves({
         label: 'clpfd',
-        pack: mockPacks[1]
+        pack: mockPacks[1],
       });
 
       await packageCommands.showPackPicker();
@@ -491,7 +510,7 @@ describe('PrologPackageCommands', () => {
 
       windowStub.showQuickPick.resolves({
         label: 'http',
-        pack: mockPacks[0]
+        pack: mockPacks[0],
       });
       windowStub.showWarningMessage.resolves('Yes, Uninstall');
 
@@ -507,7 +526,9 @@ describe('PrologPackageCommands', () => {
 
       await packageCommands.showUninstallPicker();
 
-      expect(windowStub.showInformationMessage).to.have.been.calledWith('No packs are currently installed.');
+      expect(windowStub.showInformationMessage).to.have.been.calledWith(
+        'No packs are currently installed.'
+      );
       expect(windowStub.showQuickPick).to.not.have.been.called;
     });
 
@@ -516,7 +537,7 @@ describe('PrologPackageCommands', () => {
 
       windowStub.showQuickPick.resolves({
         label: 'http',
-        pack: mockPacks[0]
+        pack: mockPacks[0],
       });
       windowStub.showWarningMessage.resolves('Cancel');
 

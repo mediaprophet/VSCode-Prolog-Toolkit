@@ -1,0 +1,101 @@
+{
+  "title": "VSCode-Prolog-Toolkit UI Installation Check",
+  "description": "Checklist for verifying that the extension UI works as intended after installation.",
+  "steps": [
+    {
+      "step": 1,
+      "description": "Install the VSCode-Prolog-Toolkit extension from the VSIX or Marketplace.",
+      "expectedResult": "Extension appears in the Extensions sidebar and is enabled."
+    },
+    {
+      "step": 2,
+      "description": "Reload or restart VS Code after installation.",
+      "expectedResult": "No errors or warnings related to the extension on startup."
+    },
+    {
+      "step": 3,
+      "description": "Open the Developer Tools (Help > Toggle Developer Tools) and check the Console for errors or warnings related to the extension.",
+      "expectedResult": "No uncaught exceptions or errors from the Prolog Toolkit extension."
+    },
+    {
+      "step": 4,
+      "description": "Check the VS Code Output panel (select 'Prolog Toolkit' or 'Extension Host') for activation or runtime errors.",
+      "expectedResult": "No activation or runtime errors are reported."
+    },
+    {
+      "step": 5,
+      "description": "Verify that the extension is activated by checking for the 'Congratulations, your extension ... is now active!' log message.",
+      "expectedResult": "Activation log message is present."
+    },
+    {
+      "step": 6,
+      "description": "Check that the PrologActivityProvider is registered: search for 'registerTreeDataProvider' in the codebase and confirm it is called with the correct IDs.",
+      "expectedResult": "'prologActivity', 'prologQueries', and 'prologFiles' are registered with the same provider instance."
+    },
+    {
+      "step": 7,
+      "description": "Open a Prolog (.pl) file in the editor.",
+      "expectedResult": "Syntax highlighting and language features are enabled for Prolog files."
+    },
+    {
+      "step": 8,
+      "description": "Check the Activity Bar for the Prolog Toolkit icon.",
+      "expectedResult": "Prolog Toolkit icon is visible and clickable in the Activity Bar."
+    },
+    {
+      "step": 9,
+      "description": "Click the Prolog Toolkit icon to open the extension dashboard or main UI.",
+      "expectedResult": "Dashboard or main UI loads without errors and displays available features."
+    },
+    {
+      "step": 10,
+      "description": "Check that the treeview is not empty: at minimum, the root nodes (Installation, Query History, Prolog Files, Debug Sessions, Settings, Notifications & Errors) should always be present.",
+      "expectedResult": "Treeview shows all root nodes, even if there is no data."
+    },
+    {
+      "step": 11,
+      "description": "If the treeview is empty, check for exceptions in the PrologActivityProvider constructor, getRootItems, or getChildren methods.",
+      "expectedResult": "No exceptions are thrown; fallback nodes are always returned."
+    },
+    {
+      "step": 12,
+      "description": "Check that refresh() is called after installation or state changes.",
+      "expectedResult": "Treeview updates when installation status or data changes."
+    },
+    {
+      "step": 13,
+      "description": "Open the Command Palette (Ctrl+Shift+P) and search for Prolog commands (e.g., 'Prolog: Query', 'Prolog: Consult').",
+      "expectedResult": "Prolog commands are listed and can be executed."
+    },
+    {
+      "step": 14,
+      "description": "Trigger a Prolog query or consult action from the UI or Command Palette.",
+      "expectedResult": "Query/consult UI appears, accepts input, and displays results or errors as appropriate."
+    },
+    {
+      "step": 15,
+      "description": "Open the extension's settings via the gear icon or Command Palette.",
+      "expectedResult": "Settings UI loads, and options can be viewed and changed."
+    },
+    {
+      "step": 16,
+      "description": "Check for any error or warning notifications in the VS Code notification area after using UI features.",
+      "expectedResult": "No unexpected errors or warnings are shown."
+    },
+    {
+      "step": 17,
+      "description": "Verify that all UI elements (buttons, panels, dialogs) are responsive and accessible.",
+      "expectedResult": "All UI elements respond to user actions and are accessible via keyboard and mouse."
+    },
+    {
+      "step": 18,
+      "description": "If the problem persists, run 'npm run lint' and 'npm run test' to check for codebase errors or failing tests.",
+      "expectedResult": "No critical lint or test errors are present."
+    },
+    {
+      "step": 19,
+      "description": "If all else fails, add error logging to the PrologActivityProvider constructor and getRootItems to capture any silent failures.",
+      "expectedResult": "Any initialization errors are logged and can be diagnosed."
+    }
+  ]
+}

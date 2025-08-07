@@ -1,5 +1,7 @@
-import { window, QuickPickItem } from 'vscode';
-import { PrologPackageManager, PrologPack, PackageOperationResult } from './prologPackageManager';
+import type { QuickPickItem } from 'vscode';
+import { window } from 'vscode';
+import type { PackageOperationResult, PrologPack } from './prologPackageManager.js';
+import { PrologPackageManager } from './prologPackageManager.js';
 
 export interface PackQuickPickItem extends QuickPickItem {
   pack: PrologPack;
@@ -100,6 +102,9 @@ export class PrologPackageCommands {
     const packName = args[0];
 
     // Validate pack security first
+    if (!packName) {
+      return '\u274c Invalid pack name.';
+    }
     const securityCheck = await this.packageManager.validatePackSecurity(packName);
     if (!securityCheck.safe) {
       const proceed = await window.showWarningMessage(
@@ -117,6 +122,9 @@ export class PrologPackageCommands {
       );
     }
 
+    if (!packName) {
+      return '\u274c Invalid pack name.';
+    }
     const result = await this.packageManager.installPack(packName);
     return this.formatOperationResult('Installation', result);
   }
@@ -139,6 +147,9 @@ export class PrologPackageCommands {
       return `❌ Uninstallation of '${packName}' cancelled.`;
     }
 
+    if (!packName) {
+      return '\u274c Invalid pack name.';
+    }
     const result = await this.packageManager.uninstallPack(packName);
     return this.formatOperationResult('Uninstallation', result);
   }
@@ -170,6 +181,9 @@ export class PrologPackageCommands {
       return results;
     } else {
       const packName = args[0];
+      if (!packName) {
+        return '\u274c Invalid pack name.';
+      }
       const result = await this.packageManager.updatePack(packName);
       return this.formatOperationResult('Update', result);
     }
@@ -181,6 +195,9 @@ export class PrologPackageCommands {
     }
 
     const packName = args[0];
+    if (!packName) {
+      return '\u274c Invalid pack name.';
+    }
     const packInfo = await this.packageManager.getPackInfo(packName);
 
     if (!packInfo) {

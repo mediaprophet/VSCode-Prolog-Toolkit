@@ -1,5 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { EventEmitter } from 'events';
+import type { AxiosInstance, AxiosResponse } from 'axios';
+import axios from 'axios';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
 
 export interface PrologApiClientConfig {
   baseUrl: string;
@@ -96,7 +97,15 @@ export interface N3Request {
  * TypeScript/JavaScript SDK for VSCode Prolog Toolkit API
  * Provides easy integration for AI agents and external applications
  */
-export class PrologApiClient extends EventEmitter {
+export interface PrologApiClientEventMap {
+  requestStart: [any];
+  requestError: [any];
+  responseSuccess: [any];
+  responseError: [any];
+  requestRetry: [number, any];
+}
+
+export class PrologApiClient extends NodeEventEmitter<PrologApiClientEventMap> {
   private client: AxiosInstance;
   private config: PrologApiClientConfig;
 
@@ -114,7 +123,7 @@ export class PrologApiClient extends EventEmitter {
 
     this.client = axios.create({
       baseURL: this.config.baseUrl,
-      timeout: this.config.timeout,
+      timeout: this.config.timeout ?? 30000,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'PrologApiClient/1.0.0',
@@ -379,7 +388,7 @@ export class PrologApiClient extends EventEmitter {
    * Update authentication
    */
   updateAuth(auth: PrologApiClientConfig['auth']): void {
-    this.config.auth = auth;
+    this.config.auth = auth ?? { type: 'none' };
 
     // Clear existing auth headers
     delete this.client.defaults.headers['X-API-Key'];
@@ -428,7 +437,12 @@ export class PrologApiClient extends EventEmitter {
   /**
    * Test connection to the API
    */
-  async testConnection(): Promise<{ connected: boolean; latency: number; version?: string; error?: string }> {
+  async testConnection(): Promise<{
+    connected: boolean;
+    latency: number;
+    version?: string;
+    error?: string;
+  }> {
     const start = Date.now();
 
     try {

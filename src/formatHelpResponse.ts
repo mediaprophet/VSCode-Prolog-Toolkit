@@ -1,4 +1,4 @@
-import { ChatResponseStream } from 'vscode';
+import type { ChatResponseStream } from 'vscode';
 
 // Format help response
 export function formatHelpResponse(doc: any, stream: ChatResponseStream) {

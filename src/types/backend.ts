@@ -1,9 +1,3 @@
-/**
- * Backend-related type definitions for PrologBackend and related functionality
- */
-
-import { EventEmitter } from 'events';
-
 // PrologBackend Options and Configuration
 export interface PrologBackendOptions {
   swiplPath?: string;
@@ -66,6 +60,7 @@ export interface ChunkInfo {
   total_results: number;
   is_first: boolean;
   is_last: boolean;
+  timeout?: ReturnType<typeof setTimeout>;
 }
 
 // Query Management Types
@@ -246,22 +241,22 @@ export interface SessionSnapshot {
 
 // Event Types for Backend
 export interface BackendEventMap {
-  ready: () => void;
-  started: () => void;
-  stopped: () => void;
-  restarted: () => void;
-  error: (error: Error) => void;
-  exit: (code: number | null, signal: NodeJS.Signals | null) => void;
-  queryCompleted: (event: { queryId: string; result: any; executionTime: number }) => void;
-  queryHistoryAdded: (entry: any) => void;
-  queryScheduleCompleted: (query: ScheduledQuery) => void;
-  queryScheduleExecutionStarted: (query: ScheduledQuery) => void;
-  resourceUsageUpdated: (usage: ResourceUsage) => void;
-  sessionCreated: (event: { sessionId: string; config: SessionConfig }) => void;
-  sessionSwitched: (event: { fromSessionId?: string; toSessionId: string }) => void;
-  sessionDeleted: (event: { sessionId: string }) => void;
-  sessionStateSaved: (event: { sessionId: string; snapshotId?: string }) => void;
-  sessionStateRestored: (event: { sessionId: string; snapshotId?: string }) => void;
+  ready: [];
+  started: [];
+  stopped: [];
+  restarted: [];
+  error: [Error];
+  exit: [code: number | null, signal: string | null];
+  queryCompleted: [{ queryId: string; result: any; executionTime: number }];
+  queryHistoryAdded: [any];
+  queryScheduleCompleted: [ScheduledQuery];
+  queryScheduleExecutionStarted: [ScheduledQuery];
+  resourceUsageUpdated: [ResourceUsage];
+  sessionCreated: [{ sessionId: string; config: SessionConfig }];
+  sessionSwitched: [{ fromSessionId?: string; toSessionId: string }];
+  sessionDeleted: [{ sessionId: string }];
+  sessionStateSaved: [{ sessionId: string; snapshotId?: string }];
+  sessionStateRestored: [{ sessionId: string; snapshotId?: string }];
 }
 
 // Callback Types
@@ -270,7 +265,7 @@ export type StreamingCallback = (chunk: any, isFirst: boolean, isLast: boolean) 
 export type ProgressCallback = (progress: number, message?: string) => void;
 
 // Backend Interface
-export interface IPrologBackend extends EventEmitter {
+export interface IPrologBackend {
   isRunning(): boolean;
   start(): void;
   stop(intentional?: boolean): void;

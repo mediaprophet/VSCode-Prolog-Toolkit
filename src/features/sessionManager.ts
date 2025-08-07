@@ -1,24 +1,26 @@
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { ConcurrencyManager, ResourceQuota } from './concurrencyManager';
-import { QueryHistoryManager } from './queryHistoryManager';
+import type { Event } from 'vscode';
+import { Disposable, EventEmitter } from 'vscode';
+import type { ResourceQuota } from './concurrencyManager.js';
+import { ConcurrencyManager } from './concurrencyManager.js';
+import { QueryHistoryManager } from './queryHistoryManager.js';
 
 export interface SessionConfig {
   id: string;
   name: string;
-  description?: string;
-  userId?: string;
-  agentId?: string;
+  description?: string | undefined;
+  userId?: string | undefined;
+  agentId?: string | undefined;
   createdAt: number;
   lastAccessedAt: number;
   isActive: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
   resourceQuota?: Partial<ResourceQuota>;
   persistenceEnabled: boolean;
   autoSave: boolean;
-  maxIdleTime?: number; // in milliseconds
+  maxIdleTime?: number;
 }
 
 export interface SessionState {
@@ -42,10 +44,12 @@ export interface SessionState {
 export interface SessionSnapshot {
   sessionId: string;
   name: string;
-  description?: string;
+  description?: string | undefined;
+  userId?: string | undefined;
+  agentId?: string | undefined;
   state: SessionState;
   createdAt: number;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface SessionManagerOptions {
@@ -65,7 +69,7 @@ export interface SessionManagerOptions {
  * Supports multiple concurrent sessions for different agents or users
  * with state persistence and resource isolation
  */
-export class SessionManager extends EventEmitter {
+export class SessionManager implements Disposable {
   private options: SessionManagerOptions;
   private sessions: Map<string, SessionConfig> = new Map();
   private sessionStates: Map<string, SessionState> = new Map();
@@ -79,14 +83,70 @@ export class SessionManager extends EventEmitter {
   private isInitialized: boolean = false;
 
   // Integration with existing managers
-  private concurrencyManager?: ConcurrencyManager;
-  private historyManager?: QueryHistoryManager;
+  private concurrencyManager: ConcurrencyManager | undefined;
+  private historyManager: QueryHistoryManager | undefined;
   private sessionConcurrencyManagers: Map<string, ConcurrencyManager> = new Map();
   private sessionHistoryManagers: Map<string, QueryHistoryManager> = new Map();
 
-  constructor(options: Partial<SessionManagerOptions> = {}) {
-    super();
+  // VS Code event emitters
+  private readonly _onInitialized = new EventEmitter<void>();
+  private readonly _onError = new EventEmitter<unknown>();
+  private readonly _onSessionCreated = new EventEmitter<{
+    sessionId: string;
+    config: SessionConfig;
+  }>();
+  private readonly _onSessionSwitched = new EventEmitter<{
+    previousSessionId: string | null;
+    currentSessionId: string;
+    sessionConfig: SessionConfig;
+  }>();
+  private readonly _onSessionDeleted = new EventEmitter<{
+    sessionId: string;
+    config: SessionConfig;
+  }>();
+  private readonly _onSessionStateSaved = new EventEmitter<{
+    sessionId: string;
+    state: SessionState;
+  }>();
+  private readonly _onSessionStateRestored = new EventEmitter<{
+    sessionId: string;
+    state: SessionState;
+  }>();
+  private readonly _onSnapshotCreated = new EventEmitter<{
+    snapshotId: string;
+    snapshot: SessionSnapshot;
+  }>();
+  private readonly _onSessionResourceQuotaUpdated = new EventEmitter<{
+    sessionId: string;
+    quota: Partial<ResourceQuota>;
+  }>();
+  private readonly _onSessionsCleanedUp = new EventEmitter<{ count: number }>();
 
+  // VS Code event properties
+  public readonly onInitialized: Event<void> = this._onInitialized.event;
+  public readonly onError: Event<unknown> = this._onError.event;
+  public readonly onSessionCreated: Event<{ sessionId: string; config: SessionConfig }> =
+    this._onSessionCreated.event;
+  public readonly onSessionSwitched: Event<{
+    previousSessionId: string | null;
+    currentSessionId: string;
+    sessionConfig: SessionConfig;
+  }> = this._onSessionSwitched.event;
+  public readonly onSessionDeleted: Event<{ sessionId: string; config: SessionConfig }> =
+    this._onSessionDeleted.event;
+  public readonly onSessionStateSaved: Event<{ sessionId: string; state: SessionState }> =
+    this._onSessionStateSaved.event;
+  public readonly onSessionStateRestored: Event<{ sessionId: string; state: SessionState }> =
+    this._onSessionStateRestored.event;
+  public readonly onSnapshotCreated: Event<{ snapshotId: string; snapshot: SessionSnapshot }> =
+    this._onSnapshotCreated.event;
+  public readonly onSessionResourceQuotaUpdated: Event<{
+    sessionId: string;
+    quota: Partial<ResourceQuota>;
+  }> = this._onSessionResourceQuotaUpdated.event;
+  public readonly onSessionsCleanedUp: Event<{ count: number }> = this._onSessionsCleanedUp.event;
+
+  constructor(options: Partial<SessionManagerOptions> = {}) {
     this.options = {
       storageDir: path.join(process.cwd(), '.prolog-sessions'),
       maxSessions: 50,
@@ -138,11 +198,11 @@ export class SessionManager extends EventEmitter {
       }
 
       this.isInitialized = true;
-      this.emit('initialized');
+      this._onInitialized.fire();
       console.log(`[SessionManager] Initialized with ${this.sessions.size} sessions`);
     } catch (error: unknown) {
       console.error('[SessionManager] Initialization failed:', error);
-      this.emit('error', error);
+      this._onError.fire(error);
     }
   }
 
@@ -238,7 +298,7 @@ export class SessionManager extends EventEmitter {
       await this.saveSessionState(sessionId);
     }
 
-    this.emit('sessionCreated', { sessionId, config: sessionConfig });
+    this._onSessionCreated.fire({ sessionId, config: sessionConfig });
     console.log(`[SessionManager] Created session ${sessionId} (${name})`);
 
     return sessionId;
@@ -279,7 +339,7 @@ export class SessionManager extends EventEmitter {
     // Load session state
     await this.loadSessionState(sessionId);
 
-    this.emit('sessionSwitched', {
+    this._onSessionSwitched.fire({
       previousSessionId: this.activeSession,
       currentSessionId: sessionId,
       sessionConfig: session,
@@ -388,7 +448,7 @@ export class SessionManager extends EventEmitter {
       await this.deleteSessionFromDisk(sessionId);
     }
 
-    this.emit('sessionDeleted', { sessionId, config: session });
+    this._onSessionDeleted.fire({ sessionId, config: session });
     console.log(`[SessionManager] Deleted session ${sessionId} (${session.name})`);
 
     return true;
@@ -430,7 +490,7 @@ export class SessionManager extends EventEmitter {
       await this.saveSessionStateToDisk(sessionId, currentState);
     }
 
-    this.emit('sessionStateSaved', { sessionId, state: currentState });
+    this._onSessionStateSaved.fire({ sessionId, state: currentState });
     console.log(`[SessionManager] Saved state for session ${sessionId}`);
   }
 
@@ -461,7 +521,7 @@ export class SessionManager extends EventEmitter {
 
     this.sessionStates.set(sessionId, state);
 
-    this.emit('sessionStateRestored', { sessionId, state });
+    this._onSessionStateRestored.fire({ sessionId, state });
     console.log(
       `[SessionManager] Restored state for session ${sessionId}${snapshotId ? ` from snapshot ${snapshotId}` : ''}`
     );
@@ -493,7 +553,7 @@ export class SessionManager extends EventEmitter {
       await this.saveSnapshot(snapshotId, snapshot);
     }
 
-    this.emit('snapshotCreated', { snapshotId, snapshot });
+    this._onSnapshotCreated.fire({ snapshotId, snapshot });
     console.log(`[SessionManager] Created snapshot ${snapshotId} for session ${sessionId}`);
 
     return snapshotId;
@@ -539,7 +599,7 @@ export class SessionManager extends EventEmitter {
       await this.saveSessionToDisk(sessionId);
     }
 
-    this.emit('sessionResourceQuotaUpdated', { sessionId, quota });
+    this._onSessionResourceQuotaUpdated.fire({ sessionId, quota });
     console.log(`[SessionManager] Updated resource quota for session ${sessionId}`);
   }
 
@@ -733,7 +793,7 @@ export class SessionManager extends EventEmitter {
     }
 
     if (sessionsToCleanup.length > 0) {
-      this.emit('sessionsCleanedUp', { count: sessionsToCleanup.length });
+      this._onSessionsCleanedUp.fire({ count: sessionsToCleanup.length });
     }
   }
 
@@ -773,7 +833,16 @@ export class SessionManager extends EventEmitter {
     this.sessions.clear();
     this.sessionStates.clear();
 
-    this.removeAllListeners();
+    this._onInitialized.dispose();
+    this._onError.dispose();
+    this._onSessionCreated.dispose();
+    this._onSessionSwitched.dispose();
+    this._onSessionDeleted.dispose();
+    this._onSessionStateSaved.dispose();
+    this._onSessionStateRestored.dispose();
+    this._onSnapshotCreated.dispose();
+    this._onSessionResourceQuotaUpdated.dispose();
+    this._onSessionsCleanedUp.dispose();
     console.log('[SessionManager] Disposed');
   }
 }

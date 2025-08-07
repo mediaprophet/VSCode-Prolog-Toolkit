@@ -1,9 +1,13 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/node';
-import { ValidationProvider, LSPContext, BackendResponse } from './types';
+import type { Diagnostic } from 'vscode-languageserver-types';
+import { DiagnosticSeverity } from 'vscode-languageserver-types';
+import type { BackendResponse, LSPContext, ValidationProvider } from './types.js';
 
 export class PrologValidationProvider implements ValidationProvider {
-  async validateTextDocument(textDocument: TextDocument, context: LSPContext): Promise<Diagnostic[]> {
+  async validateTextDocument(
+    textDocument: TextDocument,
+    context: LSPContext
+  ): Promise<Diagnostic[]> {
     const settings = await context.getDocumentSettings(textDocument.uri);
 
     if (settings.linter.run === 'never') {
@@ -16,7 +20,7 @@ export class PrologValidationProvider implements ValidationProvider {
 
     // Basic Prolog syntax validation
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i] ?? '';
       const trimmedLine = line.trim();
 
       if (trimmedLine === '' || trimmedLine.startsWith('%')) {
@@ -89,15 +93,15 @@ export class PrologValidationProvider implements ValidationProvider {
     // Check for undefined predicates (basic heuristic)
     const predicateMatch = trimmedLine.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
     if (predicateMatch) {
-      const predicate = predicateMatch[1];
-      if (this.isLikelyUndefinedPredicate(predicate)) {
+      const predicate = predicateMatch[1] ?? '';
+      if (predicate && this.isLikelyUndefinedPredicate(predicate)) {
         const diagnostic: Diagnostic = {
           severity: DiagnosticSeverity.Information,
           range: {
             start: { line: lineNumber, character: line.indexOf(predicate) },
             end: { line: lineNumber, character: line.indexOf(predicate) + predicate.length },
           },
-          message: `Predicate '${predicate}' may be undefined`,
+          message: `Predicate '${predicate}' is possibly undefined`,
           source: 'prolog-lsp',
         };
         diagnostics.push(diagnostic);
@@ -162,7 +166,10 @@ export class PrologValidationProvider implements ValidationProvider {
     return !builtins.includes(predicate);
   }
 
-  private async validateWithBackend(document: TextDocument, context: LSPContext): Promise<Diagnostic[]> {
+  private async validateWithBackend(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<Diagnostic[]> {
     if (!context.prologBackend?.isRunning()) {
       return [];
     }

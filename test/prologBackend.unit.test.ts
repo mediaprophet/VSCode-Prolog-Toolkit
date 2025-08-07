@@ -1,13 +1,14 @@
-import * as axios from 'axios';
-import { expect } from 'chai';
-import { ChildProcess } from 'child_process';
-import * as sinon from 'sinon';
+import axios from 'axios';
+import chai, { expect } from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import { PrologBackend } from '../src/prologBackend.js';
+chai.use(sinonChai);
 
 describe('PrologBackend Unit Tests (Mocked)', function () {
-  let backend: PrologBackend;
-  let mockChildProcess: sinon.SinonStubbedInstance<ChildProcess>;
-  let axiosStub: sinon.SinonStub;
+  let backend: any;
+  let mockChildProcess: any;
+  let axiosStub: any;
 
   beforeEach(function () {
     // Create a mock child process
@@ -17,25 +18,25 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       on: sinon.stub(),
       stdout: {
         on: sinon.stub(),
-        pipe: sinon.stub()
+        pipe: sinon.stub(),
       },
       stderr: {
         on: sinon.stub(),
-        pipe: sinon.stub()
+        pipe: sinon.stub(),
       },
       stdin: {
         write: sinon.stub(),
-        end: sinon.stub()
-      }
+        end: sinon.stub(),
+      },
     } as any;
 
     // Stub axios for HTTP requests
-    axiosStub = sinon.stub(axios, 'default');
+    axiosStub = sinon.stub(axios, 'request');
 
     // Create backend instance
     backend = new PrologBackend({
       swiplPath: 'swipl',
-      port: 3063
+      port: 3063,
     });
 
     // Replace the spawn method to return our mock
@@ -59,7 +60,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       const config = {
         swiplPath: '/custom/path/swipl',
         port: 9999,
-        args: ['--quiet']
+        args: ['--quiet'],
       };
 
       const customBackend = new PrologBackend(config);
@@ -122,8 +123,8 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       axiosStub.resolves({
         data: {
           status: 'ok',
-          results: [{ X: 5 }]
-        }
+          results: [{ X: 5 }],
+        },
       });
     });
 
@@ -135,7 +136,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       startedCallback();
 
       const response = await backend.sendRequest('query', {
-        goal: 'X is 2 + 3'
+        goal: 'X is 2 + 3',
       });
 
       expect(axiosStub).to.have.been.calledOnce;
@@ -178,8 +179,8 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       axiosStub.resolves({
         data: [
           { status: 'ok', results: [] },
-          { status: 'ok', results: [{ X: 5 }] }
-        ]
+          { status: 'ok', results: [{ X: 5 }] },
+        ],
       });
 
       backend.start();
@@ -190,7 +191,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
 
       const batch = [
         { cmd: 'consult', params: { file: 'test.pl' } },
-        { cmd: 'query', params: { goal: 'X is 2 + 3' } }
+        { cmd: 'query', params: { goal: 'X is 2 + 3' } },
       ];
 
       const responses = await backend.sendRequest(batch);
@@ -213,7 +214,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       axiosStub.resolves({ data: { status: 'error', error: 'Invalid input' } });
 
       const response = await backend.sendRequest('query', {
-        goal: 'test\u0000dangerous'
+        goal: 'test\u0000dangerous',
       });
 
       expect(response.status).to.equal('error');
@@ -230,14 +231,16 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
 
     it('should enforce timeout limits', async function () {
       // Mock a delayed response
-      axiosStub.returns(new Promise(resolve => {
-        setTimeout(() => resolve({ data: { status: 'ok' } }), 10000);
-      }));
+      axiosStub.returns(
+        new Promise(resolve => {
+          setTimeout(() => resolve({ data: { status: 'ok' } }), 10000);
+        })
+      );
 
       try {
         await backend.sendRequest('query', {
           goal: 'test',
-          timeoutMs: 1000
+          timeoutMs: 1000,
         });
         expect.fail('Should have timed out');
       } catch (error) {
@@ -307,8 +310,8 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
         data: {
           status: 'ok',
           version: 1,
-          uptime: 1000
-        }
+          uptime: 1000,
+        },
       });
 
       const health = await backend.sendRequest('status', {});
@@ -339,7 +342,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
       const config = {
         swiplPath: '/custom/swipl',
         port: 8888,
-        args: ['--custom-arg']
+        args: ['--custom-arg'],
       };
 
       const customBackend = new PrologBackend(config);
@@ -379,7 +382,7 @@ describe('PrologBackend Unit Tests (Mocked)', function () {
     });
 
     it('should emit error events', function (done) {
-      backend.on('error', (error) => {
+      backend.on('error', error => {
         expect(error).to.be.instanceOf(Error);
         done();
       });

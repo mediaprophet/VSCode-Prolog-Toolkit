@@ -5,7 +5,6 @@ import type {
   Diagnostic,
   DiagnosticCollection,
   DiagnosticSeverity,
-  Position,
   Range,
   TextDocument,
   Uri,
@@ -68,7 +67,11 @@ export interface IConfigurationManager {
  */
 export interface IProcessExecutor {
   executeProlog(document: TextDocument, config: ILinterConfiguration): Promise<IProcessResult>;
-  buildArgumentsForDialect(trigger: RunTrigger, fileName: string, documentText: string): {
+  buildArgumentsForDialect(
+    trigger: RunTrigger,
+    fileName: string,
+    documentText: string
+  ): {
     args: string[];
     goals?: string;
   };

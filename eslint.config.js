@@ -10,6 +10,7 @@ export default [
   {
     ignores: [
       "src/extension.ts",
+      "src/**/*.js",
       "node_modules/**",
       "out/**",
       "dist/**",

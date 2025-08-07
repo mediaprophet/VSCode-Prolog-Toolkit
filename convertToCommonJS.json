@@ -1,0 +1,49 @@
+{
+  "plan": [
+    {
+      "step": 1,
+      "description": "Set project-wide TypeScript target to 'es2022' and module to 'CommonJS' for all builds."
+    },
+    {
+      "step": 2,
+      "description": "Update all tsconfig files (tsconfig.json, tsconfig.build.json, tsconfig.debug.json, etc.) to use 'module': 'CommonJS', 'target': 'es2022', and remove ESM-specific options (e.g., 'verbatimModuleSyntax', 'allowImportingTsExtensions')."
+    },
+    {
+      "step": 3,
+      "description": "Update package.json: set 'type' to 'commonjs' or remove the 'type' field. Ensure 'main' and 'exports' point to CommonJS outputs."
+    },
+    {
+      "step": 4,
+      "description": "Convert all import/export statements in the codebase to CommonJS (require/module.exports) or use TypeScript's 'esModuleInterop' and 'allowSyntheticDefaultImports' for compatibility."
+    },
+    {
+      "step": 5,
+      "description": "Check all dependencies for ESM-only packages. Replace or polyfill any ESM-only dependencies with CommonJS-compatible alternatives."
+    },
+    {
+      "step": 6,
+      "description": "Update all build scripts, npm scripts, and launch configs to point to the CommonJS outputs (e.g., out/extension.js, out/debug/prologDebugSession.js). Remove ESM/ESNext build targets."
+    },
+    {
+      "step": 7,
+      "description": "Clean the workspace (remove out/, dist/, and any ESM build artifacts). Rebuild the project using the new CommonJS settings."
+    },
+    {
+      "step": 8,
+      "description": "Test the extension and debug adapter in VS Code. Fix any runtime errors related to module loading or require/import mismatches."
+    },
+    {
+      "step": 9,
+      "description": "If you want to keep some ESM code, use a CommonJS wrapper as the extension entry point (extension.js), and dynamically import ESM modules as needed. Document any hybrid logic clearly."
+    },
+    {
+      "step": 10,
+      "description": "Document the migration in CHANGELOG.md and README.md, including any known limitations or hybrid workarounds."
+    }
+  ],
+  "notes": [
+    "The VS Code extension host and debug adapter protocol are most reliable with CommonJS modules as of 2025.",
+    "ESM support is improving, but for production-grade stability, CommonJS is still recommended for entry points and debug adapters.",
+    "A hybrid approach is possible, but requires careful dynamic import and may complicate debugging and packaging."
+  ]
+}

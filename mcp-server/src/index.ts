@@ -60,18 +60,14 @@ class PrologToolkitMCPServer {
       ...config
     };
 
-    this.server = new Server(
-      {
-        name: 'vscode-prolog-toolkit',
-        version: '1.0.0',
+    this.server = new Server({
+      name: 'vscode-prolog-toolkit',
+      version: '1.0.0',
+      capabilities: {
+        resources: {},
+        tools: {},
       },
-      {
-        capabilities: {
-          resources: {},
-          tools: {},
-        },
-      }
-    );
+    });
 
     this.setupHandlers();
   }
@@ -206,25 +202,25 @@ class PrologToolkitMCPServer {
         switch (name) {
           case 'execute_prolog_query':
             return await this.executePrologQuery(args);
-          
+
           case 'consult_prolog_file':
             return await this.consultPrologFile(args);
-          
+
           case 'create_prolog_session':
             return await this.createPrologSession(args);
-          
+
           case 'list_prolog_sessions':
             return await this.listPrologSessions(args);
-          
+
           case 'get_session_state':
             return await this.getSessionState(args);
-          
+
           case 'validate_prolog_syntax':
             return await this.validatePrologSyntax(args);
-          
+
           case 'get_prolog_help':
             return await this.getPrologHelp(args);
-          
+
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -235,7 +231,7 @@ class PrologToolkitMCPServer {
         if (error instanceof McpError) {
           throw error;
         }
-        
+
         throw new McpError(
           ErrorCode.InternalError,
           `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
@@ -277,13 +273,13 @@ class PrologToolkitMCPServer {
         switch (uri) {
           case 'prolog://sessions':
             return await this.getSessionsResource();
-          
+
           case 'prolog://predicates':
             return await this.getPredicatesResource();
-          
+
           case 'prolog://examples':
             return await this.getExamplesResource();
-          
+
           default:
             throw new McpError(
               ErrorCode.InvalidRequest,
@@ -423,7 +419,7 @@ class PrologToolkitMCPServer {
       content: [
         {
           type: 'text',
-          text: validation.valid 
+          text: validation.valid
             ? 'Prolog syntax is valid ✓'
             : `Syntax errors found:\n${validation.errors.map((e: any) => `- Line ${e.line}: ${e.message}`).join('\n')}`
         }
@@ -591,7 +587,7 @@ fib(N, F) :-
     }
 
     let output = `Query succeeded with ${result.results.length} result(s):\n\n`;
-    
+
     result.results.forEach((res, index) => {
       output += `Result ${index + 1}:\n`;
       if (typeof res === 'object') {
@@ -615,7 +611,7 @@ fib(N, F) :-
     }
 
     let output = `Found ${sessions.length} Prolog session(s):\n\n`;
-    
+
     sessions.forEach(session => {
       output += `• ${session.name} (${session.id})\n`;
       output += `  Status: ${session.isActive ? 'Active' : 'Inactive'}\n`;
@@ -632,7 +628,7 @@ fib(N, F) :-
     }
 
     let output = `Help for: ${help.topic}\n\n`;
-    
+
     if (help.description) {
       output += `Description: ${help.description}\n\n`;
     }

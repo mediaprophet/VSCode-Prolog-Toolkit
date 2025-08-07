@@ -1,11 +1,13 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import type { Express, NextFunction, Request, Response } from 'express';
+import express from 'express';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import { Server } from 'http';
-import { PrologBackend } from '../prologBackend';
-import { apiRoutes } from './apiRoutes';
-import { authMiddleware, AuthConfig } from './apiMiddleware';
+import type { PrologBackend } from '../prologBackend.js';
+import type { AuthConfig } from './apiMiddleware.js';
+import { authMiddleware } from './apiMiddleware.js';
+import { apiRoutes } from './apiRoutes.js';
 
 export interface ApiServerConfig {
   enabled: boolean;
@@ -98,8 +100,7 @@ export class ApiServer {
         standardHeaders: true,
         legacyHeaders: false,
         // Allow burst requests up to the burst limit
-        skip: req => {
-          const burstKey = `burst_${req.ip}`;
+        skip: _req => {
           // Simple burst tracking (in production, use Redis or similar)
           return false; // For now, apply rate limiting to all requests
         },
@@ -204,7 +205,7 @@ export class ApiServer {
     });
 
     // Global error handler
-    this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+    this.app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
       console.error(`[ApiServer] Error in ${req.method} ${req.path}:`, error);
 
       // Don't send error details in production

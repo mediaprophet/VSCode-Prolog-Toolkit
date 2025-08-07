@@ -1,8 +1,10 @@
 import { expect } from 'chai';
-import { PrologBackend } from '../src/prologBackend.js';
+import path from 'path';
+import * as PrologBackendModule from '../out/src/prologBackend.js';
+const { PrologBackend } = PrologBackendModule;
 
 describe('PrologBackend', function () {
-  let backend: PrologBackend;
+  let backend: any;
   beforeEach(function () {
     backend = new PrologBackend();
   });
@@ -24,11 +26,13 @@ describe('PrologBackend', function () {
     backend.on('started', async () => {
       try {
         // Prepare a batch: consult, query, help
-        const testFile = require('path').resolve(__dirname, 'resources', 'foo_with_pldoc.pl').replace(/\\/g, '/');
+        const testFile = path
+          .resolve(__dirname, 'resources', 'foo_with_pldoc.pl')
+          .replace(/\\/g, '/');
         const batch = [
           { cmd: 'consult', params: { file: testFile } },
           { cmd: 'query', params: { goal: 'foo(1, B).' } },
-          { cmd: 'help', params: { predicate: 'foo/2' } }
+          { cmd: 'help', params: { predicate: 'foo/2' } },
         ];
         const responses = await backend.sendRequest(batch);
         expect(responses).to.be.an('array').with.lengthOf(3);
@@ -68,7 +72,9 @@ describe('PrologBackend', function () {
           expect(err).to.exist;
           // SWI-Prolog throws a time_limit_exceeded error
           if (typeof err === 'object' && err !== null && ('message' in err || 'error' in err)) {
-            const msg = (err as { message?: string; error?: string }).message || (err as { message?: string; error?: string }).error;
+            const msg =
+              (err as { message?: string; error?: string }).message ||
+              (err as { message?: string; error?: string }).error;
             expect(msg).to.match(/time[_ ]limit[_ ]exceeded/i);
           }
           finish(undefined);
@@ -94,7 +100,9 @@ describe('PrologBackend', function () {
     }
     backend.on('started', async () => {
       try {
-        const testFile = require('path').resolve(__dirname, 'resources', 'foo_with_pldoc.pl').replace(/\\/g, '/');
+        const testFile = path
+          .resolve(__dirname, 'resources', 'foo_with_pldoc.pl')
+          .replace(/\\/g, '/');
         let consultResp;
         try {
           consultResp = await backend.sendRequest('query', { goal: `consult('${testFile}')` });
@@ -162,26 +170,28 @@ describe('PrologBackend', function () {
     backend.start();
   });
 
-
   it('[3] should send a query and receive output', function (done) {
     backend.on('started', () => {
       console.log('[TEST] [3] Backend started, sending query...');
-      backend.sendRequest('query', { goal: 'write(hello), nl.' }).then((output) => {
-        console.log('[TEST] [3] Query response:', output);
-        expect(output.status).to.equal('ok');
-        done();
-      }).catch((err: unknown) => {
-        console.error('[TEST] [3] Query error:', err);
-        done(err);
-      });
+      backend
+        .sendRequest('query', { goal: 'write(hello), nl.' })
+        .then(output => {
+          console.log('[TEST] [3] Query response:', output);
+          expect(output.status).to.equal('ok');
+          done();
+        })
+        .catch((err: unknown) => {
+          console.error('[TEST] [3] Query error:', err);
+          done(err);
+        });
     });
     backend.start();
   });
 
-
   it('[4] should handle invalid input', function (done) {
     backend.on('started', () => {
-      backend.sendRequest('query', { goal: '\u0000badinput' })
+      backend
+        .sendRequest('query', { goal: '\u0000badinput' })
         .then(() => done(new Error('Expected error for invalid input, but got success')))
         .catch((err: unknown) => {
           expect(err).to.exist;

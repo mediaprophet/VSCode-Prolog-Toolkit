@@ -1,9 +1,8 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
-import { InstallationChecker, InstallationStatus } from './installationChecker';
-import { InstallationGuide } from './installationGuide';
-import { PlatformUtils } from '../utils/platformUtils';
+import * as vscode from 'vscode';
+import { PlatformUtils } from '../utils/platformUtils.js';
+import { InstallationChecker } from './installationChecker.js';
+import { InstallationGuide } from './installationGuide.js';
 
 export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'prologSettings';
@@ -652,10 +651,10 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.js')
+      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.js')
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.css')
+      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.css')
     );
 
     return `<!DOCTYPE html>

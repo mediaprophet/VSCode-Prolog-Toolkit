@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import * as path from 'path';
-import { PrologBackend } from '../src/old_prologBackend.ts.old';
+import { PrologBackend } from '../src/prologBackend.js';
 
 describe('PrologBackend PlDoc Only', function () {
   it('should return args and examples for a user-defined predicate (PlDoc only)', function (done) {

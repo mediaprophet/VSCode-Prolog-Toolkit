@@ -3,19 +3,19 @@ import {
   Disposable,
   Position,
   Range,
-  TextDocument,
+  type TextDocument,
   Uri,
   workspace,
   WorkspaceEdit,
 } from 'vscode';
-import { ICommandManager } from './interfaces';
+import type { ICommandManager } from './interfaces.js';
 
 /**
  * Manages VS Code commands for Prolog linting functionality
  */
 export class CommandManager implements ICommandManager {
-  private commandAddDynamic: Disposable;
-  private commandAddUseModule: Disposable;
+  private commandAddDynamic!: Disposable;
+  private commandAddUseModule!: Disposable;
   private commandAddDynamicId: string;
   private commandAddUseModuleId: string;
 
@@ -104,7 +104,6 @@ export class CommandManager implements ICommandManager {
   ): Promise<boolean> {
     const edit = new WorkspaceEdit();
     const lines = this.getDirectiveLines(doc, 'use_module', range);
-    const pred: string = predicate.match(/(.+)\/\d+/)?.[1] || predicate;
     const re = new RegExp('^:-\\s+use_module\\s*\\(\\s*.+\\b' + module + '\\b');
     let directiveLine: number = -1;
     let pos: Position;
@@ -127,7 +126,8 @@ export class CommandManager implements ICommandManager {
       edit.insert(uri, pos, predicate + ',');
     } else {
       // If no existing directive is found, add a new 'use_module' directive
-      pos = new Position(lines[lines.length - 1], 0);
+      const lastLine = lines[lines.length - 1] ?? 0;
+      pos = new Position(lastLine, 0);
       edit.insert(uri, pos, `:- use_module(library(${module}), [${predicate}]).\n`);
     }
 
@@ -173,6 +173,7 @@ export class CommandManager implements ICommandManager {
         line = index;
         return true;
       }
+      return false;
     });
 
     // Continue iterating to find the end of the directive or the end of the document
@@ -187,7 +188,7 @@ export class CommandManager implements ICommandManager {
 
     line = 0;
     // Check for the presence of a comment block at the beginning of the document
-    let inComment = /\s*\/\*/.test(textlines[0]);
+    let inComment = /\s*\/\*/.test(textlines[0] || '');
 
     // Continue iterating until the end of the comment block is found
     while (inComment && line < textlines.length) {
@@ -244,14 +245,14 @@ export class CommandManager implements ICommandManager {
    */
   public extractPredicatesFromUseModule(lineText: string): string[] {
     const match = lineText.match(/\[([^\]]+)\]/);
-    if (!match) {
+    if (!match || typeof match[1] !== 'string') {
       return [];
     }
 
     return match[1]
       .split(',')
-      .map(pred => pred.trim())
-      .filter(pred => pred.length > 0);
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
   }
 
   /**
@@ -259,7 +260,6 @@ export class CommandManager implements ICommandManager {
    */
   public isPredicateInUseModule(doc: TextDocument, module: string, predicate: string): boolean {
     const lines = this.findUseModuleDirectives(doc, module);
-    
     for (const lineIndex of lines) {
       const lineText = doc.lineAt(lineIndex).text;
       const predicates = this.extractPredicatesFromUseModule(lineText);
@@ -267,7 +267,6 @@ export class CommandManager implements ICommandManager {
         return true;
       }
     }
-
     return false;
   }
 }

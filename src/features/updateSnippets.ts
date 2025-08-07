@@ -1,208 +1,234 @@
-import { Variable } from '@vscode/debugadapter';
-import {
-  TextDocument,
-  window,
-  Disposable,
-  Position,
-  CancellationToken,
-  CompletionContext,
-  CompletionItem,
-  SnippetString,
-  MarkdownString,
-  Uri,
-  workspace,
-  CompletionItemKind,
-} from 'vscode';
 import * as fs from 'fs';
-import { Utils } from '../utils/utils';
-import { verify } from 'crypto';
+import type { CancellationToken, CompletionContext, Position, TextDocument } from 'vscode';
+import {
+  CompletionItem,
+  CompletionItemKind,
+  Disposable,
+  MarkdownString,
+  SnippetString,
+  window,
+  workspace,
+} from 'vscode';
+import { Utils } from '../utils/utils.js';
 
-// Class responsible for updating snippets based on prolog files
 export class SnippetUpdater {
-  // Update snippets based on new predicates create by the user in the document
   public updateSnippet() {
-    // Get the currently active text editor
     const editor = window.activeTextEditor;
     if (!editor) {
       return;
     }
-
     const doc = editor.document;
-    // Update only if the document is a prolog file
     if (doc.languageId === 'prolog') {
-      // Retrieve predicates from the document and check against existing snippets
       const predicats = this._getPredicat(doc);
       const already: string[] = [];
       const description: boolean[] = [];
-      // Extract existing snippets' names for comparison
-      Object.keys(Utils.snippets).forEach(elem => {
-        if (elem.includes(':')) {
-          if (elem.includes(':-')) {
-            already.push(elem.replace(':- ', ''));
+      if (Utils.snippets) {
+        Object.keys(Utils.snippets as object).forEach(elem => {
+          if (elem.includes(':')) {
+            if (elem.includes(':-')) {
+              already.push(elem.replace(':- ', ''));
+            } else {
+              const part = elem.split(':')[1];
+              if (part !== undefined) {
+                already.push(part);
+              }
+            }
           } else {
-            already.push(elem.split(':')[1]);
+            already.push(elem);
           }
-        } else {
-          already.push(elem);
-        }
-        if (Utils.snippets[elem].description.includes('\ncustom predicate\n')) {
-          description.push(false);
-        } else {
-          description.push(true);
-        }
-      });
-      // Update snippets based on new predicates in the document
-      predicats.forEach(elem => {
-        const num = elem[1].split(',').length;
-        if (!already.includes(elem[0] + '/' + num.toString())) {
-          if (elem[2] == null) {
-            Utils.snippets[elem[0] + '/' + num.toString()] = {
-              prefix: elem[0],
-              body: [''],
-              description:
-                elem[0].toString() + '(' + elem[1].toString() + ')\ncustom predicate\n\n',
-            };
+          if (
+            Utils.snippets &&
+            Utils.snippets[elem]?.description?.includes('\ncustom predicate\n')
+          ) {
+            description.push(false);
           } else {
-            Utils.snippets[elem[0] + '/' + num.toString()] = {
-              prefix: elem[0],
-              body: [''],
-              description: elem[0].toString() + '(' + elem[1].toString() + ')\n' + elem[2] + '\n',
-            };
+            description.push(true);
           }
-          Utils.newsnippets.push(elem);
-        } else if (elem[2] != null) {
-          delete Utils.snippets[
-            Object.keys(Utils.snippets)[already.indexOf(elem[0] + '/' + num.toString())]
-          ];
-          Utils.snippets[elem[0] + '/' + num.toString()] = {
-            prefix: elem[0],
-            body: [''],
-            description: elem[0].toString() + '(' + elem[1].toString() + ')\n' + elem[2] + '\n',
-          };
-          for (let i = 0; i < Utils.newsnippets.length; i++) {
-            if (Utils.newsnippets[i][0] == elem[0] && Utils.newsnippets[i][1] == elem[1]) {
-              Utils.newsnippets.splice(i, 1);
-              Utils.newsnippets.push(elem);
-              break;
+        });
+        predicats.forEach((elem: [string, string, string?]) => {
+          const num = elem[1]?.split(',').length ?? 0;
+          const key = elem[0] + '/' + num.toString();
+          if (!already.includes(key)) {
+            if (elem[2] == null) {
+              if (Utils.snippets) {
+                Utils.snippets[key] = {
+                  prefix: elem[0] ?? '',
+                  body: [''],
+                  description:
+                    (elem[0]?.toString() ?? '') +
+                    '(' +
+                    (elem[1]?.toString() ?? '') +
+                    ')\ncustom predicate\n\n',
+                };
+              }
+            } else {
+              if (Utils.snippets) {
+                Utils.snippets[key] = {
+                  prefix: elem[0] ?? '',
+                  body: [''],
+                  description:
+                    (elem[0]?.toString() ?? '') +
+                    '(' +
+                    (elem[1]?.toString() ?? '') +
+                    ')\n' +
+                    (elem[2] ?? '') +
+                    '\n',
+                };
+              }
+            }
+            Utils.newsnippets.push(elem);
+          } else if (elem[2] != null) {
+            if (Utils.snippets) {
+              const idx = already.indexOf(key);
+              const keys = Object.keys(Utils.snippets as object);
+              const delKey = keys[idx];
+              if (delKey !== undefined) {
+                delete Utils.snippets[delKey];
+              }
+              Utils.snippets[key] = {
+                prefix: elem[0] ?? '',
+                body: [''],
+                description:
+                  (elem[0]?.toString() ?? '') +
+                  '(' +
+                  (elem[1]?.toString() ?? '') +
+                  ')\n' +
+                  (elem[2] ?? '') +
+                  '\n',
+              };
+            }
+            for (let i = 0; i < Utils.newsnippets.length; i++) {
+              if (Utils.newsnippets[i][0] == elem[0] && Utils.newsnippets[i][1] == elem[1]) {
+                Utils.newsnippets.splice(i, 1);
+                Utils.newsnippets.push(elem);
+                break;
+              }
             }
           }
+        });
+        if (Utils.CONTEXT) {
+          Utils.genPredicateModules(Utils.CONTEXT);
         }
-      });
-      // Generate predicate modules based on the updated context
-      Utils.genPredicateModules(Utils.CONTEXT);
+      }
     }
   }
-
-  // Extracts predicates from the given TextDocument
-  public _getPredicat(doc: TextDocument) {
-    const docContent = doc.getText(); // Get the content of the document
-    const regexp = /(^\s*)([a-z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_\-, ]*)\)(?=.*(:-|=>|-->).*)/gm; // Regular expression for matching Prolog predicates
-    const regexpModule = /^\s*:-\s*use_module\(([a-z][a-zA-Z0-9_/]*)\s*(,|\)\s*\.)/gm; // Regular expression for matching Prolog use_module directives
-    const regexpComment = /^\s*(%(?!!)|%!|\*(?!\/)|\/\*\*)(\s*)(.*)/gm; // Regular expression for matching Prolog comments
-    const arrayModule = [...docContent.matchAll(regexpModule)]; // Extract all use_module directives from the document
-    const prolog = doc.fileName.split('.')[1]; // Get the Prolog extension from the document's file name
-    let predicats = [];
-
-    // Loop through each use_module directive
+  private _getPredicat(doc: TextDocument) {
+    const docContent = doc.getText();
+    const regexp = /(^\s*)([a-z][a-zA-Z0-9_]*)\(([a-zA-Z0-9_\-, ]*)\)(?=.*(:-|=>|-->).*)/gm;
+    const regexpModule = /^\s*:-\s*use_module\(([a-z][a-zA-Z0-9_/]*)\s*(,|\)\s*\.)/gm;
+    const regexpComment = /^\s*(%(?!!)|%!|\*(?!\/)|\/\*\*)(\s*)(.*)/gm;
+    const arrayModule = [...docContent.matchAll(regexpModule)];
+    const prolog = doc.fileName.split('.')[1];
+    let predicats: [string, string, string?][] = [];
     for (let i = 0; i < arrayModule.length; i++) {
-      // Read the content of the referenced module
       let text = '';
       try {
-        text = fs.readFileSync(
-          workspace.workspaceFolders[0].uri.fsPath + '/' + arrayModule[i][1] + '.' + prolog,
-          'utf8'
-        );
+        let wsPath = '';
+        if (workspace.workspaceFolders && workspace.workspaceFolders[0]) {
+          wsPath = workspace.workspaceFolders[0].uri.fsPath;
+        }
+        const mod = arrayModule[i];
+        if (mod !== undefined && Array.isArray(mod) && typeof mod[1] === 'string') {
+          text = fs.readFileSync(wsPath + '/' + mod[1] + '.' + prolog, 'utf8');
+        }
       } catch (error) {
         console.error('Error reading file:', error);
       }
-
-      // Extract predicates from the referenced module's content
       const array2 = [...text.matchAll(regexp)];
       array2.forEach(elem => {
-        let nbline = Utils.findLineColForByte(text, elem.index + elem[1].length).line - 1;
+        const idx =
+          typeof elem.index === 'number' && typeof elem[1] === 'string'
+            ? elem.index + elem[1].length
+            : 0;
+        const lineCol = Utils.findLineColForByte(text, idx);
+        let nbline = (lineCol?.line ?? 1) - 1;
         const lines = text.split(/\n|\r/);
         let verif = true;
         let comment = '';
         while (verif && nbline > -1) {
-          const res = lines[nbline].matchAll(regexpComment).next();
-          if (res.value) {
-            if (res.value[1] != '*/' || res.value[1] != '/**') {
-              if (comment == '') {
-                comment = res.value[3];
-              } else if (res.value[3] != '') {
+          const res = lines[nbline]?.matchAll(regexpComment).next();
+          if (res && res.value) {
+            if (res.value[1] !== '*/' && res.value[1] !== '/**') {
+              if (comment === '') {
+                comment = res.value[3] ?? '';
+              } else if (res.value[3] && res.value[3] !== '') {
                 comment = res.value[3] + '\n' + comment;
               }
             }
-            if (res.value[1] == '%!' || res.value[1] == '/**') {
+            if (res.value[1] === '%!' || res.value[1] === '/**') {
               verif = false;
             }
             nbline = nbline - 1;
           } else {
-            comment = null;
+            comment = '';
             verif = false;
           }
         }
-        predicats.push([elem[2], elem[3], comment]);
+        predicats.push([
+          typeof elem[2] === 'string' ? elem[2] : '',
+          typeof elem[3] === 'string' ? elem[3] : '',
+          comment,
+        ]);
       });
     }
-    // Extract predicates from the current document
     const array = [...docContent.matchAll(regexp)];
-    // Search for definition comments
     array.forEach(elem => {
-      let nbline = Utils.findLineColForByte(docContent, elem.index + elem[1].length).line - 1;
+      const idx =
+        typeof elem.index === 'number' && typeof elem[1] === 'string'
+          ? elem.index + elem[1].length
+          : 0;
+      const lineCol = Utils.findLineColForByte(docContent, idx);
+      let nbline = (lineCol?.line ?? 1) - 1;
       const lines = docContent.split('\n');
       let verif = true;
       let comment = '';
       while (verif && nbline > -1) {
-        const res = lines[nbline].matchAll(regexpComment).next();
-        if (res.value) {
-          if (res.value[1] != '*/' || res.value[1] != '/**') {
-            if (comment == '') {
-              comment = res.value[3];
-            } else if (res.value[3] != '') {
+        const res = lines[nbline]?.matchAll(regexpComment).next();
+        if (res && res.value) {
+          if (res.value[1] !== '*/' && res.value[1] !== '/**') {
+            if (comment === '') {
+              comment = res.value[3] ?? '';
+            } else if (res.value[3] && res.value[3] !== '') {
               comment = res.value[3] + '\n' + comment;
             }
           }
-          if (res.value[1] == '%!' || res.value[1] == '/**') {
+          if (res.value[1] === '%!' || res.value[1] === '/**') {
             verif = false;
           }
           nbline = nbline - 1;
         } else {
-          comment = null;
+          comment = '';
           verif = false;
         }
       }
-      predicats.push([elem[2], elem[3], comment]);
+      predicats.push([
+        typeof elem[2] === 'string' ? elem[2] : '',
+        typeof elem[3] === 'string' ? elem[3] : '',
+        comment,
+      ]);
     });
-    // Filter out a specific predicate named "test"
     predicats = predicats.filter(function (predicat) {
       return predicat[0] != 'test';
     });
     return predicats;
   }
-  dispose() {
+
+  public dispose() {
     // No resources to dispose
   }
 }
 
-// Class responsible for managing the SnippetUpdater and subscribing to relevant events
 export class SnippetUpdaterController {
   private snippetUpdater: SnippetUpdater;
   private _disposable: Disposable;
 
   constructor(snippetUpdater: SnippetUpdater) {
     this.snippetUpdater = snippetUpdater;
-    this.snippetUpdater.updateSnippet(); // Update snippets initially
-
-    // subscribe to selection change and editor activation events
+    this.snippetUpdater.updateSnippet();
     const subscriptions: Disposable[] = [];
     workspace.onDidSaveTextDocument(this._onEvent, this, subscriptions);
     window.onDidChangeActiveTextEditor(this._onEvent, this, subscriptions);
-
-    // update the counter for the current file
     this.snippetUpdater.updateSnippet();
-
-    // create a combined disposable from both event subscriptions
     this._disposable = Disposable.from(...subscriptions);
   }
 
@@ -218,15 +244,15 @@ export class SnippetUpdaterController {
 export class PrologCompletionProvider {
   // Provides completion items for Prolog code (auto completion)
   public provideCompletionItems(
-    document: TextDocument,
-    position: Position,
-    token: CancellationToken,
-    context: CompletionContext
+    _document: TextDocument,
+    _position: Position,
+    _token: CancellationToken,
+    _context: CompletionContext
   ) {
     // Array to store completion items
-    const snippetCompletion = [];
+    const snippetCompletion: CompletionItem[] = [];
     // Iterate through new snippets and create completion items
-    Utils.newsnippets.forEach(elem => {
+    Utils.newsnippets.forEach((elem: [string, string, string?]) => {
       const params = elem[1].split(','); // Split parameters of the snippet
       const completionItem = new CompletionItem(
         elem[0] + '/' + params.length,

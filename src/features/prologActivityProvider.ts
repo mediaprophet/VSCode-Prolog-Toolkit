@@ -1,9 +1,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ErrorHandler, PrologError } from './errorHandler';
-import { InstallationChecker } from './installationChecker';
-import { QueryHistoryManager } from './queryHistoryManager';
-import { QueryNotificationManager } from './queryNotificationManager';
+import type { PrologError } from './errorHandler.js';
+import { ErrorHandler } from './errorHandler.js';
+import { InstallationChecker } from './installationChecker.js';
+import { QueryHistoryManager } from './queryHistoryManager.js';
+import { QueryNotificationManager } from './queryNotificationManager.js';
 
 export interface PrologTreeItem {
   id: string;
@@ -51,7 +52,11 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
     this.queryHistory = QueryHistoryManager.getInstance();
     this.queryNotificationManager = new QueryNotificationManager();
     this.errorHandler = new ErrorHandler();
-    this.checkInstallation();
+    this.initializeAsync();
+  }
+
+  private async initializeAsync(): Promise<void> {
+    await this.checkInstallation();
   }
 
   private async checkInstallation(): Promise<void> {
@@ -62,6 +67,10 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
       this.refresh();
     } catch (error) {
       console.error('Error checking Prolog installation:', error);
+      // Set defaults in case of error
+      this.isInstalled = false;
+      this.currentVersion = 'Unknown';
+      this.refresh();
     }
   }
 
@@ -289,7 +298,8 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
           title: 'Clear History',
         },
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[PrologActivityProvider] Error loading query history:', error);
       items.push({
         id: 'query-error',
         label: 'Error loading history',
@@ -297,6 +307,10 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
         tooltip: 'Failed to load query history',
         iconPath: new vscode.ThemeIcon('error'),
         contextValue: 'query-error',
+        command: {
+          command: 'prolog.refreshInstallation',
+          title: 'Refresh',
+        },
       });
     }
 
@@ -366,7 +380,8 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
           title: 'New Prolog File',
         },
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[PrologActivityProvider] Error loading Prolog files:', error);
       items.push({
         id: 'file-error',
         label: 'Error loading files',
@@ -374,6 +389,10 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
         tooltip: 'Failed to load Prolog files',
         iconPath: new vscode.ThemeIcon('error'),
         contextValue: 'file-error',
+        command: {
+          command: 'prolog.refreshInstallation',
+          title: 'Refresh',
+        },
       });
     }
 
@@ -500,7 +519,6 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
     // Get active queries from QueryNotificationManager
     try {
       const activeQueries = this.queryNotificationManager.getActiveQueries();
-      const allQueries = this.queryNotificationManager.getAllQueries();
 
       // Add active queries section
       if (activeQueries.length > 0) {
@@ -604,7 +622,8 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
         iconPath: new vscode.ThemeIcon('graph'),
         contextValue: 'notification-stats',
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[PrologActivityProvider] Error loading notifications:', error);
       items.push({
         id: 'notifications-error',
         label: 'Error loading notifications',
@@ -612,6 +631,10 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
         tooltip: 'Failed to load notifications and errors',
         iconPath: new vscode.ThemeIcon('error'),
         contextValue: 'notifications-error',
+        command: {
+          command: 'prolog.refreshInstallation',
+          title: 'Refresh',
+        },
       });
     }
 

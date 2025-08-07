@@ -53,7 +53,7 @@
 - To add a new language feature, create a provider in `src/features/` and register it in `extension.ts`. Ensure all new features are tested and robust.
 
 ## References
-- See `fullimplementation.md` and `implementationsteps.json` for detailed architecture, protocols, and implementation plans. All steps in these documents should be implemented with robust, production-grade code and comprehensive tests.
+- See 'docs/*.*', `fullimplementation.md` and `implementationsteps.json` for detailed architecture, protocols, and implementation plans. All steps in these documents should be implemented with robust, production-grade code and comprehensive tests.
 - See `README.md` for user-facing features and configuration.
 
 ---

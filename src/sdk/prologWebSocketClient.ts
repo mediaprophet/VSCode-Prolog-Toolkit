@@ -1,5 +1,6 @@
+// Node.js types are available globally via @types/node
 import WebSocket from 'ws';
-import { EventEmitter } from 'events';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
 
 export interface PrologWebSocketConfig {
   url: string;
@@ -50,12 +51,34 @@ export interface SystemStatus {
  * WebSocket client for real-time Prolog notifications
  * Provides real-time updates for query progress, session events, and system status
  */
-export class PrologWebSocketClient extends EventEmitter {
+export interface PrologWebSocketClientEventMap {
+  connected: [];
+  disconnected: [number, string];
+  error: [any];
+  pong: [];
+  welcome: [any];
+  queryProgress: [QueryNotification];
+  notification: [any];
+  queryComplete: [QueryNotification];
+  sessionEvent: [SessionEvent];
+  systemStatus: [SystemStatus];
+  queryStatusResponse: [any];
+  queryCancelResponse: [any];
+  subscribed: [any];
+  unsubscribed: [any];
+  serverError: [any];
+  unknownMessage: [any];
+  parseError: [any, any];
+  reconnectFailed: [];
+  reconnecting: [number];
+}
+
+export class PrologWebSocketClient extends NodeEventEmitter<PrologWebSocketClientEventMap> {
   private ws: WebSocket | null = null;
   private config: PrologWebSocketConfig;
   private reconnectAttempts: number = 0;
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   private isConnected: boolean = false;
   private subscriptions: Set<string> = new Set();
 
@@ -105,7 +128,11 @@ export class PrologWebSocketClient extends EventEmitter {
         this.ws.on('close', (code, reason) => {
           this.isConnected = false;
           this.stopHeartbeat();
-          this.emit('disconnected', code, reason);
+          this.emit(
+            'disconnected',
+            code,
+            typeof reason === 'string' ? reason : (reason?.toString?.() ?? '')
+          );
           console.log(`[PrologWebSocketClient] Disconnected (${code}: ${reason})`);
 
           if (this.config.reconnect?.enabled && code !== 1000) {
@@ -380,7 +407,7 @@ export class PrologWebSocketClient extends EventEmitter {
           break;
         }
         case 'pong': {
-          this.emit('pong', message);
+          this.emit('pong');
           break;
         }
 

@@ -1,14 +1,9 @@
 'use strict';
 
-import {
-  ChatRequest,
-  ChatResponseStream,
-  CancellationToken,
-  ChatResult,
-  workspace,
-} from 'vscode';
-import { PrologBackend } from '../prologBackend';
-import { TelemetryCollector, TelemetryData } from './telemetryCollector';
+import type { CancellationToken, ChatRequest, ChatResponseStream, ChatResult } from 'vscode';
+import { workspace } from 'vscode';
+import { PrologBackend } from '../prologBackend.js';
+import { TelemetryCollector } from './telemetryCollector.js';
 
 export class ChatHandler {
   private prologBackend: PrologBackend | null = null;
@@ -27,7 +22,7 @@ export class ChatHandler {
   // Chat participant handler
   async handleChatRequest(
     request: ChatRequest,
-    context: any, // ChatContext type not available in current vscode API
+    _context: any, // ChatContext type not available in current vscode API
     stream: ChatResponseStream,
     _token: CancellationToken
   ): Promise<ChatResult> {
@@ -62,7 +57,12 @@ export class ChatHandler {
       // Handle cancellation
       if (_token.isCancellationRequested) {
         stream.markdown('❌ **Request cancelled**');
-        this.telemetry.collect({ command, success: false, error: 'cancelled', timestamp: startTime });
+        this.telemetry.collect({
+          command,
+          success: false,
+          error: 'cancelled',
+          timestamp: startTime,
+        });
         return { metadata: { command: 'cancelled' } };
       }
 
@@ -192,7 +192,7 @@ export class ChatHandler {
             streaming: true,
             max_results_per_chunk: 50,
           },
-          (chunk, isFirst, isLast) => {
+          (chunk: any, isFirst: any, isLast: any) => {
             // Handle streaming chunks
             if (isFirst) {
               stream.progress('📊 Processing results...');
@@ -270,7 +270,7 @@ export class ChatHandler {
   private async handleConsultCommand(
     filePath: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     if (!filePath.trim()) {
       stream.markdown('❌ **Error**: Please provide a file path. Example: `/consult myfile.pl`');
@@ -309,7 +309,7 @@ export class ChatHandler {
   private async handleHelpCommand(
     predicate: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     if (!predicate.trim()) {
       stream.markdown(this.getHelpMessage());
@@ -380,7 +380,7 @@ export class ChatHandler {
   private async handleN3LoadCommand(
     args: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     const parts = args.trim().split(/\s+/);
 
@@ -427,7 +427,7 @@ export class ChatHandler {
   private async handleN3ListCommand(
     args: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     try {
       if (!this.prologBackend?.isRunning()) {
@@ -537,7 +537,7 @@ export class ChatHandler {
   private async handleN3ReasonCommand(
     args: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     try {
       if (!this.prologBackend?.isRunning()) {
@@ -589,7 +589,7 @@ export class ChatHandler {
   private async handleN3ExplainCommand(
     args: string,
     stream: ChatResponseStream,
-    __token: CancellationToken
+    _token: CancellationToken
   ) {
     const goal = args.trim();
 

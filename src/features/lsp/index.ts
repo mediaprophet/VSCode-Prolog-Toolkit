@@ -1,37 +1,36 @@
 // Import all providers for internal use
-import { ConfigurationManager } from './configurationManager';
-import { PrologValidationProvider } from './validationProvider';
-import { PrologCompletionProvider } from './completionProvider';
-import { PrologHoverProvider } from './hoverProvider';
-import { PrologCodeActionsProvider } from './codeActionsProvider';
-import { PrologExecuteCommandHandler } from './executeCommandHandler';
-import { PrologDefinitionProvider } from './definitionProvider';
-import { PrologSymbolProvider } from './symbolProvider';
-import { PrologReferencesProvider } from './referencesProvider';
-import { PrologSignatureProvider } from './signatureProvider';
-import { PrologFormattingProvider } from './formattingProvider';
-import { PrologRenameProvider } from './renameProvider';
-import { PrologFoldingProvider } from './foldingProvider';
-import { PrologSemanticTokensProvider } from './semanticTokensProvider';
+import { PrologCodeActionsProvider } from './codeActionsProvider.js';
+import { PrologCompletionProvider } from './completionProvider.js';
+import { PrologDefinitionProvider } from './definitionProvider.js';
+import { PrologExecuteCommandHandler } from './executeCommandHandler.js';
+import { PrologFoldingProvider } from './foldingProvider.js';
+import { PrologFormattingProvider } from './formattingProvider.js';
+import { PrologHoverProvider } from './hoverProvider.js';
+import { PrologReferencesProvider } from './referencesProvider.js';
+import { PrologRenameProvider } from './renameProvider.js';
+import { PrologSemanticTokensProvider } from './semanticTokensProvider.js';
+import { PrologSignatureProvider } from './signatureProvider.js';
+import { PrologSymbolProvider } from './symbolProvider.js';
+import { PrologValidationProvider } from './validationProvider.js';
 
 // Export all types and interfaces
-export * from './types';
+export * from './types.js';
 
 // Export all providers
-export { ConfigurationManager } from './configurationManager';
-export { PrologValidationProvider } from './validationProvider';
-export { PrologCompletionProvider } from './completionProvider';
-export { PrologHoverProvider } from './hoverProvider';
-export { PrologCodeActionsProvider } from './codeActionsProvider';
-export { PrologExecuteCommandHandler } from './executeCommandHandler';
-export { PrologDefinitionProvider } from './definitionProvider';
-export { PrologSymbolProvider } from './symbolProvider';
-export { PrologReferencesProvider } from './referencesProvider';
-export { PrologSignatureProvider } from './signatureProvider';
-export { PrologFormattingProvider } from './formattingProvider';
-export { PrologRenameProvider } from './renameProvider';
-export { PrologFoldingProvider } from './foldingProvider';
-export { PrologSemanticTokensProvider } from './semanticTokensProvider';
+export { PrologCodeActionsProvider } from './codeActionsProvider.js';
+export { PrologCompletionProvider } from './completionProvider.js';
+export { ConfigurationManager } from './configurationManager.js';
+export { PrologDefinitionProvider } from './definitionProvider.js';
+export { PrologExecuteCommandHandler } from './executeCommandHandler.js';
+export { PrologFoldingProvider } from './foldingProvider.js';
+export { PrologFormattingProvider } from './formattingProvider.js';
+export { PrologHoverProvider } from './hoverProvider.js';
+export { PrologReferencesProvider } from './referencesProvider.js';
+export { PrologRenameProvider } from './renameProvider.js';
+export { PrologSemanticTokensProvider } from './semanticTokensProvider.js';
+export { PrologSignatureProvider } from './signatureProvider.js';
+export { PrologSymbolProvider } from './symbolProvider.js';
+export { PrologValidationProvider } from './validationProvider.js';
 
 // Convenience factory function to create all providers
 export function createLSPProviders() {

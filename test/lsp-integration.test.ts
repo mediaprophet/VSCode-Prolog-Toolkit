@@ -1,18 +1,18 @@
 import { expect } from 'chai';
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
-import { PrologLSPClient } from '../src/features/prologLSPClient';
-import { MultiIDESupport } from '../src/features/multiIDESupport';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { MultiIDESupport } from '../src/features/multiIDESupport.js';
+import { PrologLSPClient } from '../src/features/prologLSPClient.js';
 
-describe('LSP Integration Tests', function() {
+describe('LSP Integration Tests', function () {
   this.timeout(30000); // Increase timeout for LSP operations
 
   let lspClient: PrologLSPClient;
   let testWorkspace: string;
   let testDocument: vscode.TextDocument;
 
-  before(async function() {
+  before(async function () {
     // Setup test workspace
     testWorkspace = path.join(__dirname, 'test-workspace');
     if (!fs.existsSync(testWorkspace)) {
@@ -60,13 +60,13 @@ test_member(X, [_|T]) :- test_member(X, T).
     // Initialize LSP client
     const mockContext = {
       subscriptions: [],
-      asAbsolutePath: (relativePath: string) => path.join(__dirname, '..', relativePath)
+      asAbsolutePath: (relativePath: string) => path.join(__dirname, '..', relativePath),
     } as any;
 
     lspClient = new PrologLSPClient(mockContext);
   });
 
-  after(async function() {
+  after(async function () {
     // Cleanup
     if (lspClient) {
       await lspClient.stop();
@@ -83,64 +83,66 @@ test_member(X, [_|T]) :- test_member(X, T).
     }
   });
 
-  describe('LSP Client Lifecycle', function() {
-    it('should start LSP client successfully', async function() {
+  describe('LSP Client Lifecycle', function () {
+    it('should start LSP client successfully', async function () {
       await lspClient.start();
       expect(lspClient.isRunning()).to.be.true;
     });
 
-    it('should handle client restart', async function() {
+    it('should handle client restart', async function () {
       await lspClient.restart();
       expect(lspClient.isRunning()).to.be.true;
     });
 
-    it('should stop LSP client successfully', async function() {
+    it('should stop LSP client successfully', async function () {
       await lspClient.stop();
       expect(lspClient.isRunning()).to.be.false;
-      
+
       // Restart for other tests
       await lspClient.start();
     });
   });
 
-  describe('LSP Language Features', function() {
-    beforeEach(async function() {
+  describe('LSP Language Features', function () {
+    beforeEach(async function () {
       // Ensure LSP client is running
       if (!lspClient.isRunning()) {
         await lspClient.start();
       }
-      
+
       // Wait for LSP to be ready
       await new Promise(resolve => setTimeout(resolve, 2000));
     });
 
-    it('should provide completions', async function() {
+    it('should provide completions', async function () {
       const position = new vscode.Position(6, 20); // Inside grandparent rule
-      
-      const completions = await vscode.commands.executeCommand(
+
+      const completions = (await vscode.commands.executeCommand(
         'vscode.executeCompletionItemProvider',
         testDocument.uri,
         position
-      ) as vscode.CompletionList;
+      )) as vscode.CompletionList;
 
       expect(completions).to.not.be.undefined;
       expect(completions.items).to.be.an('array');
-      
+
       // Should include built-in predicates
-      const memberCompletion = completions.items.find(item => 
-        item.label === 'member' || (typeof item.label === 'object' && item.label.label === 'member')
+      const memberCompletion = completions.items.find(
+        item =>
+          item.label === 'member' ||
+          (typeof item.label === 'object' && item.label.label === 'member')
       );
       expect(memberCompletion).to.not.be.undefined;
     });
 
-    it('should provide hover information', async function() {
+    it('should provide hover information', async function () {
       const position = new vscode.Position(1, 0); // On 'parent' predicate
-      
-      const hovers = await vscode.commands.executeCommand(
+
+      const hovers = (await vscode.commands.executeCommand(
         'vscode.executeHoverProvider',
         testDocument.uri,
         position
-      ) as vscode.Hover[];
+      )) as vscode.Hover[];
 
       expect(hovers).to.be.an('array');
       if (hovers.length > 0) {
@@ -148,30 +150,28 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should provide document symbols', async function() {
-      const symbols = await vscode.commands.executeCommand(
+    it('should provide document symbols', async function () {
+      const symbols = (await vscode.commands.executeCommand(
         'vscode.executeDocumentSymbolProvider',
         testDocument.uri
-      ) as vscode.DocumentSymbol[];
+      )) as vscode.DocumentSymbol[];
 
       expect(symbols).to.be.an('array');
       expect(symbols.length).to.be.greaterThan(0);
-      
+
       // Should find predicates
-      const parentSymbol = symbols.find(symbol => 
-        symbol.name.includes('parent')
-      );
+      const parentSymbol = symbols.find(symbol => symbol.name.includes('parent'));
       expect(parentSymbol).to.not.be.undefined;
     });
 
-    it('should provide definitions', async function() {
+    it('should provide definitions', async function () {
       const position = new vscode.Position(6, 35); // On 'parent' in grandparent rule
-      
-      const definitions = await vscode.commands.executeCommand(
+
+      const definitions = (await vscode.commands.executeCommand(
         'vscode.executeDefinitionProvider',
         testDocument.uri,
         position
-      ) as vscode.Location[];
+      )) as vscode.Location[];
 
       expect(definitions).to.be.an('array');
       // Should find definition of parent predicate
@@ -180,27 +180,27 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should provide references', async function() {
+    it('should provide references', async function () {
       const position = new vscode.Position(1, 0); // On first 'parent' predicate
-      
-      const references = await vscode.commands.executeCommand(
+
+      const references = (await vscode.commands.executeCommand(
         'vscode.executeReferenceProvider',
         testDocument.uri,
         position
-      ) as vscode.Location[];
+      )) as vscode.Location[];
 
       expect(references).to.be.an('array');
       expect(references.length).to.be.greaterThan(1); // Should find multiple references
     });
 
-    it('should provide document highlights', async function() {
+    it('should provide document highlights', async function () {
       const position = new vscode.Position(1, 0); // On 'parent' predicate
-      
-      const highlights = await vscode.commands.executeCommand(
+
+      const highlights = (await vscode.commands.executeCommand(
         'vscode.executeDocumentHighlights',
         testDocument.uri,
         position
-      ) as vscode.DocumentHighlight[];
+      )) as vscode.DocumentHighlight[];
 
       expect(highlights).to.be.an('array');
       if (highlights.length > 0) {
@@ -208,7 +208,7 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should provide signature help', async function() {
+    it('should provide signature help', async function () {
       // Insert a function call to test signature help
       const edit = new vscode.WorkspaceEdit();
       const insertPosition = new vscode.Position(20, 0);
@@ -216,16 +216,19 @@ test_member(X, [_|T]) :- test_member(X, T).
       await vscode.workspace.applyEdit(edit);
 
       const signaturePosition = new vscode.Position(20, 12); // After opening parenthesis
-      
-      const signatures = await vscode.commands.executeCommand(
+
+      const signatures = (await vscode.commands.executeCommand(
         'vscode.executeSignatureHelpProvider',
         testDocument.uri,
         signaturePosition
-      ) as vscode.SignatureHelp;
+      )) as vscode.SignatureHelp;
 
       // Clean up the edit
       const deleteEdit = new vscode.WorkspaceEdit();
-      deleteEdit.delete(testDocument.uri, new vscode.Range(insertPosition, new vscode.Position(20, 12)));
+      deleteEdit.delete(
+        testDocument.uri,
+        new vscode.Range(insertPosition, new vscode.Position(20, 12))
+      );
       await vscode.workspace.applyEdit(deleteEdit);
 
       if (signatures) {
@@ -233,26 +236,26 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should provide code actions', async function() {
+    it('should provide code actions', async function () {
       const range = new vscode.Range(1, 0, 1, 10); // Select 'parent' predicate
-      
-      const codeActions = await vscode.commands.executeCommand(
+
+      const codeActions = (await vscode.commands.executeCommand(
         'vscode.executeCodeActionProvider',
         testDocument.uri,
         range
-      ) as vscode.CodeAction[];
+      )) as vscode.CodeAction[];
 
       expect(codeActions).to.be.an('array');
       // Should provide actions like "Execute as Query", "Get Help"
       if (codeActions.length > 0) {
-        const queryAction = codeActions.find(action => 
-          action.title.includes('Query') || action.title.includes('Execute')
+        const queryAction = codeActions.find(
+          action => action.title.includes('Query') || action.title.includes('Execute')
         );
         expect(queryAction).to.not.be.undefined;
       }
     });
 
-    it('should provide document formatting', async function() {
+    it('should provide document formatting', async function () {
       // Create a poorly formatted line
       const edit = new vscode.WorkspaceEdit();
       const insertPosition = new vscode.Position(20, 0);
@@ -260,69 +263,72 @@ test_member(X, [_|T]) :- test_member(X, T).
       edit.insert(testDocument.uri, insertPosition, poorlyFormatted);
       await vscode.workspace.applyEdit(edit);
 
-      const formatEdits = await vscode.commands.executeCommand(
+      const formatEdits = (await vscode.commands.executeCommand(
         'vscode.executeFormatDocumentProvider',
         testDocument.uri
-      ) as vscode.TextEdit[];
+      )) as vscode.TextEdit[];
 
       // Clean up
       const deleteEdit = new vscode.WorkspaceEdit();
-      deleteEdit.delete(testDocument.uri, new vscode.Range(insertPosition, new vscode.Position(20, poorlyFormatted.length)));
+      deleteEdit.delete(
+        testDocument.uri,
+        new vscode.Range(insertPosition, new vscode.Position(20, poorlyFormatted.length))
+      );
       await vscode.workspace.applyEdit(deleteEdit);
 
       expect(formatEdits).to.be.an('array');
     });
   });
 
-  describe('N3/RDF Support', function() {
-    it('should provide N3-specific completions', async function() {
+  describe('N3/RDF Support', function () {
+    it('should provide N3-specific completions', async function () {
       const position = new vscode.Position(25, 10); // In N3 content area
-      
-      const completions = await vscode.commands.executeCommand(
+
+      const completions = (await vscode.commands.executeCommand(
         'vscode.executeCompletionItemProvider',
         testDocument.uri,
         position
-      ) as vscode.CompletionList;
+      )) as vscode.CompletionList;
 
       expect(completions).to.not.be.undefined;
       expect(completions.items).to.be.an('array');
-      
+
       // Should include RDF-specific completions
       const rdfCompletion = completions.items.find(item => {
         const label = typeof item.label === 'string' ? item.label : item.label.label;
         return label.includes('rdf:') || label.includes('rdfs:');
       });
-      
+
       if (completions.items.length > 0) {
         expect(rdfCompletion).to.not.be.undefined;
       }
     });
 
-    it('should validate N3 syntax', async function() {
+    it('should validate N3 syntax', async function () {
       // Wait for diagnostics to be computed
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       const diagnostics = vscode.languages.getDiagnostics(testDocument.uri);
       expect(diagnostics).to.be.an('array');
-      
+
       // Should not have syntax errors in valid N3 content
-      const n3Errors = diagnostics.filter(diag => 
-        diag.message.includes('N3') || diag.message.includes('RDF')
+      const n3Errors = diagnostics.filter(
+        diag => diag.message.includes('N3') || diag.message.includes('RDF')
       );
-      
+
       // Valid N3 should not produce errors
       expect(n3Errors.length).to.equal(0);
     });
   });
 
-  describe('Custom LSP Commands', function() {
-    beforeEach(async function() {
+  describe('Custom LSP Commands', function () {
+    beforeEach(async function () {
       if (!lspClient.isRunning()) {
         await lspClient.start();
       }
     });
 
-    it('should execute Prolog queries', async function() {
+    it('should execute Prolog queries', async function () {
       try {
         const result = await lspClient.executeQuery('parent(tom, X)');
         expect(result).to.not.be.undefined;
@@ -333,7 +339,7 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should get predicate help', async function() {
+    it('should get predicate help', async function () {
       try {
         const result = await lspClient.getHelp('member');
         expect(result).to.not.be.undefined;
@@ -343,7 +349,7 @@ test_member(X, [_|T]) :- test_member(X, T).
       }
     });
 
-    it('should consult files', async function() {
+    it('should consult files', async function () {
       try {
         const result = await lspClient.consultFile(testDocument.uri.fsPath);
         expect(result).to.not.be.undefined;
@@ -354,67 +360,73 @@ test_member(X, [_|T]) :- test_member(X, T).
     });
   });
 
-  describe('Multi-IDE Support', function() {
-    it('should generate IDE configurations', async function() {
+  describe('Multi-IDE Support', function () {
+    it('should generate IDE configurations', async function () {
       await MultiIDESupport.generateIDEConfigurations(testWorkspace);
-      
+
       const lspDir = path.join(testWorkspace, '.lsp');
       expect(fs.existsSync(lspDir)).to.be.true;
-      
+
       // Check for configuration files
-      const configFiles = ['vscode.json', 'coc-settings.json', 'neovim.json', 'vim.json', 'emacs.json'];
+      const configFiles = [
+        'vscode.json',
+        'coc-settings.json',
+        'neovim.json',
+        'vim.json',
+        'emacs.json',
+      ];
       for (const configFile of configFiles) {
         const configPath = path.join(lspDir, configFile);
         expect(fs.existsSync(configPath)).to.be.true;
-        
+
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         expect(config).to.be.an('object');
       }
-      
+
       // Check for setup scripts
       expect(fs.existsSync(path.join(lspDir, 'setup.sh'))).to.be.true;
       expect(fs.existsSync(path.join(lspDir, 'setup.ps1'))).to.be.true;
       expect(fs.existsSync(path.join(lspDir, 'README.md'))).to.be.true;
     });
 
-    it('should generate launch configurations', async function() {
+    it('should generate launch configurations', async function () {
       MultiIDESupport.generateLaunchConfigurations(testWorkspace);
-      
+
       const launchPath = path.join(testWorkspace, '.vscode', 'launch.json');
       expect(fs.existsSync(launchPath)).to.be.true;
-      
+
       const launchConfig = JSON.parse(fs.readFileSync(launchPath, 'utf8'));
       expect(launchConfig.configurations).to.be.an('array');
       expect(launchConfig.configurations.length).to.be.greaterThan(0);
-      
-      const prologLSPConfig = launchConfig.configurations.find((config: any) => 
+
+      const prologLSPConfig = launchConfig.configurations.find((config: any) =>
         config.name.includes('Prolog LSP')
       );
       expect(prologLSPConfig).to.not.be.undefined;
     });
 
-    it('should detect available IDEs', async function() {
+    it('should detect available IDEs', async function () {
       const availableIDEs = await MultiIDESupport.detectAvailableIDEs();
       expect(availableIDEs).to.be.an('array');
-      
+
       // Should at least detect VS Code in test environment
       expect(availableIDEs).to.include('vscode');
     });
   });
 
-  describe('Error Handling', function() {
-    it('should handle LSP server startup failures gracefully', async function() {
+  describe('Error Handling', function () {
+    it('should handle LSP server startup failures gracefully', async function () {
       // Stop the current client
       await lspClient.stop();
-      
+
       // Create a client with invalid server path
       const mockContext = {
         subscriptions: [],
-        asAbsolutePath: (relativePath: string) => '/invalid/path/to/server.js'
+        asAbsolutePath: (relativePath: string) => '/invalid/path/to/server.js',
       } as any;
-      
+
       const invalidClient = new PrologLSPClient(mockContext);
-      
+
       try {
         await invalidClient.start();
         // Should not reach here
@@ -422,12 +434,12 @@ test_member(X, [_|T]) :- test_member(X, T).
       } catch (error) {
         expect(error).to.not.be.undefined;
       }
-      
+
       // Restart the original client for other tests
       await lspClient.start();
     });
 
-    it('should handle malformed Prolog syntax', async function() {
+    it('should handle malformed Prolog syntax', async function () {
       // Insert malformed Prolog code
       const edit = new vscode.WorkspaceEdit();
       const insertPosition = new vscode.Position(20, 0);
@@ -437,25 +449,28 @@ test_member(X, [_|T]) :- test_member(X, T).
 
       // Wait for diagnostics
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const diagnostics = vscode.languages.getDiagnostics(testDocument.uri);
       expect(diagnostics).to.be.an('array');
-      
+
       // Should detect syntax errors
-      const syntaxErrors = diagnostics.filter(diag => 
-        diag.severity === vscode.DiagnosticSeverity.Error
+      const syntaxErrors = diagnostics.filter(
+        diag => diag.severity === vscode.DiagnosticSeverity.Error
       );
       expect(syntaxErrors.length).to.be.greaterThan(0);
 
       // Clean up
       const deleteEdit = new vscode.WorkspaceEdit();
-      deleteEdit.delete(testDocument.uri, new vscode.Range(insertPosition, new vscode.Position(20, malformedCode.length)));
+      deleteEdit.delete(
+        testDocument.uri,
+        new vscode.Range(insertPosition, new vscode.Position(20, malformedCode.length))
+      );
       await vscode.workspace.applyEdit(deleteEdit);
     });
   });
 
-  describe('Performance', function() {
-    it('should handle large documents efficiently', async function() {
+  describe('Performance', function () {
+    it('should handle large documents efficiently', async function () {
       // Create a large Prolog document
       let largeContent = '% Large Prolog file for performance testing\n';
       for (let i = 0; i < 1000; i++) {
@@ -471,14 +486,14 @@ test_member(X, [_|T]) :- test_member(X, T).
       await vscode.window.showTextDocument(largeDocument);
 
       const startTime = Date.now();
-      
+
       // Test completion performance
       const position = new vscode.Position(500, 10);
-      const completions = await vscode.commands.executeCommand(
+      const completions = (await vscode.commands.executeCommand(
         'vscode.executeCompletionItemProvider',
         largeDocument.uri,
         position
-      ) as vscode.CompletionList;
+      )) as vscode.CompletionList;
 
       const endTime = Date.now();
       const duration = endTime - startTime;

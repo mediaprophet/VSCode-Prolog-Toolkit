@@ -1,26 +1,21 @@
-import { EventEmitter } from 'events';
+import { OutputEvent, StoppedEvent, TerminatedEvent } from '@vscode/debugadapter';
+import type { DebugProtocol } from '@vscode/debugprotocol';
 import * as fs from 'fs';
-import { spawn } from 'process-promises';
-import { DebugProtocol } from '@vscode/debugprotocol';
-import { PrologDebugSession } from './prologDebugSession';
-import {
-  StoppedEvent,
-  StackFrame,
-  Source,
-  OutputEvent,
-  TerminatedEvent,
-} from '@vscode/debugadapter';
-import { basename, resolve } from 'path';
 import jsesc from 'jsesc';
-import { InstallationGuide } from './installationGuide';
+import { spawn } from 'process-promises';
 import { commands, window } from 'vscode';
-import { PlatformUtils } from '../utils/platformUtils';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
+import { PlatformUtils } from '../utils/platformUtils.js';
+import { InstallationGuide } from './installationGuide.js';
+import { PrologDebugSession } from './prologDebugSession.js';
 
 export interface ITraceCmds {
   continue: string[2];
   stepover: string[2];
   stepinto: string[2];
   stepout: string[2];
+  Run: string[];
+  // Duplicate interface removed
 }
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   program?: string;
@@ -35,12 +30,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
   console?: string;
   traceCmds?: ITraceCmds;
 }
-export interface ITraceCmds {
-  Run: string[];
-  Stepin: string[];
-  Stepover: string[];
-  Stop: string[];
-}
+// Duplicate interface removed
 
 export interface IBreakPoint {
   sourceFile: string;
@@ -51,8 +41,14 @@ export interface IBreakPoint {
 interface ISourceLineLocations {
   [sourceFile: string]: number[];
 }
+// Event map for PrologDebugger
+export interface PrologDebuggerEventMap {
+  responseBreakpoints: [DebugProtocol.SetBreakpointsResponse];
+  responseFunctionBreakpoints: [DebugProtocol.SetFunctionBreakpointsResponse];
+}
+
 // Define PrologDebugger class
-export class PrologDebugger extends EventEmitter {
+export class PrologDebugger extends NodeEventEmitter<PrologDebuggerEventMap> {
   private _prologProc: any = null;
   // private _traceCmds: ITraceCmds;
   private _breakpoints: IBreakPoint[] = [];
@@ -90,7 +86,7 @@ export class PrologDebugger extends EventEmitter {
     lengths.unshift(0); // Add a starting index of 0 to the lengths array
     // Accumulate the lengths to get the character position for each line
     for (let i = 1; i < lengths.length; i++) {
-      lengths[i] += lengths[i - 1];
+      lengths[i] = (lengths[i] ?? 0) + (lengths[i - 1] ?? 0);
     }
     this._soureLineLocations[source] = lengths; // Cache the line locations for the source file
   }
@@ -101,8 +97,9 @@ export class PrologDebugger extends EventEmitter {
     let i = 0;
     for (
       ;
-      this._soureLineLocations[source]?.[i] !== undefined &&
-      this._soureLineLocations[source][i] < startChar;
+      Array.isArray(this._soureLineLocations[source]) &&
+      (this._soureLineLocations[source]?.[i] ?? undefined) !== undefined &&
+      (this._soureLineLocations[source]?.[i] ?? 0) < startChar;
       i++
     ); // Find the line index where the given character position is located
     // Calculate the line number and column offset for the character position
@@ -206,9 +203,8 @@ export class PrologDebugger extends EventEmitter {
     ];
     // Iterate through the predefined regular expressions
     for (let i = 0; i < regs.length; i++) {
-      // Test if the data matches any of the regular expressions
-      if (regs[i].test(data)) {
-        return true; // Return true if a match is found (filter off)
+      if (regs[i]?.test?.(data) === true) {
+        return true;
       }
     }
     // Return false if no match is found (do not filter off)

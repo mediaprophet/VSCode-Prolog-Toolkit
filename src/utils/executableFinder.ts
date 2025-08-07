@@ -1,9 +1,10 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import which from 'which';
-import { PlatformUtils, PlatformType } from './platformUtils';
+import type { PlatformType } from './platformUtils.js';
+import { PlatformUtils } from './platformUtils.js';
 
 /**
  * Executable detection result interface
@@ -165,7 +166,7 @@ export class ExecutableFinder {
       }
 
       // Validate that it's actually SWI-Prolog
-      if (!this.isSwiplOutput(versionResult.output)) {
+      if (!this.isSwiplOutput(versionResult.output ?? '')) {
         issues.push('Executable does not appear to be SWI-Prolog');
         return {
           found: false,
@@ -178,9 +179,9 @@ export class ExecutableFinder {
       return {
         found: true,
         path: normalizedPath,
-        version: this.extractVersion(versionResult.output),
+        version: this.extractVersion(versionResult.output ?? ''),
         permissions,
-        issues: issues.length > 0 ? issues : undefined,
+        issues: issues.length > 0 ? issues : [],
       };
     } catch (error) {
       return {
@@ -286,12 +287,12 @@ export class ExecutableFinder {
   private extractVersion(output: string): string {
     const versionMatch = output.match(/SWI-Prolog version (\d+\.\d+\.\d+)/i);
     if (versionMatch) {
-      return versionMatch[1];
+      return versionMatch[1] ?? 'Unknown';
     }
 
     // Fallback: try to extract any version-like pattern
     const fallbackMatch = output.match(/(\d+\.\d+\.\d+)/);
-    return fallbackMatch ? fallbackMatch[1] : 'Unknown';
+    return fallbackMatch ? (fallbackMatch[1] ?? 'Unknown') : 'Unknown';
   }
 
   /**
@@ -299,7 +300,7 @@ export class ExecutableFinder {
    */
   public async getInstallationSuggestions(): Promise<string[]> {
     // Import here to avoid circular dependencies
-    const { PackageManagerIntegration } = await import('../features/packageManagerIntegration');
+    const { PackageManagerIntegration } = await import('../features/packageManagerIntegration.js');
     const packageManager = PackageManagerIntegration.getInstance();
 
     try {
@@ -307,7 +308,10 @@ export class ExecutableFinder {
     } catch (error) {
       // Fallback to basic suggestions if package manager integration fails
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.warn('[ExecutableFinder] Package manager integration failed, using fallback suggestions:', errorMsg);
+      console.warn(
+        '[ExecutableFinder] Package manager integration failed, using fallback suggestions:',
+        errorMsg
+      );
       const suggestions: string[] = [];
       suggestions.push(`Install SWI-Prolog from https://www.swi-prolog.org/download/stable`);
 

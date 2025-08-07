@@ -1,22 +1,14 @@
 'use strict';
 
-import { Utils } from '../utils/utils';
-import {
-  Terminal,
-  window,
-  workspace,
-  TextDocument,
-  Disposable,
-  OutputChannel,
-  TextEditor,
-  commands,
-} from 'vscode';
-import jsesc from 'jsesc';
-import { InstallationGuide } from './installationGuide';
-import { PlatformUtils, PlatformType } from '../utils/platformUtils';
-import { ExecutableFinder } from '../utils/executableFinder';
 import { spawn } from 'child_process';
-import * as os from 'os';
+import jsesc from 'jsesc';
+import type { Disposable, Terminal, TextDocument, TextEditor } from 'vscode';
+import { commands, window, workspace } from 'vscode';
+import { ExecutableFinder } from '../utils/executableFinder.js';
+import type { PlatformType } from '../utils/platformUtils.js';
+import { PlatformUtils } from '../utils/platformUtils.js';
+import { Utils } from '../utils/utils.js';
+import { InstallationGuide } from './installationGuide.js';
 
 /**
  * Shell information interface
@@ -111,7 +103,7 @@ export default class PrologTerminal {
         supportsColors: true,
         requiresQuoting: true,
       };
-    } catch (_error) {
+    } catch {
       // Ignore shell detection failure
     }
 
@@ -125,7 +117,7 @@ export default class PrologTerminal {
         supportsColors: true,
         requiresQuoting: true,
       };
-    } catch (_error) {
+    } catch {
       // Ignore shell detection failure
     }
 
@@ -139,7 +131,7 @@ export default class PrologTerminal {
         supportsColors: true,
         requiresQuoting: true,
       };
-    } catch (_error) {
+    } catch {
       // Ignore bash detection failure
     }
 
@@ -167,7 +159,7 @@ export default class PrologTerminal {
         supportsColors: true,
         requiresQuoting: true,
       };
-    } catch (_error) {
+    } catch {
       // Ignore zsh detection failure
     }
 
@@ -181,7 +173,7 @@ export default class PrologTerminal {
         supportsColors: true,
         requiresQuoting: true,
       };
-    } catch (_error) {
+    } catch {
       // Ignore WSL detection failure
     }
 
@@ -212,7 +204,7 @@ export default class PrologTerminal {
           supportsColors: true,
           requiresQuoting: true,
         };
-      } catch (_error) {
+      } catch {
         // Ignore Windows PowerShell detection failure
       }
     }
@@ -235,7 +227,7 @@ export default class PrologTerminal {
           supportsColors: shell.name !== 'dash',
           requiresQuoting: true,
         };
-      } catch (_error) {
+      } catch {
         // Ignore PowerShell Core detection failure
       }
     }
@@ -509,7 +501,7 @@ export default class PrologTerminal {
       const installationGuide = InstallationGuide.getInstance();
       switch (action) {
         case 'Install with Package Manager': {
-          const { PackageManagerIntegration } = await import('./packageManagerIntegration');
+          const { PackageManagerIntegration } = await import('./packageManagerIntegration.js');
           const packageManager = PackageManagerIntegration.getInstance();
           await packageManager.showInstallationDialog();
           break;
@@ -549,57 +541,58 @@ export default class PrologTerminal {
 
       PrologTerminal._terminal.sendText(escapedText);
       PrologTerminal._terminal.show(false);
-    } catch (error) {
-      // Error already handled in createPrologTerm
-      console.error('Failed to send string to Prolog terminal:', error);
+    } catch {
+      // Ignore Windows PowerShell detection failure
     }
   }
-  // load the prolog file
+  /**
+   * Load the current Prolog file into the terminal
+   */
   public static async loadDocument() {
     if (!window.activeTextEditor) {
       return;
     }
     try {
-      PrologTerminal._document = window.activeTextEditor.document; // Get the active Prolog document
-      await PrologTerminal.createPrologTerm(); // Create the Prolog terminal
+      // Use a local variable for the document to avoid private access
+      const document = window.activeTextEditor.document;
+      await PrologTerminal.createPrologTerm();
       // Get the file name and escape it using jsesc
-      const fname = jsesc(PlatformUtils.normalizePath(PrologTerminal._document.fileName), {
+      const fname = jsesc(PlatformUtils.normalizePath(document.fileName), {
         quotes: 'single',
       });
-      const goals = `['${fname}']`; // Define the goals to load the Prolog file
+      const goals = `['${fname}']`;
       // load the file into swipl with a goal
-      if (PrologTerminal._document.isDirty) {
-        PrologTerminal._document.save().then(_ => {
+      if (document.isDirty) {
+        document.save().then(_ => {
           PrologTerminal.sendString(goals);
         });
       } else {
         await PrologTerminal.sendString(goals);
       }
-    } catch (error) {
+    } catch {
       // Error already handled in createPrologTerm
-      console.error('Failed to load document in Prolog terminal:', error);
     }
   }
-  // query the goal under the cursor command
-  public static queryGoalUnderCursor() {
-    // Get the active text editor and document
+
+  /**
+   * Query the goal under the cursor in the current document
+   */
+  public static async queryGoalUnderCursor() {
     if (!window.activeTextEditor) {
       return;
     }
     const editor: TextEditor = window.activeTextEditor;
     const doc: TextDocument = editor.document;
-    const pred = Utils.getPredicateUnderCursor(doc, editor.selection.active); // Get the predicate under the cursor using utility function
-    // if no predicate under cursor
+    const pred = Utils.getPredicateUnderCursor(doc, editor.selection.active);
     if (!pred) {
       return;
     }
-    PrologTerminal.loadDocument(); // Load the current Prolog document into the Prolog terminal
-    let goal = pred?.wholePred || ''; // Extract the goal from the predicate
-    // Separate the module if present
+    await PrologTerminal.loadDocument();
+    let goal = pred.wholePred || '';
     if (goal.indexOf(':') > -1) {
       const parts = goal.split(':');
-      goal = parts.length > 1 ? parts[1] : goal;
+      goal = parts.length > 1 && typeof parts[1] === 'string' ? parts[1] : goal;
     }
-    PrologTerminal.sendString(goal);
+    await PrologTerminal.sendString(goal);
   }
 }

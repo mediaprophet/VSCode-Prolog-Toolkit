@@ -1,6 +1,6 @@
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
 
 export interface SecurityEvent {
   id: string;
@@ -14,27 +14,27 @@ export interface SecurityEvent {
     | 'resource_limit_exceeded'
     | 'dangerous_predicate_blocked'
     | 'sandbox_violation';
-  userId?: string;
-  userRole?: string;
-  ipAddress?: string;
-  userAgent?: string;
+  userId?: string | undefined;
+  userRole?: string | undefined;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
   timestamp: Date;
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
   details: {
-    query?: string;
-    endpoint?: string;
-    resource?: string;
-    limit?: number;
-    actual?: number;
-    predicate?: string;
-    violation?: string;
+    query?: string | undefined;
+    endpoint?: string | undefined;
+    resource?: string | undefined;
+    limit?: number | undefined;
+    actual?: number | undefined;
+    predicate?: string | undefined;
+    violation?: string | undefined;
     [key: string]: any;
   };
   metadata?: {
-    sessionId?: string;
-    requestId?: string;
-    duration?: number;
+    sessionId?: string | undefined;
+    requestId?: string | undefined;
+    duration?: number | undefined;
     [key: string]: any;
   };
 }
@@ -79,7 +79,13 @@ export interface AuditConfig {
 /**
  * Security Auditor for comprehensive security event logging and monitoring
  */
-export class SecurityAuditor extends EventEmitter {
+export interface SecurityAuditorEventMap {
+  securityEvent: [SecurityEvent];
+  alertAcknowledged: [SecurityAlert];
+  securityAlert: [SecurityAlert];
+}
+
+export class SecurityAuditor extends NodeEventEmitter<SecurityAuditorEventMap> {
   private config: AuditConfig;
   private events: SecurityEvent[] = [];
   private alerts: SecurityAlert[] = [];

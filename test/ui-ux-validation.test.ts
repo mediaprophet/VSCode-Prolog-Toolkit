@@ -26,7 +26,16 @@ describe('UI/UX Enhancements Validation', () => {
       const chatParticipant = packageJson.contributes.chatParticipants[0];
       const commandNames = chatParticipant.commands.map((cmd: any) => cmd.name);
 
-      const expectedCommands = ['query', 'consult', 'help', 'status', 'n3_load', 'n3_list', 'n3_reason', 'n3_explain'];
+      const expectedCommands = [
+        'query',
+        'consult',
+        'help',
+        'status',
+        'n3_load',
+        'n3_list',
+        'n3_reason',
+        'n3_explain',
+      ];
       expectedCommands.forEach(cmd => {
         expect(commandNames).to.include(cmd, `Missing command: ${cmd}`);
       });
@@ -36,7 +45,10 @@ describe('UI/UX Enhancements Validation', () => {
       const chatParticipant = packageJson.contributes.chatParticipants[0];
       chatParticipant.commands.forEach((cmd: any) => {
         expect(cmd.description).to.be.a('string');
-        expect(cmd.description.length).to.be.greaterThan(10, `Command ${cmd.name} has too short description`);
+        expect(cmd.description.length).to.be.greaterThan(
+          10,
+          `Command ${cmd.name} has too short description`
+        );
       });
     });
   });
@@ -91,7 +103,13 @@ describe('UI/UX Enhancements Validation', () => {
 
   describe('File Structure', () => {
     it('should have LSP extension file', () => {
-      const lspExtensionPath = path.join(__dirname, '..', 'src', 'features', 'prologLSPExtension.ts');
+      const lspExtensionPath = path.join(
+        __dirname,
+        '..',
+        'src',
+        'features',
+        'prologLSPExtension.ts'
+      );
       expect(fs.existsSync(lspExtensionPath)).to.be.true;
     });
 

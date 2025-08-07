@@ -384,5 +384,5 @@ export interface Utils {
 }
 
 // Export utility functions
-export * from '../utils/safeAccess';
-export * from '../utils/errorHandling';
+export * from '../utils/errorHandling.js';
+export * from '../utils/safeAccess.js';

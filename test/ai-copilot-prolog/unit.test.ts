@@ -25,7 +25,10 @@ describe('AI Copilot Prolog Support - Unit', function () {
   it('should enforce timeouts for long-running queries', async function () {
     this.timeout(3000);
     try {
-      await backend.sendRequest('query', { goal: 'repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat', timeoutMs: 100 });
+      await backend.sendRequest('query', {
+        goal: 'repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat',
+        timeoutMs: 100,
+      });
       throw new Error('Should have timed out');
     } catch (err: any) {
       expect(err.message).to.match(/timeout/i);
@@ -44,7 +47,7 @@ describe('AI Copilot Prolog Support - Unit', function () {
   it('should queue and process multiple requests safely', async function () {
     const promises = [
       backend.sendRequest('query', { goal: 'member(X, [a,b])' }),
-      backend.sendRequest('query', { goal: 'member(Y, [1,2])' })
+      backend.sendRequest('query', { goal: 'member(Y, [1,2])' }),
     ];
     const results = await Promise.all(promises);
     expect(results[0].success).to.be.true;

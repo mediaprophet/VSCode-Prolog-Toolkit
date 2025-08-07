@@ -1,5 +1,6 @@
-import { window, ProgressLocation, CancellationToken, Progress } from 'vscode';
-import { PrologBackend } from '../prologBackend';
+import type { CancellationToken, Progress } from 'vscode';
+import { ProgressLocation, window } from 'vscode';
+import { PrologBackend } from '../prologBackend.js';
 
 export interface PrologPack {
   name: string;

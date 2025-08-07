@@ -1,29 +1,43 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DocumentSymbol, SymbolInformation, SymbolKind } from 'vscode-languageserver/node';
-import { SymbolProvider, LSPContext } from './types';
+import type { LSPContext, SymbolProvider } from './types.js';
+type DocumentSymbol = any;
+type SymbolInformation = any;
+enum SymbolKind {
+  File = 17,
+  Module = 1,
+  Namespace = 2,
+  Package = 3,
+  Method = 6,
+  Function = 12,
+  Operator = 25,
+}
+const SymbolKindEnum = SymbolKind;
 
 export class PrologSymbolProvider implements SymbolProvider {
-  async provideDocumentSymbols(document: TextDocument, context: LSPContext): Promise<DocumentSymbol[]> {
+  async provideDocumentSymbols(
+    document: TextDocument,
+    _context: LSPContext
+  ): Promise<DocumentSymbol[]> {
     const symbols: DocumentSymbol[] = [];
     const text = document.getText();
     const lines = text.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-
+      const lineRaw = lines[i];
+      if (typeof lineRaw !== 'string') continue;
+      const line = lineRaw.trim();
       if (line.startsWith('%') || line === '') {
         continue;
       }
 
       // Match predicate definitions
       const predicateMatch = line.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
-      if (predicateMatch) {
+      if (predicateMatch && typeof predicateMatch[1] === 'string') {
         const name = predicateMatch[1];
         const arity = this.countArity(line);
-
         symbols.push({
           name: `${name}/${arity}`,
-          kind: SymbolKind.Function,
+          kind: SymbolKindEnum.Function,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -37,11 +51,11 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match directives
       const directiveMatch = line.match(/^:-\s*(.+)\./);
-      if (directiveMatch) {
+      if (directiveMatch && typeof directiveMatch[1] === 'string') {
         const content = directiveMatch[1];
         symbols.push({
           name: `:- ${content}`,
-          kind: SymbolKind.Namespace,
+          kind: SymbolKindEnum.Namespace,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -55,11 +69,11 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match module declarations
       const moduleMatch = line.match(/^:-\s*module\s*\(\s*([a-z][a-zA-Z0-9_]*)\s*,/);
-      if (moduleMatch) {
+      if (moduleMatch && typeof moduleMatch[1] === 'string') {
         const moduleName = moduleMatch[1];
         symbols.push({
           name: `module: ${moduleName}`,
-          kind: SymbolKind.Module,
+          kind: SymbolKindEnum.Module,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -73,11 +87,11 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match use_module declarations
       const useModuleMatch = line.match(/^:-\s*use_module\s*\(\s*([^)]+)\s*\)/);
-      if (useModuleMatch) {
+      if (useModuleMatch && typeof useModuleMatch[1] === 'string') {
         const moduleRef = useModuleMatch[1];
         symbols.push({
           name: `use_module: ${moduleRef}`,
-          kind: SymbolKind.Package,
+          kind: SymbolKindEnum.Package,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -91,11 +105,11 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match include declarations
       const includeMatch = line.match(/^:-\s*include\s*\(\s*([^)]+)\s*\)/);
-      if (includeMatch) {
+      if (includeMatch && typeof includeMatch[1] === 'string') {
         const includeRef = includeMatch[1];
         symbols.push({
           name: `include: ${includeRef}`,
-          kind: SymbolKind.File,
+          kind: SymbolKindEnum.File,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -109,14 +123,13 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match DCG rules (using -->)
       const dcgMatch = line.match(/^([a-z][a-zA-Z0-9_]*)\s*(\([^)]*\))?\s*-->/);
-      if (dcgMatch) {
+      if (dcgMatch && typeof dcgMatch[1] === 'string') {
         const name = dcgMatch[1];
-        const params = dcgMatch[2] || '()';
+        const params = typeof dcgMatch[2] === 'string' ? dcgMatch[2] : '()';
         const arity = this.countArity(params);
-        
         symbols.push({
           name: `${name}//${arity} (DCG)`,
-          kind: SymbolKind.Method,
+          kind: SymbolKindEnum.Method,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -130,14 +143,18 @@ export class PrologSymbolProvider implements SymbolProvider {
 
       // Match operators
       const operatorMatch = line.match(/^:-\s*op\s*\(\s*(\d+)\s*,\s*([^,]+)\s*,\s*([^)]+)\s*\)/);
-      if (operatorMatch) {
+      if (
+        operatorMatch &&
+        typeof operatorMatch[1] === 'string' &&
+        typeof operatorMatch[2] === 'string' &&
+        typeof operatorMatch[3] === 'string'
+      ) {
         const precedence = operatorMatch[1];
         const associativity = operatorMatch[2].trim();
         const operator = operatorMatch[3].trim();
-        
         symbols.push({
           name: `op ${precedence} ${associativity} ${operator}`,
-          kind: SymbolKind.Operator,
+          kind: SymbolKindEnum.Operator,
           range: {
             start: { line: i, character: 0 },
             end: { line: i, character: line.length },
@@ -153,13 +170,20 @@ export class PrologSymbolProvider implements SymbolProvider {
     return symbols;
   }
 
-  async provideWorkspaceSymbols(query: string, documents: TextDocument[], context: LSPContext): Promise<SymbolInformation[]> {
+  async provideWorkspaceSymbols(
+    query: string,
+    documents: TextDocument[],
+    context: LSPContext
+  ): Promise<SymbolInformation[]> {
     const symbols: SymbolInformation[] = [];
     const queryLower = query.toLowerCase();
 
     // Search through all documents
     for (const document of documents) {
-      const documentSymbols: DocumentSymbol[] = await this.provideDocumentSymbols(document, context);
+      const documentSymbols: DocumentSymbol[] = await this.provideDocumentSymbols(
+        document,
+        context
+      );
 
       for (const symbol of documentSymbols) {
         if (symbol.name.toLowerCase().includes(queryLower)) {
@@ -180,16 +204,16 @@ export class PrologSymbolProvider implements SymbolProvider {
     symbols.sort((a, b) => {
       const aExact = a.name.toLowerCase() === queryLower;
       const bExact = b.name.toLowerCase() === queryLower;
-      
+
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
-      
+
       const aStarts = a.name.toLowerCase().startsWith(queryLower);
       const bStarts = b.name.toLowerCase().startsWith(queryLower);
-      
+
       if (aStarts && !bStarts) return -1;
       if (!aStarts && bStarts) return 1;
-      
+
       return a.name.localeCompare(b.name);
     });
 
@@ -198,7 +222,7 @@ export class PrologSymbolProvider implements SymbolProvider {
 
   private countArity(line: string): number {
     const match = line.match(/\(([^)]*)\)/);
-    if (!match) return 0;
+    if (!match || typeof match[1] !== 'string') return 0;
 
     const args = match[1].trim();
     if (args === '') return 0;
@@ -217,18 +241,28 @@ export class PrologSymbolProvider implements SymbolProvider {
   }
 
   // Additional utility method to get symbols by kind
-  public async getSymbolsByKind(document: TextDocument, kind: SymbolKind, context: LSPContext): Promise<DocumentSymbol[]> {
+  public async getSymbolsByKind(
+    document: TextDocument,
+    kind: SymbolKind,
+    context: LSPContext
+  ): Promise<DocumentSymbol[]> {
     const allSymbols = await this.provideDocumentSymbols(document, context);
     return allSymbols.filter(symbol => symbol.kind === kind);
   }
 
   // Method to get predicates only
-  public async getPredicates(document: TextDocument, context: LSPContext): Promise<DocumentSymbol[]> {
+  public async getPredicates(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<DocumentSymbol[]> {
     return this.getSymbolsByKind(document, SymbolKind.Function, context);
   }
 
   // Method to get directives only
-  public async getDirectives(document: TextDocument, context: LSPContext): Promise<DocumentSymbol[]> {
+  public async getDirectives(
+    document: TextDocument,
+    context: LSPContext
+  ): Promise<DocumentSymbol[]> {
     return this.getSymbolsByKind(document, SymbolKind.Namespace, context);
   }
 
@@ -238,9 +272,12 @@ export class PrologSymbolProvider implements SymbolProvider {
   }
 
   // Method to find symbol at position
-  public findSymbolAtPosition(document: TextDocument, line: number, character: number): DocumentSymbol | null {
-    // This would need to be implemented with the document symbols
-    // For now, return null as it requires async call to provideDocumentSymbols
+  public findSymbolAtPosition(
+    document: TextDocument,
+    line: number,
+    character: number
+  ): DocumentSymbol | null {
+    // Not implemented: requires async call to provideDocumentSymbols
     return null;
   }
 }

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { describe, it, beforeEach } from 'mocha';
-import { ErrorHandler, PrologError, ErrorContext } from '../src/features/errorHandler';
+import { beforeEach, describe, it } from 'mocha';
+import { ErrorContext, ErrorHandler, PrologError } from '../src/features/errorHandler.js';
 
 describe('ErrorHandler', () => {
   let errorHandler: ErrorHandler;
@@ -13,7 +13,7 @@ describe('ErrorHandler', () => {
     it('should handle string errors', () => {
       const error = 'syntax error: unexpected token';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('SYNTAX_ERROR');
       expect(result.type).to.equal('syntax');
       expect(result.message).to.include('syntax error');
@@ -23,7 +23,7 @@ describe('ErrorHandler', () => {
     it('should handle Error objects', () => {
       const error = new SyntaxError('Invalid syntax');
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('SYNTAX_ERROR');
       expect(result.type).to.equal('syntax');
       expect(result.message).to.include('Invalid syntax');
@@ -32,12 +32,14 @@ describe('ErrorHandler', () => {
     it('should handle Prolog error terms', () => {
       const error = {
         functor: 'error',
-        args: [{
-          functor: 'existence_error',
-          args: ['procedure', 'unknown_predicate/1']
-        }]
+        args: [
+          {
+            functor: 'existence_error',
+            args: ['procedure', 'unknown_predicate/1'],
+          },
+        ],
       };
-      
+
       const result = errorHandler.handleError(error);
       expect(result.code).to.equal('EXISTENCE_ERROR');
       expect(result.type).to.equal('runtime');
@@ -46,9 +48,9 @@ describe('ErrorHandler', () => {
     it('should handle HTTP errors', () => {
       const error = {
         code: 'ECONNREFUSED',
-        message: 'Connection refused'
+        message: 'Connection refused',
       };
-      
+
       const result = errorHandler.handleError(error);
       expect(result.code).to.equal('CONNECTION_FAILED');
       expect(result.type).to.equal('network');
@@ -59,9 +61,9 @@ describe('ErrorHandler', () => {
       const context: ErrorContext = {
         command: 'query',
         query: 'test_predicate(X)',
-        file: 'test.pl'
+        file: 'test.pl',
       };
-      
+
       const result = errorHandler.handleError(error, context);
       expect(result.context).to.equal('query');
       expect(result.file).to.equal('test.pl');
@@ -72,7 +74,7 @@ describe('ErrorHandler', () => {
     it('should identify syntax errors', () => {
       const error = 'Syntax error: operator expected';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('SYNTAX_ERROR');
       expect(result.suggestion).to.include('Check your Prolog syntax');
     });
@@ -80,7 +82,7 @@ describe('ErrorHandler', () => {
     it('should identify existence errors', () => {
       const error = 'existence_error(procedure, test/1)';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('EXISTENCE_ERROR');
       expect(result.suggestion).to.include('Check if the predicate is defined');
     });
@@ -88,7 +90,7 @@ describe('ErrorHandler', () => {
     it('should identify type errors', () => {
       const error = 'type_error(integer, atom)';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('TYPE_ERROR');
       expect(result.suggestion).to.include('Check the types of your arguments');
     });
@@ -96,7 +98,7 @@ describe('ErrorHandler', () => {
     it('should identify permission errors', () => {
       const error = 'permission_error(modify, static_procedure, test/1)';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('PERMISSION_ERROR');
       expect(result.suggestion).to.include('permission');
     });
@@ -104,7 +106,7 @@ describe('ErrorHandler', () => {
     it('should identify timeout errors', () => {
       const error = 'Query timeout after 30 seconds';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('BACKEND_TIMEOUT');
       expect(result.suggestion).to.include('time limit');
     });
@@ -112,7 +114,7 @@ describe('ErrorHandler', () => {
     it('should identify connection errors', () => {
       const error = 'Connection refused to localhost:3060';
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('CONNECTION_FAILED');
       expect(result.suggestion).to.include('SWI-Prolog is running');
     });
@@ -122,12 +124,14 @@ describe('ErrorHandler', () => {
     it('should parse formal error terms', () => {
       const errorTerm = {
         functor: 'error',
-        args: [{
-          functor: 'type_error',
-          args: ['integer', 'hello']
-        }]
+        args: [
+          {
+            functor: 'type_error',
+            args: ['integer', 'hello'],
+          },
+        ],
       };
-      
+
       const result = errorHandler.handleError(errorTerm);
       expect(result.code).to.equal('TYPE_ERROR');
       expect(result.message).to.include('integer');
@@ -137,9 +141,9 @@ describe('ErrorHandler', () => {
     it('should parse syntax error terms', () => {
       const errorTerm = {
         functor: 'syntax_error',
-        args: ['operator_expected']
+        args: ['operator_expected'],
       };
-      
+
       const result = errorHandler.handleError(errorTerm);
       expect(result.code).to.equal('SYNTAX_ERROR');
       expect(result.message).to.include('operator_expected');
@@ -148,9 +152,9 @@ describe('ErrorHandler', () => {
     it('should parse existence error terms', () => {
       const errorTerm = {
         functor: 'existence_error',
-        args: ['procedure', 'unknown/1']
+        args: ['procedure', 'unknown/1'],
       };
-      
+
       const result = errorHandler.handleError(errorTerm);
       expect(result.code).to.equal('EXISTENCE_ERROR');
       expect(result.message).to.include("procedure 'unknown/1' does not exist");
@@ -170,11 +174,11 @@ describe('ErrorHandler', () => {
         column: 18,
         file: 'test.pl',
         context: 'consult',
-        severity: 'error'
+        severity: 'error',
       };
-      
+
       const formatted = errorHandler.formatError(error);
-      
+
       expect(formatted).to.include('📝 **Syntax Error**');
       expect(formatted).to.include('**Message:** Missing period at end of clause');
       expect(formatted).to.include('**Location:**');
@@ -192,11 +196,11 @@ describe('ErrorHandler', () => {
         code: 'UNKNOWN_ERROR',
         type: 'runtime',
         message: 'Something went wrong',
-        severity: 'error'
+        severity: 'error',
       };
-      
+
       const formatted = errorHandler.formatError(error);
-      
+
       expect(formatted).to.include('⚡ **Runtime Error**');
       expect(formatted).to.include('**Message:** Something went wrong');
       expect(formatted).to.not.include('**Location:**');
@@ -208,16 +212,16 @@ describe('ErrorHandler', () => {
         code: 'SYNTAX_ERROR',
         type: 'syntax',
         message: 'Syntax error',
-        severity: 'error'
+        severity: 'error',
       };
-      
+
       const networkError: PrologError = {
         code: 'CONNECTION_FAILED',
         type: 'network',
         message: 'Network error',
-        severity: 'error'
+        severity: 'error',
       };
-      
+
       expect(errorHandler.formatError(syntaxError)).to.include('📝');
       expect(errorHandler.formatError(networkError)).to.include('🌐');
     });
@@ -227,9 +231,9 @@ describe('ErrorHandler', () => {
     it('should detect missing period in query', () => {
       const userInput = '?- parent(X, Y)';
       const originalError = 'syntax error';
-      
+
       const result = errorHandler.createUserFriendlyError(userInput, originalError);
-      
+
       expect(result.code).to.equal('MISSING_PERIOD');
       expect(result.message).to.include('Query should end with a period');
     });
@@ -237,9 +241,9 @@ describe('ErrorHandler', () => {
     it('should detect missing period in rule', () => {
       const userInput = 'grandparent(X, Z) :- parent(X, Y), parent(Y, Z)';
       const originalError = 'syntax error';
-      
+
       const result = errorHandler.createUserFriendlyError(userInput, originalError);
-      
+
       expect(result.code).to.equal('MISSING_PERIOD');
       expect(result.message).to.include('Rule should end with a period');
     });
@@ -247,9 +251,9 @@ describe('ErrorHandler', () => {
     it('should detect unmatched opening parenthesis', () => {
       const userInput = 'parent(tom, bob';
       const originalError = 'syntax error';
-      
+
       const result = errorHandler.createUserFriendlyError(userInput, originalError);
-      
+
       expect(result.code).to.equal('UNMATCHED_PARENTHESES');
       expect(result.message).to.include('Missing closing parenthesis');
     });
@@ -257,9 +261,9 @@ describe('ErrorHandler', () => {
     it('should detect unmatched closing parenthesis', () => {
       const userInput = 'parent tom, bob)';
       const originalError = 'syntax error';
-      
+
       const result = errorHandler.createUserFriendlyError(userInput, originalError);
-      
+
       expect(result.code).to.equal('UNMATCHED_PARENTHESES');
       expect(result.message).to.include('Missing opening parenthesis');
     });
@@ -267,9 +271,9 @@ describe('ErrorHandler', () => {
     it('should fallback to original error processing', () => {
       const userInput = 'valid_syntax(X).';
       const originalError = 'existence_error(procedure, unknown/1)';
-      
+
       const result = errorHandler.createUserFriendlyError(userInput, originalError);
-      
+
       expect(result.code).to.equal('EXISTENCE_ERROR');
     });
   });
@@ -280,13 +284,13 @@ describe('ErrorHandler', () => {
         type: 'user',
         message: 'Custom error occurred',
         suggestion: 'Try something else',
-        severity: 'warning'
+        severity: 'warning',
       });
-      
+
       const error = errorHandler.handleError('custom error');
       // Should create generic error since string doesn't match pattern
       expect(error.code).to.not.equal('CUSTOM_ERROR');
-      
+
       // But the error code should be available
       const errorCodes = errorHandler.getErrorCodes();
       expect(errorCodes.has('CUSTOM_ERROR')).to.be.true;
@@ -294,7 +298,7 @@ describe('ErrorHandler', () => {
 
     it('should get all error codes', () => {
       const errorCodes = errorHandler.getErrorCodes();
-      
+
       expect(errorCodes.has('SYNTAX_ERROR')).to.be.true;
       expect(errorCodes.has('EXISTENCE_ERROR')).to.be.true;
       expect(errorCodes.has('TYPE_ERROR')).to.be.true;
@@ -306,7 +310,7 @@ describe('ErrorHandler', () => {
     it('should handle connection refused', () => {
       const error = { code: 'ECONNREFUSED' };
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('CONNECTION_FAILED');
       expect(result.message).to.include('Connection refused');
     });
@@ -314,7 +318,7 @@ describe('ErrorHandler', () => {
     it('should handle timeout', () => {
       const error = { code: 'ETIMEDOUT' };
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('BACKEND_TIMEOUT');
       expect(result.message).to.include('timed out');
     });
@@ -323,12 +327,12 @@ describe('ErrorHandler', () => {
       const error = {
         response: {
           status: 404,
-          statusText: 'Not Found'
-        }
+          statusText: 'Not Found',
+        },
       };
-      
+
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('HTTP_ERROR');
       expect(result.message).to.include('HTTP 404: Not Found');
     });
@@ -336,11 +340,11 @@ describe('ErrorHandler', () => {
     it('should handle HTTP request errors', () => {
       const error = {
         request: {},
-        message: 'Network error'
+        message: 'Network error',
       };
-      
+
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('HTTP_ERROR');
       expect(result.message).to.include('Network error');
     });
@@ -354,11 +358,11 @@ describe('ErrorHandler', () => {
         details: 'Additional details',
         line: 10,
         column: 5,
-        file: 'structured.pl'
+        file: 'structured.pl',
       };
-      
+
       const result = errorHandler.handleError(error);
-      
+
       expect(result.code).to.equal('CUSTOM_STRUCTURED');
       expect(result.message).to.equal('Structured error message');
       expect(result.details).to.equal('Additional details');
@@ -371,7 +375,7 @@ describe('ErrorHandler', () => {
   describe('edge cases', () => {
     it('should handle null error', () => {
       const result = errorHandler.handleError(null);
-      
+
       expect(result.code).to.equal('UNKNOWN_ERROR');
       expect(result.type).to.equal('runtime');
       expect(result.severity).to.equal('error');
@@ -379,14 +383,14 @@ describe('ErrorHandler', () => {
 
     it('should handle undefined error', () => {
       const result = errorHandler.handleError(undefined);
-      
+
       expect(result.code).to.equal('UNKNOWN_ERROR');
       expect(result.message).to.include('undefined');
     });
 
     it('should handle empty string error', () => {
       const result = errorHandler.handleError('');
-      
+
       expect(result.code).to.equal('UNKNOWN_ERROR');
       expect(result.message).to.equal('');
     });
@@ -395,14 +399,14 @@ describe('ErrorHandler', () => {
       const complexError = {
         nested: {
           deep: {
-            value: 'error'
-          }
+            value: 'error',
+          },
         },
-        array: [1, 2, 3]
+        array: [1, 2, 3],
       };
-      
+
       const result = errorHandler.handleError(complexError);
-      
+
       expect(result.code).to.equal('UNKNOWN_ERROR');
       expect(result.message).to.include('nested');
     });

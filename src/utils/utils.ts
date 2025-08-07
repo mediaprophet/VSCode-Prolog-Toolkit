@@ -1,17 +1,12 @@
 // 'use strict' directive is not needed in ES modules
-import * as fs from 'fs';
-import * as cp from 'child_process';
 import jsesc from 'jsesc';
+import * as cp from 'node:child_process';
+import * as fs from 'node:fs';
 // import { CompleterResult } from "readline";
 // import { error } from "util";
-import {
-  ExtensionContext,
-  Position,
-  Range,
-  TextDocument,
-  workspace,
-} from 'vscode';
-import { PlatformUtils, getPlatformDefaults } from './platformUtils';
+import type { ExtensionContext, Position, TextDocument } from 'vscode';
+import { workspace } from 'vscode';
+import { PlatformUtils, getPlatformDefaults } from './platformUtils.js';
 
 export interface ISnippet {
   [predIndicator: string]: {
@@ -178,11 +173,13 @@ export class Utils {
     for (const p in Utils.snippets) {
       // from the loaded snippets
       if (p.indexOf(':') > 0) {
-        [mod, pred] = p.split(':');
-        if (Utils.predModules[pred]) {
-          // if predicates have severals modules
+        const split = p.split(':');
+        const mod = split[0] ?? '';
+        const pred = split[1] ?? '';
+        if (pred && Utils.predModules && Utils.predModules[pred]) {
+          // if predicates have several modules
           Utils.predModules[pred] = Utils.predModules[pred].concat(mod);
-        } else {
+        } else if (pred && Utils.predModules) {
           Utils.predModules[pred] = [mod];
         }
       }
@@ -191,7 +188,16 @@ export class Utils {
   // return the module of a specified predicate
   public static getPredModules(pred1: string): string[] {
     const pred = pred1.indexOf(':') > -1 ? pred1.split(':')[1] : pred1;
-    return Utils.predModules[pred] ? Utils.predModules[pred] : [];
+    if (
+      typeof pred !== 'undefined' &&
+      pred &&
+      Utils.predModules &&
+      pred in Utils.predModules &&
+      Utils.predModules[pred]
+    ) {
+      return Utils.predModules[pred]!;
+    }
+    return [];
   }
   // get all the builtin predicates names from the loaded snippet
   public static getBuiltinNames(): string[] {
@@ -199,9 +205,14 @@ export class Utils {
     builtins = builtins.filter(name => {
       return !/:/.test(name) && /\//.test(name);
     });
-    builtins = builtins.map(name => {
-      return name.match(/(.+)\//)[1];
-    });
+    builtins = builtins
+      .map(name => {
+        const match = name.match(/(.+)\//);
+        return typeof match !== 'undefined' && match && typeof match[1] === 'string'
+          ? match[1]
+          : '';
+      })
+      .filter((item): item is string => !!item && typeof item === 'string');
     builtins = builtins.filter((item, index, original) => {
       return !/\W/.test(item) && original.indexOf(item) == index;
     });
@@ -211,9 +222,17 @@ export class Utils {
   // get the predicate under the cursor
   public static getPredicateUnderCursor(doc: TextDocument, position: Position): IPredicate {
     // get predicate name range
-    const wordRange: Range = doc.getWordRangeAtPosition(position);
+    const wordRange = doc.getWordRangeAtPosition(position);
     if (!wordRange) {
-      return null;
+      // Return a default IPredicate object or throw if null is not allowed
+      return {
+        wholePred: '',
+        pi: '',
+        functor: '',
+        arity: 0,
+        params: '',
+        module: '',
+      };
     }
     // get predicate name
     const predName: string = doc.getText(wordRange);
@@ -255,7 +274,7 @@ export class Utils {
       // find the module if a predicate is picked in :-module or :-use_module
     } else if (re1.test(text)) {
       const match = text.match(re1);
-      arity = match ? parseInt(match[1]) : 0;
+      arity = match && match[1] ? parseInt(match[1]) : 0;
       params = arity === 0 ? '' : '(' + new Array(arity).fill('_').join(',') + ')';
       wholePred = predName + params;
       switch (Utils.DIALECT) {
@@ -285,9 +304,7 @@ export class Utils {
         }
         case 'ecl': {
           const modDefMatch = docTxt.match(/\n?\s*:-\s*module\((\w+)\)/);
-          const expRe1 = new RegExp(
-            '\\n\\s*:-\\s*export[^.]+\\b' + predName + '\\s*/\\s*' + arity
-          );
+          const expRe1 = new RegExp('\\n\\s*:-\\s*export[^.]+\\b' + predName + '\\s*/\\s*' + arity);
           const expRe2 = new RegExp(
             '\\n\\s*:-\\s*import.*\\b' + predName + '\\s*/\\s*' + arity + '\\b.*from\\s*(\\w+)'
           );
@@ -418,7 +435,7 @@ export class Utils {
       pred,
       /arity=(\d+)/
     );
-    return result ? parseInt(result[1]) : -1; // return the number of parameters
+    return result && result[1] ? parseInt(result[1]) : -1; // return the number of parameters
   }
 
   // execute a prolog query
@@ -430,8 +447,8 @@ export class Utils {
     resultReg: RegExp
   ): string[] {
     const plCode = jsesc(clause, { quotes: 'double' }); // stringify
-    let input: string,
-      prologProcess: cp.SpawnSyncReturns<string | Buffer>,
+    let input: string = '',
+      prologProcess: cp.SpawnSyncReturns<string | Buffer> | undefined = undefined,
       runOptions: cp.SpawnSyncOptions;
     // execute the query by transforming it in a stream
     switch (Utils.DIALECT) {
@@ -478,14 +495,14 @@ export class Utils {
       const err = prologProcess.stderr ? prologProcess.stderr.toString() : '';
       // console.log("out:" + output);
       // console.log("err:" + err);
-      
+
       // Log stderr if there are any error messages for debugging
       if (err.trim()) {
         console.debug('[Utils] Prolog process stderr:', err);
       }
 
       const match = output.match(resultReg); // select the wanted result with the regex expression
-      return match ? match : null;
+      return match ? match : [];
     } else {
       console.log(
         'UtilsExecSyncError: ' +
@@ -493,7 +510,7 @@ export class Utils {
             ? prologProcess.stderr.toString()
             : 'Unknown error')
       );
-      return null;
+      return [];
     }
   }
   /* //OLD
@@ -533,13 +550,15 @@ export class Utils {
     let lineStartPos = 0;
     // Iterate through lines to find the line and column for the byte offset
     for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-      totalLength += lines[lineNo].length + 1; // Because we removed the '\n' during split.
+      const line = lines[lineNo];
+      if (typeof line === 'undefined') continue;
+      totalLength += line.length + 1; // Because we removed the '\n' during split.
       if (index < totalLength) {
         const colNo = index - lineStartPos;
-        return new Position(lineNo, colNo);
+        return new (workspace as any).Position(lineNo, colNo);
       }
       lineStartPos = totalLength;
     }
-    return new Position(0, 0); // fallback position
+    return new (workspace as any).Position(0, 0); // fallback position
   }
 }

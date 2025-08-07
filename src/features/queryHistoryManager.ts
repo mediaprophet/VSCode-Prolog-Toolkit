@@ -1,7 +1,6 @@
-import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
-import { QueryStatus } from './queryNotificationManager';
+import * as vscode from 'vscode';
 
 export interface QueryHistoryEntry {
   id: string;
@@ -70,8 +69,53 @@ export interface QueryHistoryOptions {
 /**
  * Persistent query history storage and management system
  */
-export class QueryHistoryManager extends EventEmitter {
+export class QueryHistoryManager {
+  /**
+   * Node.js-style event API compatibility: .on(eventName, handler)
+   */
+  public on(eventName: string, handler: (...args: any[]) => void): void {
+    switch (eventName) {
+      case 'initialized':
+        this.onInitialized(handler);
+        break;
+      case 'error':
+        this.onError(handler);
+        break;
+      case 'queryAdded':
+        this.onQueryAdded(handler);
+        break;
+      case 'queryUpdated':
+        this.onQueryUpdated(handler);
+        break;
+      case 'queryDeleted':
+        this.onQueryDeleted(handler);
+        break;
+      case 'historyCleared':
+        this.onHistoryCleared(handler);
+        break;
+      case 'historyCleanedUp':
+        this.onHistoryCleanedUp(handler);
+        break;
+      default:
+        throw new Error(`Unknown event: ${eventName}`);
+    }
+  }
   private static instance: QueryHistoryManager;
+  // VS Code event emitters
+  private _onInitialized = new vscode.EventEmitter<void>();
+  public readonly onInitialized = this._onInitialized.event;
+  private _onError = new vscode.EventEmitter<unknown>();
+  public readonly onError = this._onError.event;
+  private _onQueryAdded = new vscode.EventEmitter<QueryHistoryEntry>();
+  public readonly onQueryAdded = this._onQueryAdded.event;
+  private _onQueryUpdated = new vscode.EventEmitter<QueryHistoryEntry>();
+  public readonly onQueryUpdated = this._onQueryUpdated.event;
+  private _onQueryDeleted = new vscode.EventEmitter<string>();
+  public readonly onQueryDeleted = this._onQueryDeleted.event;
+  private _onHistoryCleared = new vscode.EventEmitter<void>();
+  public readonly onHistoryCleared = this._onHistoryCleared.event;
+  private _onHistoryCleanedUp = new vscode.EventEmitter<{ removedCount: number }>();
+  public readonly onHistoryCleanedUp = this._onHistoryCleanedUp.event;
   private options: QueryHistoryOptions;
   private historyFile: string;
   private indexFile: string;
@@ -92,7 +136,7 @@ export class QueryHistoryManager extends EventEmitter {
   }
 
   constructor(options: Partial<QueryHistoryOptions> = {}) {
-    super();
+    // no super();
 
     this.options = {
       storageDir: path.join(process.cwd(), '.prolog-history'),
@@ -130,11 +174,11 @@ export class QueryHistoryManager extends EventEmitter {
       }
 
       this.isInitialized = true;
-      this.emit('initialized');
+      this._onInitialized.fire();
       console.log(`[QueryHistoryManager] Initialized with ${this.memoryCache.size} entries`);
     } catch (error: unknown) {
       console.error('[QueryHistoryManager] Initialization failed:', error);
-      this.emit('error', error);
+      this._onError.fire(error);
     }
   }
 
@@ -162,7 +206,7 @@ export class QueryHistoryManager extends EventEmitter {
     this.writeQueue.push(historyEntry);
 
     // Emit event
-    this.emit('queryAdded', historyEntry);
+    this._onQueryAdded.fire(historyEntry);
 
     // Check if we need to enforce size limits
     if (this.memoryCache.size > this.options.maxHistorySize) {
@@ -202,7 +246,7 @@ export class QueryHistoryManager extends EventEmitter {
     // Add to write queue
     this.writeQueue.push(updatedEntry);
 
-    this.emit('queryUpdated', updatedEntry);
+    this._onQueryUpdated.fire(updatedEntry);
     console.log(`[QueryHistoryManager] Updated query ${queryId} in history`);
   }
 
@@ -255,39 +299,41 @@ export class QueryHistoryManager extends EventEmitter {
     const sortOrder = filter.sortOrder || 'desc';
 
     entries.sort((a, b) => {
-      let aValue: unknown, bValue: unknown;
-
+      let aValue: number | string, bValue: number | string;
       switch (sortBy) {
-        case 'startTime': {
+        case 'startTime':
           aValue = a.startTime;
           bValue = b.startTime;
           break;
-        }
-        case 'endTime': {
+        case 'endTime':
           aValue = a.endTime || 0;
           bValue = b.endTime || 0;
           break;
-        }
-        case 'duration': {
+        case 'duration':
           aValue = a.duration || 0;
           bValue = b.duration || 0;
           break;
-        }
-        case 'cmd': {
+        case 'cmd':
           aValue = a.cmd;
           bValue = b.cmd;
           break;
-        }
-        default: {
+        default:
           aValue = a.startTime;
           bValue = b.startTime;
-        }
       }
-
-      if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        if (sortOrder === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
       } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        // treat as numbers
+        if (sortOrder === 'asc') {
+          return (aValue as number) - (bValue as number);
+        } else {
+          return (bValue as number) - (aValue as number);
+        }
       }
     });
 
@@ -329,7 +375,7 @@ export class QueryHistoryManager extends EventEmitter {
     if (deleted) {
       // Mark for deletion in persistent storage
       this.writeQueue.push({ id: queryId, deleted: true } as any);
-      this.emit('queryDeleted', queryId);
+      this._onQueryDeleted.fire(queryId);
       console.log(`[QueryHistoryManager] Deleted query ${queryId} from history`);
     }
 
@@ -466,7 +512,7 @@ export class QueryHistoryManager extends EventEmitter {
       console.error('[QueryHistoryManager] Error clearing persistent storage:', error);
     }
 
-    this.emit('historyCleared');
+    this._onHistoryCleared.fire();
     console.log('[QueryHistoryManager] History cleared');
   }
 
@@ -562,7 +608,7 @@ export class QueryHistoryManager extends EventEmitter {
     if (removedCount > 0) {
       // Rewrite the history file without old entries
       await this.rewriteHistoryFile();
-      this.emit('historyCleanedUp', { removedCount });
+      this._onHistoryCleanedUp.fire({ removedCount });
       console.log(`[QueryHistoryManager] Cleaned up ${removedCount} old entries`);
     }
   }
@@ -619,7 +665,14 @@ export class QueryHistoryManager extends EventEmitter {
     // Process any remaining writes
     this.processWriteQueue();
 
-    this.removeAllListeners();
+    // VS Code EventEmitters do not require removeAllListeners; dispose them instead
+    this._onInitialized.dispose();
+    this._onError.dispose();
+    this._onQueryAdded.dispose();
+    this._onQueryUpdated.dispose();
+    this._onQueryDeleted.dispose();
+    this._onHistoryCleared.dispose();
+    this._onHistoryCleanedUp.dispose();
     console.log('[QueryHistoryManager] Disposed');
   }
 }

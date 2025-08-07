@@ -16,12 +16,13 @@ import {
   workspace,
   WorkspaceEdit,
 } from 'vscode';
-import { ApiServer, ApiServerConfig } from '../features/apiServer.js';
+import type { ApiServerConfig } from '../features/apiServer.js';
+import { ApiServer } from '../features/apiServer.js';
 import { PrologDefinitionProvider } from '../features/definitionProvider.js';
 import PrologDocumentHighlightProvider from '../features/documentHighlightProvider.js';
 import { loadEditHelpers } from '../features/editHelpers.js';
-import { ExternalWebSocketManager } from '../features/externalWebSocketManager.js';
 import type { ExternalWebSocketConfig } from '../features/externalWebSocketManager.js';
+import { ExternalWebSocketManager } from '../features/externalWebSocketManager.js';
 import PrologHoverProvider from '../features/hoverProvider.js';
 import PrologLinter from '../features/linting/prologLinter.js';
 import { MultiIDESupport } from '../features/multiIDESupport.js';
@@ -232,7 +233,10 @@ export class ExtensionManager {
 
     // Highlight provider
     context.subscriptions.push(
-      languages.registerDocumentHighlightProvider(PROLOG_MODE, new PrologDocumentHighlightProvider())
+      languages.registerDocumentHighlightProvider(
+        PROLOG_MODE,
+        new PrologDocumentHighlightProvider()
+      )
     );
 
     // Definition provider (go to definition command)
@@ -260,7 +264,10 @@ export class ExtensionManager {
   }
 
   // Initialize terminal and snippets
-  private initializeTerminalAndSnippets(context: ExtensionContext, PROLOG_MODE: DocumentFilter): void {
+  private initializeTerminalAndSnippets(
+    context: ExtensionContext,
+    PROLOG_MODE: DocumentFilter
+  ): void {
     // Create prolog terminal (load file command)
     context.subscriptions.push(PrologTerminal.init());
 
@@ -420,7 +427,8 @@ export class ExtensionManager {
   // Register providers and UI components
   private registerProvidersAndUI(context: ExtensionContext): void {
     // Register chat participant with enhanced followup provider
-    const chatParticipant = chat.createChatParticipant('prolog',
+    const chatParticipant = chat.createChatParticipant(
+      'prolog',
       (request: ChatRequest, context: any, stream: ChatResponseStream, token: CancellationToken) =>
         this.chatHandler.handleChatRequest(request, context, stream, token)
     );

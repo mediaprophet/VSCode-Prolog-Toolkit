@@ -1,54 +1,44 @@
-import {
-  createConnection,
-  TextDocuments,
-  ProposedFeatures,
-  InitializeParams,
-  CompletionItem,
-  TextDocumentPositionParams,
-  TextDocumentSyncKind,
-  InitializeResult,
-  HoverParams,
-  CodeActionParams,
-  ExecuteCommandParams,
-  DefinitionParams,
-  DocumentSymbolParams,
-  WorkspaceSymbolParams,
-  ReferenceParams,
-  DocumentHighlightParams,
-  SignatureHelpParams,
-  DocumentFormattingParams,
-  DocumentRangeFormattingParams,
-  RenameParams,
-  PrepareRenameParams,
-  FoldingRangeParams,
-  SemanticTokensParams,
-  CodeActionKind,
-} from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { PrologBackend } from '../prologBackend';
+import type {
+  CodeActionParams,
+  DefinitionParams,
+  DocumentFormattingParams,
+  DocumentHighlightParams,
+  DocumentRangeFormattingParams,
+  DocumentSymbolParams,
+  ExecuteCommandParams,
+  FoldingRangeParams,
+  HoverParams,
+  InitializeParams,
+  InitializeResult,
+  PrepareRenameParams,
+  ReferenceParams,
+  RenameParams,
+  SemanticTokensParams,
+  SignatureHelpParams,
+  TextDocumentPositionParams,
+  WorkspaceSymbolParams
+} from 'vscode-languageserver/node';
+import { CodeActionKind, CompletionItem, createConnection, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver/node';
+import { PrologBackend } from '../prologBackend.js';
+import { PrologCodeActionsProvider } from './lsp/codeActionsProvider.js';
+import { PrologCompletionProvider } from './lsp/completionProvider.js';
+import { ConfigurationManager } from './lsp/configurationManager.js';
+import { PrologDefinitionProvider } from './lsp/definitionProvider.js';
+import { PrologExecuteCommandHandler } from './lsp/executeCommandHandler.js';
+import { PrologFoldingProvider } from './lsp/foldingProvider.js';
+import { PrologFormattingProvider } from './lsp/formattingProvider.js';
+import { PrologHoverProvider } from './lsp/hoverProvider.js';
+import { PrologReferencesProvider } from './lsp/referencesProvider.js';
+import { PrologRenameProvider } from './lsp/renameProvider.js';
+import { PrologSemanticTokensProvider, semanticTokensLegend } from './lsp/semanticTokensProvider.js';
+import { PrologSignatureProvider } from './lsp/signatureProvider.js';
+import { PrologSymbolProvider } from './lsp/symbolProvider.js';
+import type { LSPContext } from './lsp/types.js';
+import { PrologValidationProvider } from './lsp/validationProvider.js';
 
-// Import all modular providers
-import { ConfigurationManager } from './lsp/configurationManager';
-import { PrologValidationProvider } from './lsp/validationProvider';
-import { PrologCompletionProvider } from './lsp/completionProvider';
-import { PrologHoverProvider } from './lsp/hoverProvider';
-import { PrologCodeActionsProvider } from './lsp/codeActionsProvider';
-import { PrologExecuteCommandHandler } from './lsp/executeCommandHandler';
-import { PrologDefinitionProvider } from './lsp/definitionProvider';
-import { PrologSymbolProvider } from './lsp/symbolProvider';
-import { PrologReferencesProvider } from './lsp/referencesProvider';
-import { PrologSignatureProvider } from './lsp/signatureProvider';
-import { PrologFormattingProvider } from './lsp/formattingProvider';
-import { PrologRenameProvider } from './lsp/renameProvider';
-import { PrologFoldingProvider } from './lsp/foldingProvider';
-import { PrologSemanticTokensProvider } from './lsp/semanticTokensProvider';
-import { LSPContext, semanticTokensLegend } from './lsp/types';
-
-// Create a connection for the server
-const connection = createConnection(ProposedFeatures.all);
-
-// Create a simple text document manager
+const connection = createConnection();
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 // Initialize all providers and managers
@@ -79,16 +69,20 @@ const createLSPContext = (): LSPContext => ({
   prologBackend,
   getDocumentSettings: (resource: string) => configurationManager.getDocumentSettings(resource),
   getGlobalSettings: () => configurationManager.getGlobalSettings(),
-  documents: new Map(documents.all().map(doc => [doc.uri, doc])),
+  documents: new Map(documents.all().map((doc: TextDocument) => [doc.uri, doc])),
   hasConfigurationCapability: configurationManager.getHasConfigurationCapability(),
   hasWorkspaceFolderCapability,
 });
+
+
 
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
 
   // Set configuration capability
-  const hasConfigurationCapability = !!(capabilities.workspace && !!capabilities.workspace.configuration);
+  const hasConfigurationCapability = !!(
+    capabilities.workspace && !!capabilities.workspace.configuration
+  );
   configurationManager.setConfigurationCapability(hasConfigurationCapability);
 
   hasWorkspaceFolderCapability = !!(
@@ -170,9 +164,9 @@ connection.onInitialize((params: InitializeParams) => {
 
 connection.onInitialized(() => {
   configurationManager.registerForConfigurationChanges();
-  
+
   if (hasWorkspaceFolderCapability) {
-    connection.workspace.onDidChangeWorkspaceFolders(_event => {
+    connection.workspace.onDidChangeWorkspaceFolders((_event: any) => {
       connection.console.log('Workspace folder change event received.');
     });
   }
@@ -206,19 +200,19 @@ async function initializePrologBackend() {
 }
 
 // Configuration changes
-connection.onDidChangeConfiguration(change => {
+connection.onDidChangeConfiguration((change: any) => {
   configurationManager.onDidChangeConfiguration(change);
-  
+
   // Revalidate all open text documents
   documents.all().forEach(validateTextDocument);
 });
 
 // Document lifecycle
-documents.onDidClose(e => {
+documents.onDidClose((e: any) => {
   configurationManager.clearDocumentSettings(e.document.uri);
 });
 
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent((change: any) => {
   validateTextDocument(change.document);
 });
 
@@ -244,7 +238,11 @@ connection.onCompletion(
 
     try {
       const context = createLSPContext();
-      return await completionProvider.provideCompletions(document, _textDocumentPosition.position, context);
+      return await completionProvider.provideCompletions(
+        document,
+        _textDocumentPosition.position,
+        context
+      );
     } catch (error: unknown) {
       connection.console.error(`Completion error: ${error}`);
       return [];
@@ -283,9 +281,9 @@ connection.onCodeAction(async (params: CodeActionParams) => {
   try {
     const context = createLSPContext();
     return await codeActionsProvider.provideCodeActions(
-      document, 
-      params.range, 
-      params.context.diagnostics, 
+      document,
+      params.range,
+      params.context.diagnostics,
       context
     );
   } catch (error: unknown) {
@@ -298,15 +296,19 @@ connection.onCodeAction(async (params: CodeActionParams) => {
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   try {
     const context = createLSPContext();
-    const result = await executeCommandHandler.executeCommand(params.command, params.arguments || [], context);
-    
+    const result = await executeCommandHandler.executeCommand(
+      params.command,
+      params.arguments || [],
+      context
+    );
+
     // Send appropriate notifications based on result
     if (result.success) {
       connection.window.showInformationMessage(result.message);
     } else {
       connection.window.showErrorMessage(result.message);
     }
-    
+
     return result;
   } catch (error: unknown) {
     connection.console.error(`Execute command error: ${error}`);
@@ -369,9 +371,9 @@ connection.onReferences(async (params: ReferenceParams) => {
   try {
     const context = createLSPContext();
     return await referencesProvider.provideReferences(
-      document, 
-      params.position, 
-      params.context.includeDeclaration, 
+      document,
+      params.position,
+      params.context.includeDeclaration,
       context
     );
   } catch (error: unknown) {
@@ -491,23 +493,20 @@ connection.onFoldingRanges(async (params: FoldingRangeParams) => {
 });
 
 // Semantic tokens provider
-connection.onRequest(
-  'textDocument/semanticTokens/full',
-  async (params: SemanticTokensParams) => {
-    const document = documents.get(params.textDocument.uri);
-    if (!document) {
-      return { data: [] };
-    }
-
-    try {
-      const context = createLSPContext();
-      return await semanticTokensProvider.provideSemanticTokens(document, context);
-    } catch (error: unknown) {
-      connection.console.error(`Semantic tokens error: ${error}`);
-      return { data: [] };
-    }
+connection.onRequest('textDocument/semanticTokens/full', async (params: SemanticTokensParams) => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) {
+    return { data: [] };
   }
-);
+
+  try {
+    const context = createLSPContext();
+    return await semanticTokensProvider.provideSemanticTokens(document, context);
+  } catch (error: unknown) {
+    connection.console.error(`Semantic tokens error: ${error}`);
+    return { data: [] };
+  }
+});
 
 // Make the text document manager listen on the connection
 documents.listen(connection);

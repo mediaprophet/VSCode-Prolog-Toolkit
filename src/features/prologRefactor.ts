@@ -1,19 +1,20 @@
-import {
-  Location,
-  TextDocument,
-  Position,
-  workspace,
-  Uri,
-  Range,
-  OutputChannel,
-  WorkspaceEdit,
-  window,
-} from 'vscode';
-import { IPredicate, Utils } from '../utils/utils';
-import { spawn } from 'process-promises';
 import fg from 'fast-glob';
 import * as fs from 'fs';
 import jsesc from 'jsesc';
+import { spawn } from 'process-promises';
+import {
+  Location,
+  type OutputChannel,
+  type Position,
+  Range,
+  type TextDocument,
+  Uri,
+  WorkspaceEdit,
+  window,
+  workspace,
+} from 'vscode';
+import type { IPredicate } from '../utils/utils.js';
+import { Utils } from '../utils/utils.js';
 // import { resolve } from 'path';
 import * as path from 'path';
 
@@ -162,7 +163,7 @@ export class PrologRefactor {
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
       return this._locations;
     }
-    const root = workspace.workspaceFolders[0].uri.fsPath;
+    const root = (workspace.workspaceFolders && workspace.workspaceFolders.length > 0 && workspace.workspaceFolders[0]?.uri?.fsPath) ? workspace.workspaceFolders[0].uri.fsPath : '';
     const patterns = ['**/*.pl', '**/*.ecl'];
     const filePaths = await fg(patterns, { cwd: root, absolute: true });
     for (const file of filePaths) {
@@ -183,8 +184,8 @@ export class PrologRefactor {
     includingDefLoc = false,
     doc: TextDocument
   ) {
-    let input: string,
-      args: string[] = [];
+    let input: string = '';
+    let args: string[] = [];
     // Construct the appropriate input and arguments based on the Prolog dialect
     switch (Utils.DIALECT) {
       case 'swi': {
@@ -213,32 +214,34 @@ export class PrologRefactor {
       if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         return;
       }
-      await spawn(this._executable, args, { cwd: workspace.workspaceFolders[0].uri.fsPath })
-        .on('process', (proc: any) => {
-          if (proc.pid) {
-            // Write the input to the stdin of the spawned process
-            proc.stdin.write(input);
-            proc.stdin.end();
-          }
-        })
-        .on('stdout', (output: any) => {
-          // Parse the output based on the Prolog dialect
-          switch (Utils.DIALECT) {
-            case 'swi':
-              this.findRefsFromOutputSwi(pred, output, doc);
-              break;
-            case 'ecl':
-              this.findRefsFromOutputEcl(file, pred.pi, output);
-              break;
-            default:
-              break;
-          }
-        })
-        .on('stderr', (err: any) => {
-          // Handle any errors or display them in the output channel
-          this._outputChannel.append(err + '\n');
-          this._outputChannel.show(true);
-        });
+      const cwd = (workspace.workspaceFolders && workspace.workspaceFolders.length > 0 && workspace.workspaceFolders[0]?.uri?.fsPath) ? workspace.workspaceFolders[0].uri.fsPath : '';
+      let stdout = '';
+      let stderr = '';
+      await new Promise<void>((resolve, reject) => {
+        spawn(this._executable, args, { cwd })
+          .on('stdout', (line: string) => { stdout += line; })
+          .on('stderr', (line: string) => { stderr += line; })
+          .then(() => {
+            switch (Utils.DIALECT) {
+              case 'swi':
+                this.findRefsFromOutputSwi(pred, stdout, doc);
+                break;
+              case 'ecl':
+                this.findRefsFromOutputEcl(file, pred.pi, stdout);
+                break;
+              default:
+                break;
+            }
+            if (stderr.length > 0) {
+              this._outputChannel.append(stderr + '\n');
+              this._outputChannel.show(true);
+            }
+            resolve();
+          })
+          .catch(err => {
+            reject(err);
+          });
+      });
     } catch (error: unknown) {
       // Handle specific error cases (e.g., executable not found) and display error messages
       let message: string = '';
@@ -252,9 +255,9 @@ export class PrologRefactor {
       } else {
         message =
           error &&
-          typeof error === 'object' &&
-          'message' in error &&
-          typeof (error as any).message === 'string'
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as any).message === 'string'
             ? (error as any).message
             : `Failed to run swipl using path: ${this._executable}. Reason is unknown.`;
       }
@@ -301,10 +304,11 @@ export class PrologRefactor {
     const prolog = filenameParts.length > 1 ? filenameParts[1] : 'pl'; // Extract the Prolog dialect from the file extension
     // Iterate through "use_module" declarations
     for (let i = 0; i < arrayModule.length; i++) {
-      if (!arrayModule[i]?.[1]) {
+      const modArr = arrayModule[i];
+      if (!modArr || !Array.isArray(modArr) || typeof modArr[1] !== 'string') {
         continue;
       }
-      var modpath = arrayModule[i][1].replace(new RegExp("'", 'gm'), '');
+      var modpath = modArr[1].replace(new RegExp("'", 'gm'), '');
       modpath = modpath.replace(new RegExp('"', 'gm'), '');
       var text = '';
       try {
@@ -312,7 +316,7 @@ export class PrologRefactor {
           continue;
         }
         text = fs.readFileSync(
-          workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog,
+          ((workspace.workspaceFolders && workspace.workspaceFolders.length > 0 && workspace.workspaceFolders[0]?.uri?.fsPath) ? workspace.workspaceFolders[0].uri.fsPath : '') + '/' + modpath + '.' + prolog,
           'utf8'
         ); // Read the content of the referenced module file
       } catch (error: unknown) {
@@ -324,7 +328,7 @@ export class PrologRefactor {
           array.map(
             elem =>
               new Location(
-                Uri.file(workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog),
+                Uri.file(((workspace.workspaceFolders && workspace.workspaceFolders.length > 0 && workspace.workspaceFolders[0]?.uri?.fsPath) ? workspace.workspaceFolders[0].uri.fsPath : '') + '/' + modpath + '.' + prolog),
                 new Range(
                   Utils.findLineColForByte(text, elem.index),
                   Utils.findLineColForByte(text, elem.index + elem[0].length)
@@ -400,8 +404,9 @@ export class PrologRefactor {
     if (!match || match[1] === '') {
       return;
     }
-    const predLen = pi.split(':')[1].split('/')[0].length; // Extract the length of the predicate name
-    const locs = match[1].split(','); // Split the references string into an array of location strings
+    const predSplit = pi.split(':');
+    const predLen = (predSplit.length > 1 && predSplit[1]) ? (predSplit[1].split('/')[0]?.length ?? 0) : 0; // Extract the length of the predicate name
+    const locs = match && match[1] ? match[1].split(',') : []; // Split the references string into an array of location strings
     workspace.openTextDocument(Uri.file(file)).then(doc => {
       // Open the Prolog document to map character positions to positions in the file
       // Iterate through each location string and create Location objects

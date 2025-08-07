@@ -1,7 +1,9 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Location, DocumentHighlight, DocumentHighlightKind, Position } from 'vscode-languageserver/node';
-import { ReferencesProvider, LSPContext } from './types';
-import { PrologDefinitionProvider } from './definitionProvider';
+import type { DocumentHighlight, Location, Position } from 'vscode-languageserver-types';
+import { DocumentHighlightKind } from 'vscode-languageserver-types';
+import { PrologDefinitionProvider } from './definitionProvider.js';
+import type { LSPContext, ReferencesProvider } from './types.js';
+// DocumentHighlight and DocumentHighlightKind are not used in the provided code, remove them if not needed.
 
 export class PrologReferencesProvider implements ReferencesProvider {
   private definitionProvider: PrologDefinitionProvider;
@@ -11,10 +13,10 @@ export class PrologReferencesProvider implements ReferencesProvider {
   }
 
   async provideReferences(
-    document: TextDocument, 
-    position: Position, 
-    includeDeclaration: boolean, 
-    context: LSPContext
+    document: TextDocument,
+    position: Position,
+    includeDeclaration: boolean,
+    _context: LSPContext
   ): Promise<Location[]> {
     const word = this.getWordAtPosition(document.getText(), position);
 
@@ -36,9 +38,9 @@ export class PrologReferencesProvider implements ReferencesProvider {
   }
 
   async provideDocumentHighlights(
-    document: TextDocument, 
-    position: Position, 
-    context: LSPContext
+    document: TextDocument,
+    position: Position,
+    _context: LSPContext
   ): Promise<DocumentHighlight[]> {
     const word = this.getWordAtPosition(document.getText(), position);
 
@@ -52,12 +54,13 @@ export class PrologReferencesProvider implements ReferencesProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const regex = new RegExp(`\\b${this.escapeRegex(word)}\\b`, 'g');
       let match;
 
       while ((match = regex.exec(line)) !== null) {
         const kind = this.getHighlightKind(line, match.index, word);
-        
+
         highlights.push({
           range: {
             start: { line: i, character: match.index },
@@ -74,7 +77,7 @@ export class PrologReferencesProvider implements ReferencesProvider {
   private getWordAtPosition(text: string, position: Position): string | null {
     const lines = text.split('\n');
     const line = lines[position.line];
-    if (!line) {
+    if (typeof line !== 'string') {
       return null;
     }
 
@@ -83,19 +86,29 @@ export class PrologReferencesProvider implements ReferencesProvider {
     let end = char;
 
     // Find word boundaries
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
-      start--;
+    while (start > 0) {
+      const prevChar = line[start - 1];
+      if (typeof prevChar === 'string' && /[a-zA-Z0-9_]/.test(prevChar)) {
+        start--;
+      } else {
+        break;
+      }
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
-      end++;
+    while (end < line.length) {
+      const nextChar = line[end];
+      if (typeof nextChar === 'string' && /[a-zA-Z0-9_]/.test(nextChar)) {
+        end++;
+      } else {
+        break;
+      }
     }
 
     return start < end ? line.substring(start, end) : null;
   }
 
   private findReferencesInDocument(
-    document: TextDocument, 
-    word: string, 
+    document: TextDocument,
+    word: string,
     includeDeclaration: boolean
   ): Location[] {
     const text = document.getText();
@@ -104,12 +117,14 @@ export class PrologReferencesProvider implements ReferencesProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const regex = new RegExp(`\\b${this.escapeRegex(word)}\\b`, 'g');
       let match;
 
       while ((match = regex.exec(line)) !== null) {
+        if (!match || typeof match.index !== 'number') continue;
         const isDeclaration = this.isPredicateDeclaration(line, match.index, word);
-        
+
         // Include this occurrence if we want declarations or it's not a declaration
         if (includeDeclaration || !isDeclaration) {
           locations.push({
@@ -127,35 +142,39 @@ export class PrologReferencesProvider implements ReferencesProvider {
   }
 
   private isPredicateDeclaration(line: string, predicateIndex: number, predicate: string): boolean {
-    const beforePredicate = line.substring(0, predicateIndex).trim();
-    const afterPredicate = line.substring(predicateIndex + predicate.length);
-    
     // It's a declaration if:
     // 1. It starts the line (possibly after whitespace or :-)
     // 2. It's followed by an opening parenthesis
     // 3. The line contains :- (rule) or ends with . (fact)
-    const startsLine = beforePredicate === '' || beforePredicate === ':-';
-    const followedByParen = afterPredicate.trim().startsWith('(');
+    const afterPredicate = line.substring(predicateIndex + predicate.length);
+    const startsLine =
+      line.substring(0, predicateIndex).trim() === '' ||
+      line.substring(0, predicateIndex).trim() === ':-';
+    const followedByParen =
+      typeof afterPredicate === 'string' && afterPredicate.trim().startsWith('(');
     const isRuleOrFact = line.includes(':-') || line.trim().endsWith('.');
-    
     return startsLine && followedByParen && isRuleOrFact;
   }
 
-  private getHighlightKind(line: string, predicateIndex: number, predicate: string): DocumentHighlightKind {
+  private getHighlightKind(
+    line: string,
+    predicateIndex: number,
+    predicate: string
+  ): DocumentHighlightKind {
     // Determine the kind of highlight based on context
     if (this.isPredicateDeclaration(line, predicateIndex, predicate)) {
       return DocumentHighlightKind.Write; // Declaration/definition
     }
-    
+
     // Check if it's in a read context (being called)
-    const beforePredicate = line.substring(0, predicateIndex);
+    // ...existing code...
     const afterPredicate = line.substring(predicateIndex + predicate.length);
-    
+
     // If followed by opening parenthesis, it's likely a call
-    if (afterPredicate.trim().startsWith('(')) {
+    if (typeof afterPredicate === 'string' && afterPredicate.trim().startsWith('(')) {
       return DocumentHighlightKind.Read;
     }
-    
+
     // Default to text highlight
     return DocumentHighlightKind.Text;
   }
@@ -168,8 +187,8 @@ export class PrologReferencesProvider implements ReferencesProvider {
 
   // Find all references to a predicate across multiple documents
   public async findReferencesInDocuments(
-    documents: TextDocument[], 
-    predicate: string, 
+    documents: TextDocument[],
+    predicate: string,
     includeDeclaration = true
   ): Promise<Location[]> {
     const allLocations: Location[] = [];
@@ -187,20 +206,19 @@ export class PrologReferencesProvider implements ReferencesProvider {
     const unusedPredicates: string[] = [];
     const text = document.getText();
     const lines = text.split('\n');
-    
+
     // Find all predicate declarations
     const declarations = new Set<string>();
     const usages = new Set<string>();
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
       // Find predicate declarations
       const declarationMatch = line.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
-      if (declarationMatch) {
+      if (declarationMatch && typeof declarationMatch[1] === 'string') {
         declarations.add(declarationMatch[1]);
       }
-
       // Find predicate usages (not at start of line)
       const usageMatches = line.match(/\b[a-z][a-zA-Z0-9_]*\s*\(/g);
       if (usageMatches) {
@@ -229,16 +247,17 @@ export class PrologReferencesProvider implements ReferencesProvider {
     const undefinedPredicates: string[] = [];
     const text = document.getText();
     const lines = text.split('\n');
-    
+
     const declarations = new Set<string>();
     const usages = new Set<string>();
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
+
       // Find predicate declarations
       const declarationMatch = line.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
-      if (declarationMatch) {
+      if (declarationMatch && typeof declarationMatch[1] === 'string') {
         declarations.add(declarationMatch[1]);
       }
 
@@ -257,10 +276,36 @@ export class PrologReferencesProvider implements ReferencesProvider {
 
     // Find used predicates that are never declared (excluding built-ins)
     const builtins = new Set([
-      'member', 'append', 'length', 'reverse', 'sort', 'findall', 'bagof', 'setof',
-      'assert', 'retract', 'write', 'writeln', 'nl', 'is', 'var', 'nonvar',
-      'atom', 'number', 'compound', 'functor', 'arg', 'univ', 'call', 'once',
-      'forall', 'between', 'succ', 'true', 'fail', 'cut'
+      'member',
+      'append',
+      'length',
+      'reverse',
+      'sort',
+      'findall',
+      'bagof',
+      'setof',
+      'assert',
+      'retract',
+      'write',
+      'writeln',
+      'nl',
+      'is',
+      'var',
+      'nonvar',
+      'atom',
+      'number',
+      'compound',
+      'functor',
+      'arg',
+      'univ',
+      'call',
+      'once',
+      'forall',
+      'between',
+      'succ',
+      'true',
+      'fail',
+      'cut',
     ]);
 
     Array.from(usages).forEach(used => {

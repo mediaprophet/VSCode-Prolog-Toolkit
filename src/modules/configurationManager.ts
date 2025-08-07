@@ -1,12 +1,12 @@
 'use strict';
 
-import { ExtensionContext, workspace } from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
 import jsesc from 'jsesc';
-import { Utils } from '../utils/utils';
-import { PlatformUtils, getPlatform, getPlatformDefaults } from '../utils/platformUtils';
-import { AuthConfig } from '../features/apiMiddleware';
+import type { ExtensionContext } from 'vscode';
+import { workspace } from 'vscode';
+import type { AuthConfig } from '../features/apiMiddleware.ts';
+import { PlatformUtils, getPlatform, getPlatformDefaults } from '../utils/platformUtils.js';
+import { Utils } from '../utils/utils.js';
 
 export class ConfigurationManager {
   private static instance: ConfigurationManager;
@@ -134,17 +134,10 @@ export class ConfigurationManager {
       : 'api_key';
 
     return {
-      method: authMethod,
+      method: authMethod === 'oauth2' ? 'api_key' : authMethod,
       apiKeys: config.get('apiServer.auth.apiKeys', []) as string[],
       jwtSecret: config.get('apiServer.auth.jwtSecret', '') as string,
       localOnly: config.get('apiServer.auth.localOnly', true) as boolean,
-      oauth2: {
-        providers: config.get('apiServer.auth.oauth2.providers', ['google', 'github']) as string[],
-        clientId: config.get('apiServer.auth.oauth2.clientId', '') as string,
-        clientSecret: config.get('apiServer.auth.oauth2.clientSecret', '') as string,
-        redirectUri: config.get('apiServer.auth.oauth2.redirectUri', '') as string,
-        scope: config.get('apiServer.auth.oauth2.scope', 'read') as string,
-      },
       roles: {
         admin: config.get('apiServer.auth.roles.admin', []) as string[],
         agent: config.get('apiServer.auth.roles.agent', []) as string[],

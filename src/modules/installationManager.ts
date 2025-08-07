@@ -1,9 +1,10 @@
 'use strict';
 
-import { ExtensionContext, window, commands, workspace } from 'vscode';
-import { InstallationChecker } from '../features/installationChecker';
-import { InstallationGuide } from '../features/installationGuide';
-import { ConfigurationMigration } from '../features/configurationMigration';
+import type { ExtensionContext } from 'vscode';
+import { commands, window, workspace } from 'vscode';
+import { ConfigurationMigration } from '../features/configurationMigration.js';
+import { InstallationChecker } from '../features/installationChecker.js';
+import { InstallationGuide } from '../features/installationGuide/index.js';
 
 export class InstallationManager {
   private static instance: InstallationManager;
@@ -136,7 +137,9 @@ export class InstallationManager {
           if (foundPath) {
             const config = workspace.getConfiguration('prolog');
             await config.update('executablePath', foundPath, true);
-            window.showInformationMessage(`SWI-Prolog path auto-detected and updated: ${foundPath}`);
+            window.showInformationMessage(
+              `SWI-Prolog path auto-detected and updated: ${foundPath}`
+            );
           } else {
             window.showWarningMessage('SWI-Prolog not found in common locations');
           }

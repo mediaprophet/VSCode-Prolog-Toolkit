@@ -1,9 +1,18 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Hover, MarkupKind, Position } from 'vscode-languageserver/node';
-import { HoverProvider, LSPContext, HelpDocumentation, BackendResponse } from './types';
+import type { BackendResponse, HelpDocumentation, HoverProvider, LSPContext } from './types.js';
+type Hover = any;
+enum MarkupKind {
+  PlainText = 'plaintext',
+  Markdown = 'markdown',
+}
+type Position = { line: number; character: number };
 
 export class PrologHoverProvider implements HoverProvider {
-  async provideHover(document: TextDocument, position: Position, context: LSPContext): Promise<Hover | null> {
+  async provideHover(
+    document: TextDocument,
+    position: Position,
+    _context: LSPContext
+  ): Promise<Hover | null> {
     const text = document.getText();
     const word = this.getWordAtPosition(text, position);
 
@@ -12,9 +21,9 @@ export class PrologHoverProvider implements HoverProvider {
     }
 
     // Try to get help from backend
-    if (context.prologBackend?.isRunning()) {
+    if (_context.prologBackend?.isRunning()) {
       try {
-        const response: BackendResponse = await context.prologBackend.sendRequest('help', {
+        const response: BackendResponse = await _context.prologBackend.sendRequest('help', {
           predicate: word,
           timeoutMs: 3000,
         });
@@ -52,22 +61,19 @@ export class PrologHoverProvider implements HoverProvider {
   private getWordAtPosition(text: string, position: Position): string | null {
     const lines = text.split('\n');
     const line = lines[position.line];
-    if (!line) {
+    if (typeof line !== 'string') {
       return null;
     }
-
     const char = position.character;
     let start = char;
     let end = char;
-
     // Find word boundaries
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1] ?? '')) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end] ?? '')) {
       end++;
     }
-
     return start < end ? line.substring(start, end) : null;
   }
 
@@ -107,54 +113,37 @@ export class PrologHoverProvider implements HoverProvider {
         '# findall/3\n\nFind all solutions to Goal.\n\n```prolog\nfindall(X, member(X, [1,2,3]), L).\n```',
       reverse:
         '# reverse/2\n\nTrue if List2 is the reverse of List1.\n\n```prolog\nreverse([1,2,3], X).\n```',
-      sort:
-        '# sort/2\n\nTrue if Sorted is the sorted version of List.\n\n```prolog\nsort([3,1,2], X).\n```',
+      sort: '# sort/2\n\nTrue if Sorted is the sorted version of List.\n\n```prolog\nsort([3,1,2], X).\n```',
       bagof:
         '# bagof/3\n\nCollect solutions to Goal.\n\n```prolog\nbagof(X, member(X, [1,2,3]), L).\n```',
       setof:
         '# setof/3\n\nCollect unique solutions to Goal.\n\n```prolog\nsetof(X, member(X, [1,2,1]), L).\n```',
-      assert:
-        '# assert/1\n\nAdd clause to database.\n\n```prolog\nassert(fact(a)).\n```',
-      retract:
-        '# retract/1\n\nRemove clause from database.\n\n```prolog\nretract(fact(X)).\n```',
-      write:
-        '# write/1\n\nWrite term to output.\n\n```prolog\nwrite(hello).\n```',
-      writeln:
-        '# writeln/1\n\nWrite term followed by newline.\n\n```prolog\nwriteln(hello).\n```',
-      nl:
-        '# nl/0\n\nWrite newline to output.\n\n```prolog\nnl.\n```',
-      is:
-        '# is/2\n\nArithmetic evaluation.\n\n```prolog\nX is 2 + 3.\n```',
-      var:
-        '# var/1\n\nTrue if argument is unbound variable.\n\n```prolog\nvar(X).\n```',
+      assert: '# assert/1\n\nAdd clause to database.\n\n```prolog\nassert(fact(a)).\n```',
+      retract: '# retract/1\n\nRemove clause from database.\n\n```prolog\nretract(fact(X)).\n```',
+      write: '# write/1\n\nWrite term to output.\n\n```prolog\nwrite(hello).\n```',
+      writeln: '# writeln/1\n\nWrite term followed by newline.\n\n```prolog\nwriteln(hello).\n```',
+      nl: '# nl/0\n\nWrite newline to output.\n\n```prolog\nnl.\n```',
+      is: '# is/2\n\nArithmetic evaluation.\n\n```prolog\nX is 2 + 3.\n```',
+      var: '# var/1\n\nTrue if argument is unbound variable.\n\n```prolog\nvar(X).\n```',
       nonvar:
         '# nonvar/1\n\nTrue if argument is not unbound variable.\n\n```prolog\nnonvar(hello).\n```',
-      atom:
-        '# atom/1\n\nTrue if argument is an atom.\n\n```prolog\natom(hello).\n```',
-      number:
-        '# number/1\n\nTrue if argument is a number.\n\n```prolog\nnumber(42).\n```',
+      atom: '# atom/1\n\nTrue if argument is an atom.\n\n```prolog\natom(hello).\n```',
+      number: '# number/1\n\nTrue if argument is a number.\n\n```prolog\nnumber(42).\n```',
       compound:
         '# compound/1\n\nTrue if argument is a compound term.\n\n```prolog\ncompound(f(a)).\n```',
       functor:
         '# functor/3\n\nRelate compound term to functor name and arity.\n\n```prolog\nfunctor(f(a,b), F, A).\n```',
-      arg:
-        '# arg/3\n\nExtract argument from compound term.\n\n```prolog\narg(1, f(a,b), X).\n```',
-      univ:
-        '# univ/2\n\nConvert between term and list representation.\n\n```prolog\nf(a,b) =.. L.\n```',
-      call:
-        '# call/1\n\nCall goal dynamically.\n\n```prolog\ncall(member(X, [1,2,3])).\n```',
-      once:
-        '# once/1\n\nSucceed at most once.\n\n```prolog\nonce(member(X, [1,2,3])).\n```',
+      arg: '# arg/3\n\nExtract argument from compound term.\n\n```prolog\narg(1, f(a,b), X).\n```',
+      univ: '# univ/2\n\nConvert between term and list representation.\n\n```prolog\nf(a,b) =.. L.\n```',
+      call: '# call/1\n\nCall goal dynamically.\n\n```prolog\ncall(member(X, [1,2,3])).\n```',
+      once: '# once/1\n\nSucceed at most once.\n\n```prolog\nonce(member(X, [1,2,3])).\n```',
       forall:
         '# forall/2\n\nFor all solutions of Condition, Action must succeed.\n\n```prolog\nforall(member(X, [1,2,3]), write(X)).\n```',
       between:
         '# between/3\n\nGenerate integers between bounds.\n\n```prolog\nbetween(1, 5, X).\n```',
-      succ:
-        '# succ/2\n\nSuccessor relation for integers.\n\n```prolog\nsucc(X, 5).\n```',
-      true:
-        '# true/0\n\nAlways succeeds.\n\n```prolog\ntrue.\n```',
-      fail:
-        '# fail/0\n\nAlways fails.\n\n```prolog\nfail.\n```',
+      succ: '# succ/2\n\nSuccessor relation for integers.\n\n```prolog\nsucc(X, 5).\n```',
+      true: '# true/0\n\nAlways succeeds.\n\n```prolog\ntrue.\n```',
+      fail: '# fail/0\n\nAlways fails.\n\n```prolog\nfail.\n```',
     };
 
     return staticHelp[word] || null;

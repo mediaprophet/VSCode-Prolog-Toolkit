@@ -1,7 +1,8 @@
 import fg from 'fast-glob';
-import { DiagnosticSeverity, Position, Range, Diagnostic, TextDocument, workspace } from 'vscode';
-import { Utils } from '../../utils/utils';
-import { IDiagnosticParser, IDiagnosticInfo } from './interfaces';
+import type { TextDocument } from 'vscode';
+import { Diagnostic, DiagnosticSeverity, Position, Range, workspace } from 'vscode';
+import { Utils } from '../../utils/utils.js';
+import type { IDiagnosticInfo, IDiagnosticParser } from './interfaces.js';
 
 /**
  * Handles parsing of Prolog compiler output into diagnostic information
@@ -18,10 +19,11 @@ export class DiagnosticParser implements IDiagnosticParser {
     const match = issue.match(this.swiRegex);
 
     // Check if a match is found
-    if (match == null) return null;
+    if (!match) return null;
 
     // Extract relevant information from the match
-    const fileName = filePathIds[match[2]] ? filePathIds[match[2]] : match[2];
+    const fileKey = match[2] ?? '';
+    const fileName = (fileKey && filePathIds[fileKey]) ? filePathIds[fileKey] : fileKey;
     let severity: DiagnosticSeverity;
 
     // Determine severity based on the issue type
@@ -34,11 +36,12 @@ export class DiagnosticParser implements IDiagnosticParser {
     }
 
     // Parse line, column, and error message information
-    const line = parseInt(match[3]) - 1; // Convert to 0-based indexing
+    const lineStr = match[3];
+    const line = lineStr ? parseInt(lineStr) - 1 : 0;
     let fromCol = match[5] ? parseInt(match[5]) : 0;
     fromCol = fromCol < 0 ? 0 : fromCol;
     const toCol = match[7] ? parseInt(match[7]) : 200;
-    const message = match[8];
+    const message = match[8] ?? '';
 
     return {
       fileName,
@@ -87,7 +90,7 @@ export class DiagnosticParser implements IDiagnosticParser {
   ): void {
     if (Utils.DIALECT === 'ecl' && !/checking completed/.test(output)) {
       const lines = output.split('\n');
-      
+
       for (const line of lines) {
         if (/^File\s*/.test(line)) {
           if (lineErr) {
@@ -95,21 +98,23 @@ export class DiagnosticParser implements IDiagnosticParser {
             if (diagnostic) diagnostics.push(diagnostic);
             lineErr = '';
           }
-          
+
           const match = line.match(/File\s*([^,]+),.*line\s*(\d+):\s*(.*)/);
           if (match) {
             let fullName: string;
-            if (match[1] === 'string') {
+            if ((match[1] ?? '') === 'string') {
               fullName = textDocument.fileName;
             } else {
-              // Use fast-glob to find the file matching the pattern
-              const files = fg.sync([`**/${match[1]}`], {
-                cwd: workspace.workspaceFolders?.[0]?.uri.fsPath,
-                absolute: true,
-              });
-              fullName = files.length > 0 ? files[0] : match[1];
+              let files: string[] = [];
+              const cwd = workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : '';
+              if (cwd) {
+                files = fg.sync([`**/${match[1] ?? ''}`], { cwd, absolute: true });
+              } else {
+                files = fg.sync([`**/${match[1] ?? ''}`], { absolute: true });
+              }
+              fullName = files.length > 0 ? (files[0] ?? '') : (match[1] ?? '');
             }
-            lineErr = 'Warning:' + fullName + ':' + match[2] + ':' + match[3];
+            lineErr = 'Warning:' + fullName + ':' + (match[2] ?? '') + ':' + (match[3] ?? '');
           }
         } else if (/^\|/.test(line)) {
           lineErr += line;
@@ -162,7 +167,7 @@ export class DiagnosticParser implements IDiagnosticParser {
         const regex = /^(Warning:\s*(.+?):)(\d+):(\d+)?/;
         const match = line.match(regex);
         if (match) {
-          const lineNum = parseInt(match[3]);
+          const lineNum = parseInt(match[3] ?? '');
           const char = match[4] ? parseInt(match[4]) : 0;
           const rangeStr = lineNum + ':' + char + ':200: ';
           const lineMsg = match[1] + rangeStr + lineErr;
@@ -206,14 +211,16 @@ export class DiagnosticParser implements IDiagnosticParser {
         let match = line.match(/[fF]ile\s*([^,]+),\s*line\s*(\d+):\s*(.*)/);
 
         if (match) {
-          // Use fast-glob to find the file matching the pattern
-          const files = fg.sync([`**/${match[1]}`], {
-            cwd: workspace.workspaceFolders?.[0]?.uri.fsPath,
-            absolute: true,
-          });
-          fullName = files.length > 0 ? files[0] : match[1];
-          lineNum = match[2];
-          msg = match[3];
+          let files: string[] = [];
+          const cwd = workspace.workspaceFolders && workspace.workspaceFolders[0] ? workspace.workspaceFolders[0].uri.fsPath : undefined;
+          if (cwd) {
+            files = fg.sync([`**/${match[1] ?? ''}`], { cwd, absolute: true });
+          } else {
+            files = fg.sync([`**/${match[1] ?? ''}`], { absolute: true });
+          }
+          fullName = files.length > 0 ? (files[0] ?? '') : (match[1] ?? '');
+          lineNum = match[2] ?? '';
+          msg = match[3] ?? '';
         } else {
           fullName = textDocument.fileName;
           match = line.match(/line\s*(\d+):\s*(.*)/);
@@ -221,8 +228,8 @@ export class DiagnosticParser implements IDiagnosticParser {
             match = line.match(/:(\d+):\s*(.*)/);
           }
           if (match) {
-            lineNum = match[1];
-            msg = match[2];
+            lineNum = match[1] ?? '';
+            msg = match[2] ?? '';
           } else {
             continue;
           }
@@ -255,16 +262,19 @@ export class DiagnosticParser implements IDiagnosticParser {
   /**
    * Group diagnostics by file name
    */
-  public groupDiagnosticsByFile(diagnostics: IDiagnosticInfo[]): { [fileName: string]: IDiagnosticInfo[] } {
+  public groupDiagnosticsByFile(diagnostics: IDiagnosticInfo[]): {
+    [fileName: string]: IDiagnosticInfo[];
+  } {
     const grouped: { [fileName: string]: IDiagnosticInfo[] } = {};
-    
+
     for (const diagnostic of diagnostics) {
-      if (!grouped[diagnostic.fileName]) {
-        grouped[diagnostic.fileName] = [];
+      const fileName = diagnostic.fileName ?? '';
+      if (!grouped[fileName]) {
+        grouped[fileName] = [];
       }
-      grouped[diagnostic.fileName].push(diagnostic);
+      grouped[fileName].push(diagnostic);
     }
-    
+
     return grouped;
   }
 }

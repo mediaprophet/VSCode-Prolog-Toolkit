@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import * as vscode from 'vscode';
 
 export interface ResourceQuota {
   maxConcurrentQueries: number;
@@ -40,7 +40,78 @@ export interface ResourceUsage {
 /**
  * Advanced concurrency manager with resource quotas and priority queues
  */
-export class ConcurrencyManager extends EventEmitter {
+export class ConcurrencyManager {
+  /**
+   * Node.js-style event API compatibility: .on(eventName, handler)
+   */
+  public on(eventName: string, handler: (...args: any[]) => void): void {
+    switch (eventName) {
+      case 'queryQueued':
+        this.onQueryQueued(handler);
+        break;
+      case 'queryCancelled':
+        this.onQueryCancelled(handler);
+        break;
+      case 'resourceQuotaUpdated':
+        this.onResourceQuotaUpdated(handler);
+        break;
+      case 'queryTimeout':
+        this.onQueryTimeout(handler);
+        break;
+      case 'queryStarted':
+        this.onQueryStarted(handler);
+        break;
+      case 'executeQuery':
+        this.onExecuteQuery(handler);
+        break;
+      case 'queryCompleted':
+        this.onQueryCompleted(handler);
+        break;
+      case 'resourceUsageUpdated':
+        this.onResourceUsageUpdated(handler);
+        break;
+      default:
+        throw new Error(`Unknown event: ${eventName}`);
+    }
+  }
+  private _onQueryQueued = new vscode.EventEmitter<{
+    queryId: string;
+    priority: string;
+    queuePosition: number;
+    queueSize: number;
+  }>();
+  public readonly onQueryQueued = this._onQueryQueued.event;
+  private _onQueryCancelled = new vscode.EventEmitter<{ queryId: string; location: string }>();
+  public readonly onQueryCancelled = this._onQueryCancelled.event;
+  private _onResourceQuotaUpdated = new vscode.EventEmitter<ResourceQuota>();
+  public readonly onResourceQuotaUpdated = this._onResourceQuotaUpdated.event;
+  private _onQueryTimeout = new vscode.EventEmitter<{
+    queryId: string;
+    location: string;
+    waitTime: number;
+  }>();
+  public readonly onQueryTimeout = this._onQueryTimeout.event;
+  private _onQueryStarted = new vscode.EventEmitter<{
+    queryId: string;
+    priority: string;
+    waitTime: number;
+  }>();
+  public readonly onQueryStarted = this._onQueryStarted.event;
+  private _onExecuteQuery = new vscode.EventEmitter<{
+    query: QueuedQuery;
+    resolve: (value: unknown) => void;
+    reject: (error: unknown) => void;
+  }>();
+  public readonly onExecuteQuery = this._onExecuteQuery.event;
+  private _onQueryCompleted = new vscode.EventEmitter<{
+    queryId: string;
+    duration: number;
+    success: boolean;
+    error?: string;
+  }>();
+  public readonly onQueryCompleted = this._onQueryCompleted.event;
+  private _onResourceUsageUpdated = new vscode.EventEmitter<ResourceUsage>();
+  public readonly onResourceUsageUpdated = this._onResourceUsageUpdated.event;
   private resourceQuota: ResourceQuota;
   private queryQueue: QueuedQuery[] = [];
   private activeQueries: Map<string, QueuedQuery> = new Map();
@@ -49,7 +120,7 @@ export class ConcurrencyManager extends EventEmitter {
   private resourceMonitorInterval?: ReturnType<typeof setInterval>;
 
   constructor(quota: Partial<ResourceQuota> = {}) {
-    super();
+    // no super();
 
     this.resourceQuota = {
       maxConcurrentQueries: 10,
@@ -111,7 +182,7 @@ export class ConcurrencyManager extends EventEmitter {
       this.insertQueryByPriority(queuedQuery);
       this.updateResourceUsage();
 
-      this.emit('queryQueued', {
+      this._onQueryQueued.fire({
         queryId: id,
         priority: queryPriority.level,
         queuePosition: this.queryQueue.findIndex(q => q.id === id) + 1,
@@ -135,7 +206,7 @@ export class ConcurrencyManager extends EventEmitter {
       if (query) {
         query.reject(new Error('Query cancelled'));
         this.updateResourceUsage();
-        this.emit('queryCancelled', { queryId, location: 'queue' });
+        this._onQueryCancelled.fire({ queryId, location: 'queue' });
         return true;
       }
     }
@@ -146,7 +217,7 @@ export class ConcurrencyManager extends EventEmitter {
       this.activeQueries.delete(queryId);
       activeQuery.reject(new Error('Query cancelled'));
       this.updateResourceUsage();
-      this.emit('queryCancelled', { queryId, location: 'active' });
+      this._onQueryCancelled.fire({ queryId, location: 'active' });
       return true;
     }
 
@@ -194,7 +265,7 @@ export class ConcurrencyManager extends EventEmitter {
    */
   updateResourceQuota(newQuota: Partial<ResourceQuota>): void {
     this.resourceQuota = { ...this.resourceQuota, ...newQuota };
-    this.emit('resourceQuotaUpdated', this.resourceQuota);
+    this._onResourceQuotaUpdated.fire(this.resourceQuota);
     console.log('[ConcurrencyManager] Resource quota updated:', this.resourceQuota);
   }
 
@@ -299,7 +370,7 @@ export class ConcurrencyManager extends EventEmitter {
       if (waitTime > query.priority.timeout) {
         this.queryQueue.splice(i, 1);
         query.reject(new Error('Query timed out in queue'));
-        this.emit('queryTimeout', { queryId: query.id, location: 'queue', waitTime });
+        this._onQueryTimeout.fire({ queryId: query.id, location: 'queue', waitTime });
         i--; // Adjust index after removal
         continue;
       }
@@ -325,7 +396,7 @@ export class ConcurrencyManager extends EventEmitter {
   private async executeQuery(query: QueuedQuery): Promise<void> {
     const startTime = Date.now();
 
-    this.emit('queryStarted', {
+    this._onQueryStarted.fire({
       queryId: query.id,
       priority: query.priority.level,
       waitTime: startTime - query.queuedAt,
@@ -342,7 +413,7 @@ export class ConcurrencyManager extends EventEmitter {
       // This would be replaced with actual query execution
       // For now, we'll emit an event that the backend can listen to
       const executionPromise = new Promise((resolve, reject) => {
-        this.emit('executeQuery', {
+        this._onExecuteQuery.fire({
           query,
           resolve,
           reject,
@@ -356,7 +427,7 @@ export class ConcurrencyManager extends EventEmitter {
       query.resolve(result);
 
       const duration = Date.now() - startTime;
-      this.emit('queryCompleted', {
+      this._onQueryCompleted.fire({
         queryId: query.id,
         duration,
         success: true,
@@ -368,7 +439,7 @@ export class ConcurrencyManager extends EventEmitter {
 
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.emit('queryCompleted', {
+      this._onQueryCompleted.fire({
         queryId: query.id,
         duration,
         success: false,
@@ -400,7 +471,7 @@ export class ConcurrencyManager extends EventEmitter {
       lastUpdated: Date.now(),
     };
 
-    this.emit('resourceUsageUpdated', this.resourceUsage);
+    this._onResourceUsageUpdated.fire(this.resourceUsage);
   }
 
   /**
@@ -447,6 +518,14 @@ export class ConcurrencyManager extends EventEmitter {
     });
     this.activeQueries.clear();
 
-    this.removeAllListeners();
+    // Dispose all event emitters
+    this._onQueryQueued.dispose();
+    this._onQueryCancelled.dispose();
+    this._onResourceQuotaUpdated.dispose();
+    this._onQueryTimeout.dispose();
+    this._onQueryStarted.dispose();
+    this._onExecuteQuery.dispose();
+    this._onQueryCompleted.dispose();
+    this._onResourceUsageUpdated.dispose();
   }
 }

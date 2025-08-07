@@ -1,5 +1,5 @@
-import { EventEmitter } from 'events';
-import WebSocket from 'ws';
+import * as vscode from 'vscode';
+import { WebSocket, WebSocketServer } from 'ws';
 
 export interface QueryStatus {
   id: string;
@@ -7,12 +7,12 @@ export interface QueryStatus {
   startTime: number;
   endTime?: number;
   progress?: number;
-  message?: string;
+  message?: string | undefined;
   results?: any;
   error?: any;
   isBatch?: boolean;
-  batchIndex?: number;
-  totalBatchSize?: number;
+  batchIndex?: number | undefined;
+  totalBatchSize?: number | undefined;
 }
 
 export interface QueryNotificationOptions {
@@ -32,15 +32,46 @@ export interface QueryCallback {
 /**
  * Manages query status tracking and notifications for long-running Prolog queries
  */
-export class QueryNotificationManager extends EventEmitter {
+export class QueryNotificationManager {
+  /**
+   * Node.js-style event API compatibility: .on(eventName, handler)
+   */
+  public on(eventName: string, handler: (...args: any[]) => void): void {
+    switch (eventName) {
+      case 'queryRegistered':
+        this.onQueryRegistered(handler);
+        break;
+      case 'queryStatusUpdated':
+        this.onQueryStatusUpdated(handler);
+        break;
+      case 'queryCancelled':
+        this.onQueryCancelled(handler);
+        break;
+      case 'queryCleanedUp':
+        this.onQueryCleanedUp(handler);
+        break;
+      default:
+        throw new Error(`Unknown event: ${eventName}`);
+    }
+  }
   private queries: Map<string, QueryStatus> = new Map();
   private callbacks: Map<string, QueryCallback> = new Map();
-  private wsServer?: WebSocket.Server;
+  private wsServer?: WebSocketServer;
   private wsClients: Set<WebSocket> = new Set();
   private options: QueryNotificationOptions;
 
+  // VS Code event emitters
+  private _onQueryRegistered = new vscode.EventEmitter<QueryStatus>();
+  public readonly onQueryRegistered = this._onQueryRegistered.event;
+  private _onQueryStatusUpdated = new vscode.EventEmitter<QueryStatus>();
+  public readonly onQueryStatusUpdated = this._onQueryStatusUpdated.event;
+  private _onQueryEvent = new Map<string, vscode.EventEmitter<QueryStatus>>();
+  private _onQueryCancelled = new vscode.EventEmitter<string>();
+  public readonly onQueryCancelled = this._onQueryCancelled.event;
+  private _onQueryCleanedUp = new vscode.EventEmitter<string>();
+  public readonly onQueryCleanedUp = this._onQueryCleanedUp.event;
+
   constructor(options: QueryNotificationOptions = {}) {
-    super();
     this.options = {
       enableProgress: true,
       progressInterval: 1000,
@@ -59,7 +90,7 @@ export class QueryNotificationManager extends EventEmitter {
    */
   private initializeWebSocketServer(): void {
     try {
-      this.wsServer = new WebSocket.Server({
+      this.wsServer = new WebSocketServer({
         port: this.options.webSocketPort!,
         perMessageDeflate: false,
       });
@@ -195,7 +226,7 @@ export class QueryNotificationManager extends EventEmitter {
     }
 
     // Emit event
-    this.emit('queryRegistered', status);
+    this._onQueryRegistered.fire(status);
 
     // Broadcast to WebSocket clients
     this.broadcastNotification({
@@ -258,8 +289,12 @@ export class QueryNotificationManager extends EventEmitter {
     }
 
     // Emit events
-    this.emit('queryStatusUpdated', status);
-    this.emit(`query_${status.status}`, status);
+    this._onQueryStatusUpdated.fire(status);
+    // Fire dynamic event for each status
+    if (!this._onQueryEvent.has(status.status)) {
+      this._onQueryEvent.set(status.status, new vscode.EventEmitter<QueryStatus>());
+    }
+    this._onQueryEvent.get(status.status)!.fire(status);
 
     // Broadcast to WebSocket clients
     this.broadcastNotification({
@@ -327,7 +362,7 @@ export class QueryNotificationManager extends EventEmitter {
     });
 
     // Emit cancellation event for external handlers
-    this.emit('queryCancelled', queryId);
+    this._onQueryCancelled.fire(queryId);
 
     return true;
   }
@@ -362,7 +397,7 @@ export class QueryNotificationManager extends EventEmitter {
     this.queries.delete(queryId);
     this.callbacks.delete(queryId);
 
-    this.emit('queryCleanedUp', queryId);
+    this._onQueryCleanedUp.fire(queryId);
 
     this.broadcastNotification({
       type: 'query_cleaned_up',
@@ -419,6 +454,13 @@ export class QueryNotificationManager extends EventEmitter {
     }
     this.queries.clear();
     this.callbacks.clear();
-    this.removeAllListeners();
+    // Dispose all event emitters
+    this._onQueryRegistered.dispose();
+    this._onQueryStatusUpdated.dispose();
+    this._onQueryCancelled.dispose();
+    this._onQueryCleanedUp.dispose();
+    for (const emitter of this._onQueryEvent.values()) {
+      emitter.dispose();
+    }
   }
 }

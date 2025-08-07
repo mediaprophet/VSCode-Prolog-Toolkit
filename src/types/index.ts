@@ -6,11 +6,11 @@
 // Note: SDK types are imported directly where needed to avoid conflicts
 
 // Core extension types
-export * from './backend';
-export * from './api';
-export * from './utils';
-export * from './vscode';
-export * from './configuration';
+export * from './api.js';
+export * from './backend.js';
+export * from './configuration.js';
+export * from './utils.js';
+export * from './vscode.js';
 
 // Common utility types
 export type Awaitable<T> = T | Promise<T>;

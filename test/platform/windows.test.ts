@@ -42,7 +42,7 @@ suite('Windows Platform Tests', () => {
         'C:\\Program Files\\swipl\\bin\\swipl.exe',
         'C:/Program Files/swipl/bin/swipl.exe',
         '..\\relative\\path\\file.exe',
-        '../relative/path/file.exe'
+        '../relative/path/file.exe',
       ];
 
       testPaths.forEach(testPath => {
@@ -126,7 +126,9 @@ suite('Windows Platform Tests', () => {
       assert.ok(invalidResult.issues);
 
       // Test with non-executable file (if exists)
-      const textFileResult = await finder.validateExecutable('C:\\Windows\\System32\\drivers\\etc\\hosts');
+      const textFileResult = await finder.validateExecutable(
+        'C:\\Windows\\System32\\drivers\\etc\\hosts'
+      );
       if (await PlatformUtils.pathExists('C:\\Windows\\System32\\drivers\\etc\\hosts')) {
         assert.strictEqual(textFileResult.found, false);
         assert.ok(textFileResult.issues);
@@ -157,7 +159,9 @@ suite('Windows Platform Tests', () => {
 
       assert.ok(suggestions.length > 0);
       assert.ok(suggestions.some(s => s.includes('Windows')));
-      assert.ok(suggestions.some(s => s.includes('choco') || s.includes('winget') || s.includes('scoop')));
+      assert.ok(
+        suggestions.some(s => s.includes('choco') || s.includes('winget') || s.includes('scoop'))
+      );
     });
 
     test('should get Windows-specific recommendations', () => {
@@ -181,9 +185,22 @@ suite('Windows Platform Tests', () => {
     test('should expand Windows-style environment variables', () => {
       // Test Windows-style %VAR% expansion
       const testCases = [
-        { input: '%USERPROFILE%\\Documents', expected: process.env.USERPROFILE ? process.env.USERPROFILE + '\\Documents' : '%USERPROFILE%\\Documents' },
-        { input: '%TEMP%\\test.txt', expected: process.env.TEMP ? process.env.TEMP + '\\test.txt' : '%TEMP%\\test.txt' },
-        { input: 'C:\\test\\%USERNAME%', expected: process.env.USERNAME ? 'C:\\test\\' + process.env.USERNAME : 'C:\\test\\%USERNAME%' }
+        {
+          input: '%USERPROFILE%\\Documents',
+          expected: process.env.USERPROFILE
+            ? process.env.USERPROFILE + '\\Documents'
+            : '%USERPROFILE%\\Documents',
+        },
+        {
+          input: '%TEMP%\\test.txt',
+          expected: process.env.TEMP ? process.env.TEMP + '\\test.txt' : '%TEMP%\\test.txt',
+        },
+        {
+          input: 'C:\\test\\%USERNAME%',
+          expected: process.env.USERNAME
+            ? 'C:\\test\\' + process.env.USERNAME
+            : 'C:\\test\\%USERNAME%',
+        },
       ];
 
       testCases.forEach(testCase => {
@@ -202,7 +219,7 @@ suite('Windows Platform Tests', () => {
       const systemFiles = [
         'C:\\Windows\\System32\\kernel32.dll',
         'C:\\Windows\\System32\\cmd.exe',
-        'C:\\Windows\\System32\\notepad.exe'
+        'C:\\Windows\\System32\\notepad.exe',
       ];
 
       for (const file of systemFiles) {
@@ -214,10 +231,7 @@ suite('Windows Platform Tests', () => {
 
     test('should check executable permissions on Windows', async () => {
       // Test with Windows executables
-      const executables = [
-        'C:\\Windows\\System32\\cmd.exe',
-        'C:\\Windows\\System32\\notepad.exe'
-      ];
+      const executables = ['C:\\Windows\\System32\\cmd.exe', 'C:\\Windows\\System32\\notepad.exe'];
 
       for (const exe of executables) {
         if (await PlatformUtils.pathExists(exe)) {
@@ -229,11 +243,7 @@ suite('Windows Platform Tests', () => {
 
     test('should handle Windows file attributes', async () => {
       // Test with system directories
-      const systemDirs = [
-        'C:\\Windows',
-        'C:\\Program Files',
-        'C:\\Users'
-      ];
+      const systemDirs = ['C:\\Windows', 'C:\\Program Files', 'C:\\Users'];
 
       for (const dir of systemDirs) {
         const exists = await PlatformUtils.pathExists(dir);
@@ -284,7 +294,7 @@ suite('Windows Platform Tests', () => {
       const invalidPaths = [
         'C:\\invalid\\path\\that\\does\\not\\exist.exe',
         '\\\\invalid-server\\share\\file.exe',
-        'Z:\\nonexistent\\drive\\file.exe'
+        'Z:\\nonexistent\\drive\\file.exe',
       ];
 
       for (const invalidPath of invalidPaths) {
@@ -300,7 +310,7 @@ suite('Windows Platform Tests', () => {
       // Test with system files that might have restricted access
       const restrictedFiles = [
         'C:\\Windows\\System32\\config\\SAM',
-        'C:\\Windows\\System32\\config\\SECURITY'
+        'C:\\Windows\\System32\\config\\SECURITY',
       ];
 
       for (const file of restrictedFiles) {

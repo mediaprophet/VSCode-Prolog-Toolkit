@@ -1,12 +1,10 @@
-import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-  TransportKind,
-  RevealOutputChannelOn,
-} from 'vscode-languageclient/node';
-import { ExtensionContext, workspace, window } from 'vscode';
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as path from 'path';
+import type { ExtensionContext } from 'vscode';
+import { window, workspace } from 'vscode';
+import type { LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
+import { LanguageClient, RevealOutputChannelOn, TransportKind } from 'vscode-languageclient/node';
 
 export class PrologLSPClient {
   private client: LanguageClient | null = null;
@@ -59,7 +57,13 @@ export class PrologLSPClient {
         },
         middleware: {
           // Add custom middleware for enhanced functionality
-          provideCompletionItem: async (document, position, context, token, next) => {
+          provideCompletionItem: async (
+            document: import('vscode').TextDocument,
+            position: import('vscode').Position,
+            context: any,
+            token: import('vscode').CancellationToken,
+            next: Function
+          ) => {
             const result = await next(document, position, context, token);
 
             // Enhance completions with custom logic if needed
@@ -70,7 +74,12 @@ export class PrologLSPClient {
             return result;
           },
 
-          provideHover: async (document, position, token, next) => {
+          provideHover: async (
+            document: import('vscode').TextDocument,
+            position: import('vscode').Position,
+            token: import('vscode').CancellationToken,
+            next: Function
+          ) => {
             const result = await next(document, position, token);
 
             // Enhance hover information
@@ -130,7 +139,7 @@ export class PrologLSPClient {
     // We'll register custom handlers after the client starts successfully
 
     // Handle server errors
-    this.client.onDidChangeState(event => {
+    this.client.onDidChangeState((event: any) => {
       console.log(`LSP Client state changed: ${event.oldState} -> ${event.newState}`);
 
       if (event.newState === 2) {
@@ -150,17 +159,17 @@ export class PrologLSPClient {
     }
 
     // Register custom request handlers for enhanced functionality
-    this.client.onRequest('prolog/queryResult', params => {
+    this.client.onRequest('prolog/queryResult', (params: any) => {
       // Handle query results from server
       return this.handleQueryResult(params);
     });
 
-    this.client.onRequest('prolog/helpResult', params => {
+    this.client.onRequest('prolog/helpResult', (params: any) => {
       // Handle help results from server
       return this.handleHelpResult(params);
     });
 
-    this.client.onNotification('prolog/diagnosticsUpdate', params => {
+    this.client.onNotification('prolog/diagnosticsUpdate', (params: any) => {
       // Handle diagnostic updates
       this.handleDiagnosticsUpdate(params);
     });
@@ -257,10 +266,10 @@ export class PrologLSPClient {
     let start = char;
     let end = char;
 
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+    while (start > 0 && /[a-zA-Z0-9_]/.test((line[start - 1]) ?? '')) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test((line[end]) ?? '')) {
       end++;
     }
 

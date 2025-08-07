@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-08-07T15:56:00Z",
+  "errors": [
+    {
+      "file": "src/features/installationGuide.ts",
+      "line": 58,
+      "message": "TS1128: Declaration or statement expected."
+    },
+    {
+      "file": "src/features/installationGuide.ts",
+      "line": 200,
+      "message": "TS1005: '}' expected."
+    }
+  ],
+  "summary": "2 TypeScript errors found in src/features/installationGuide.ts. See lines 58 and 200 for details."
+}

@@ -1,12 +1,12 @@
-import {
-  type CancellationToken,
-  type CodeActionContext,
-  type Command,
-  type Range,
-  type TextDocument,
+import type {
+  CancellationToken,
+  CodeActionContext,
+  Command,
+  Range,
+  TextDocument,
 } from 'vscode';
-import { Utils } from '../../utils/utils';
-import { type ICodeActionProvider } from './interfaces';
+import { Utils } from '../../utils/utils.js';
+import type { ICodeActionProvider } from './interfaces.js';
 
 /**
  * Provides code actions for Prolog linting diagnostics
@@ -38,7 +38,7 @@ export class CodeActionProvider implements ICodeActionProvider {
 
       // Check if a match is found in the diagnostic message
       if (match && match[1]) {
-        let pred = match[1];
+        let pred = match[1] ?? '';
 
         // Get modules associated with the predicate using utility function
         const modules = Utils.getPredModules(pred);
@@ -58,14 +58,14 @@ export class CodeActionProvider implements ICodeActionProvider {
         // Extract module information from the document
         const moduleMatch = document.getText().match(/:-\s*module\((\w+),/);
         let currentModule: string = '';
-        if (moduleMatch) {
-          currentModule = moduleMatch[1];
+        if (moduleMatch && moduleMatch[1]) {
+          currentModule = moduleMatch[1] ?? '';
         }
 
         // Handle predicates with namespace (module)
         if (pred.indexOf(':') > -1) {
           const [mod, pred1] = pred.split(':');
-          if (mod === currentModule) {
+          if (mod === currentModule && pred1) {
             pred = pred1;
           }
         }
@@ -132,6 +132,6 @@ export class CodeActionProvider implements ICodeActionProvider {
     }
 
     const [mod, pred] = predicate.split(':');
-    return mod === currentModule ? pred : predicate;
+    return mod === currentModule ? (pred ?? '') : predicate;
   }
 }

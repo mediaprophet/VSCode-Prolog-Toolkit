@@ -1,26 +1,26 @@
 import { expect } from 'chai';
-import { PrologBackend } from '../src/prologBackend';
-import { StreamingHandler, createPrologResultStreamer, streamToChatResponse } from '../src/features/streamingHandler';
 import { OutputFormatter } from '../src/features/outputFormatter';
+import { StreamingHandler, createPrologResultStreamer } from '../src/features/streamingHandler';
+import { PrologBackend } from '../src/prologBackend.js';
 
 describe('Performance and Scalability Features', () => {
   let backend: PrologBackend;
   let outputFormatter: OutputFormatter;
 
-  before(async function() {
+  before(async function () {
     this.timeout(10000);
     backend = new PrologBackend({
       swiplPath: 'swipl',
       port: 3061, // Use different port for tests
       streamingEnabled: true,
-      maxResultsPerChunk: 25
+      maxResultsPerChunk: 25,
     });
-    
+
     outputFormatter = new OutputFormatter();
-    
+
     // Start backend for tests
     backend.start();
-    
+
     // Wait for backend to be ready
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Backend startup timeout')), 8000);
@@ -28,7 +28,7 @@ describe('Performance and Scalability Features', () => {
         clearTimeout(timeout);
         resolve(undefined);
       });
-      backend.on('error', (error) => {
+      backend.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -42,13 +42,21 @@ describe('Performance and Scalability Features', () => {
   });
 
   describe('Streaming Handler', () => {
-    it('should create a Prolog result streamer with correct defaults', () => {
+    it('should create a Prolog result streamer with correct defaults', async () => {
       const streamer = createPrologResultStreamer();
       expect(streamer).to.be.instanceOf(StreamingHandler);
-      
-      const config = streamer.getOptions();
-      expect(config.chunkSize).to.equal(50);
-      expect(config.maxTotalResults).to.equal(1000);
+
+      // Test chunking behavior instead of internal config
+      const results = Array.from({ length: 120 }, (_, i) => ({ X: i }));
+      const chunks: any[] = [];
+      await streamer.startStreaming(results, async chunk => {
+        chunks.push(chunk);
+      });
+      // Default chunkSize is 50, so expect 3 chunks for 120 results
+      expect(chunks).to.have.length(3);
+      expect(chunks[0].data).to.have.length(50);
+      expect(chunks[1].data).to.have.length(50);
+      expect(chunks[2].data).to.have.length(20);
     });
 
     it('should handle small result sets without chunking', async () => {
@@ -56,12 +64,9 @@ describe('Performance and Scalability Features', () => {
       const streamer = createPrologResultStreamer();
       const chunks: any[] = [];
 
-      await streamer.startStreaming(
-        smallResults,
-        async (chunk) => {
-          chunks.push(chunk);
-        }
-      );
+      await streamer.startStreaming(smallResults, async chunk => {
+        chunks.push(chunk);
+      });
 
       expect(chunks).to.have.length(1);
       expect(chunks[0].data).to.have.length(10);
@@ -74,22 +79,19 @@ describe('Performance and Scalability Features', () => {
       const streamer = createPrologResultStreamer({ chunkSize: 50 });
       const chunks: any[] = [];
 
-      await streamer.startStreaming(
-        largeResults,
-        async (chunk) => {
-          chunks.push(chunk);
-        }
-      );
+      await streamer.startStreaming(largeResults, async chunk => {
+        chunks.push(chunk);
+      });
 
       expect(chunks).to.have.length(3);
       expect(chunks[0].data).to.have.length(50);
       expect(chunks[0].isFirst).to.be.true;
       expect(chunks[0].isLast).to.be.false;
-      
+
       expect(chunks[1].data).to.have.length(50);
       expect(chunks[1].isFirst).to.be.false;
       expect(chunks[1].isLast).to.be.false;
-      
+
       expect(chunks[2].data).to.have.length(50);
       expect(chunks[2].isFirst).to.be.false;
       expect(chunks[2].isLast).to.be.true;
@@ -104,25 +106,25 @@ describe('Performance and Scalability Features', () => {
     });
 
     it('should update streaming configuration', () => {
-      backend.updateStreamingConfig({ 
-        enabled: false, 
-        maxResultsPerChunk: 100 
+      backend.updateStreamingConfig({
+        enabled: false,
+        maxResultsPerChunk: 100,
       });
-      
+
       const config = backend.getStreamingConfig();
       expect(config.enabled).to.be.false;
       expect(config.maxResultsPerChunk).to.equal(100);
-      
+
       // Reset for other tests
-      backend.updateStreamingConfig({ 
-        enabled: true, 
-        maxResultsPerChunk: 25 
+      backend.updateStreamingConfig({
+        enabled: true,
+        maxResultsPerChunk: 25,
       });
     });
 
-    it('should handle streaming requests', async function() {
+    it('should handle streaming requests', async function () {
       this.timeout(5000);
-      
+
       try {
         const chunks: any[] = [];
         const response = await backend.sendStreamingRequest(
@@ -145,13 +147,7 @@ describe('Performance and Scalability Features', () => {
   describe('Output Formatter Performance Features', () => {
     it('should format streaming output correctly', () => {
       const chunk = [{ X: 1 }, { X: 2 }, { X: 3 }];
-      const output = outputFormatter.formatStreamingOutput(
-        chunk, 
-        true, 
-        false, 
-        100, 
-        0
-      );
+      const output = outputFormatter.formatStreamingOutput(chunk, true, false, 100, 0);
 
       expect(output).to.include('📊 **Streaming results** (100 total)');
       expect(output).to.include('⏳ *Loading more results...*');
@@ -164,7 +160,7 @@ describe('Performance and Scalability Features', () => {
         offset: 50,
         limit: 25,
         has_more: true,
-        next_offset: 75
+        next_offset: 75,
       };
 
       const output = outputFormatter.formatPaginatedOutput(results, pagination);
@@ -191,20 +187,20 @@ describe('Performance and Scalability Features', () => {
   });
 
   describe('Integration Tests', () => {
-    it('should handle large query results with streaming', async function() {
+    it('should handle large query results with streaming', async function () {
       this.timeout(10000);
-      
+
       try {
         // Create a query that generates multiple results
         const response = await backend.sendRequest('query', {
           goal: 'between(1, 100, X)',
           streaming: true,
-          max_results_per_chunk: 20
+          max_results_per_chunk: 20,
         });
 
         expect(response.status).to.equal('ok');
         expect(response.results).to.be.an('array');
-        
+
         if (response.streaming_info) {
           expect(response.streaming_info.total_count).to.be.greaterThan(20);
           expect(response.streaming_info.is_large_result).to.be.true;
@@ -215,9 +211,9 @@ describe('Performance and Scalability Features', () => {
       }
     });
 
-    it('should handle N3 list with pagination', async function() {
+    it('should handle N3 list with pagination', async function () {
       this.timeout(8000);
-      
+
       try {
         // First load some N3 data
         await backend.sendRequest('n3_load', {
@@ -228,19 +224,19 @@ describe('Performance and Scalability Features', () => {
             :aristotle a :Person .
             :socrates :teaches :plato .
             :plato :teaches :aristotle .
-          `
+          `,
         });
 
         // Then list with pagination
         const response = await backend.sendRequest('n3_list', {
           limit: 2,
           offset: 0,
-          streaming: true
+          streaming: true,
         });
 
         expect(response.status).to.equal('ok');
         expect(response.triples).to.be.an('array');
-        
+
         if (response.pagination) {
           expect(response.pagination.limit).to.equal(2);
           expect(response.pagination.offset).to.equal(0);
@@ -254,29 +250,26 @@ describe('Performance and Scalability Features', () => {
   });
 
   describe('Performance Benchmarks', () => {
-    it('should process large result sets efficiently', async function() {
+    it('should process large result sets efficiently', async function () {
       this.timeout(15000);
-      
+
       const startTime = Date.now();
-      
+
       // Generate a large result set
-      const largeResults = Array.from({ length: 1000 }, (_, i) => ({ 
-        X: i, 
-        Y: i * 2, 
-        Z: `value_${i}` 
+      const largeResults = Array.from({ length: 1000 }, (_, i) => ({
+        X: i,
+        Y: i * 2,
+        Z: `value_${i}`,
       }));
 
       const streamer = createPrologResultStreamer({ chunkSize: 100 });
       let processedCount = 0;
 
-      await streamer.startStreaming(
-        largeResults,
-        async (chunk) => {
-          processedCount += chunk.data.length;
-          // Simulate some processing time
-          await new Promise(resolve => setTimeout(resolve, 1));
-        }
-      );
+      await streamer.startStreaming(largeResults, async chunk => {
+        processedCount += chunk.data.length;
+        // Simulate some processing time
+        await new Promise(resolve => setTimeout(resolve, 1));
+      });
 
       const endTime = Date.now();
       const processingTime = endTime - startTime;
@@ -287,14 +280,14 @@ describe('Performance and Scalability Features', () => {
 
     it('should format large outputs efficiently', () => {
       const startTime = Date.now();
-      
-      const largeResults = Array.from({ length: 500 }, (_, i) => ({ 
-        variable: `X${i}`, 
-        value: `result_${i}` 
+
+      const largeResults = Array.from({ length: 500 }, (_, i) => ({
+        variable: `X${i}`,
+        value: `result_${i}`,
       }));
 
       const output = outputFormatter.formatLargeResultSet(largeResults);
-      
+
       const endTime = Date.now();
       const formatTime = endTime - startTime;
 

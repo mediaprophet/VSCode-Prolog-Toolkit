@@ -14,9 +14,14 @@ suite('Platform Utils Tests', () => {
       const detectedPlatform = PlatformUtils.getPlatform();
 
       // Map Node.js platform names to our platform names
-      const expectedPlatform = currentPlatform === 'win32' ? 'windows' :
-        currentPlatform === 'darwin' ? 'macos' :
-          currentPlatform === 'linux' ? 'linux' : 'unknown';
+      const expectedPlatform =
+        currentPlatform === 'win32'
+          ? 'windows'
+          : currentPlatform === 'darwin'
+            ? 'macos'
+            : currentPlatform === 'linux'
+              ? 'linux'
+              : 'unknown';
 
       assert.strictEqual(detectedPlatform, expectedPlatform);
     });
@@ -64,7 +69,7 @@ suite('Platform Utils Tests', () => {
         './relative/path',
         '../parent/path',
         '/absolute/path',
-        '~/home/path'
+        '~/home/path',
       ];
 
       // Add Windows-specific paths if on Windows
@@ -95,15 +100,18 @@ suite('Platform Utils Tests', () => {
     });
 
     test('should expand environment variables correctly', () => {
-      const testCases = PlatformUtils.getPlatform() === 'windows' ? [
-        { input: '%USERPROFILE%\\test', envVar: 'USERPROFILE' },
-        { input: '%TEMP%\\file.txt', envVar: 'TEMP' },
-        { input: '%PATH%', envVar: 'PATH' }
-      ] : [
-        { input: '$HOME/test', envVar: 'HOME' },
-        { input: '${HOME}/file.txt', envVar: 'HOME' },
-        { input: '$PATH', envVar: 'PATH' }
-      ];
+      const testCases =
+        PlatformUtils.getPlatform() === 'windows'
+          ? [
+              { input: '%USERPROFILE%\\test', envVar: 'USERPROFILE' },
+              { input: '%TEMP%\\file.txt', envVar: 'TEMP' },
+              { input: '%PATH%', envVar: 'PATH' },
+            ]
+          : [
+              { input: '$HOME/test', envVar: 'HOME' },
+              { input: '${HOME}/file.txt', envVar: 'HOME' },
+              { input: '$PATH', envVar: 'PATH' },
+            ];
 
       testCases.forEach(testCase => {
         const expanded = PlatformUtils.expandEnvironmentVariables(testCase.input);
@@ -198,7 +206,9 @@ suite('Platform Utils Tests', () => {
 
       // Should include common cross-platform variables
       assert.ok(envVars.crossPlatform.includes('PATH'));
-      assert.ok(envVars.crossPlatform.includes('HOME') || envVars.crossPlatform.includes('USERPROFILE'));
+      assert.ok(
+        envVars.crossPlatform.includes('HOME') || envVars.crossPlatform.includes('USERPROFILE')
+      );
 
       // Should include platform-specific variables
       if (PlatformUtils.getPlatform() === 'windows') {
@@ -207,14 +217,17 @@ suite('Platform Utils Tests', () => {
         assert.ok(envVars.platformSpecific.includes('APPDATA'));
       } else {
         assert.ok(envVars.platformSpecific.includes('HOME'));
-        assert.ok(envVars.platformSpecific.includes('TMPDIR') || envVars.platformSpecific.includes('TMP'));
+        assert.ok(
+          envVars.platformSpecific.includes('TMPDIR') || envVars.platformSpecific.includes('TMP')
+        );
       }
     });
 
     test('should expand multiple environment variables', () => {
-      const input = PlatformUtils.getPlatform() === 'windows'
-        ? '%USERPROFILE%\\%USERNAME%\\test'
-        : '$HOME/$USER/test';
+      const input =
+        PlatformUtils.getPlatform() === 'windows'
+          ? '%USERPROFILE%\\%USERNAME%\\test'
+          : '$HOME/$USER/test';
 
       const expanded = PlatformUtils.expandEnvironmentVariables(input);
 
@@ -330,26 +343,23 @@ suite('Platform Utils Tests', () => {
         'path-with-dashes',
         'path_with_underscores',
         'path.with.dots',
-        'path(with)parentheses'
+        'path(with)parentheses',
       ];
 
       specialPaths.forEach(specialPath => {
         const normalized = PlatformUtils.normalizePath(specialPath);
         assert.ok(normalized.length > 0);
         // Should preserve special characters
-        assert.ok(normalized.includes(specialPath) || normalized.includes(path.normalize(specialPath)));
+        assert.ok(
+          normalized.includes(specialPath) || normalized.includes(path.normalize(specialPath))
+        );
       });
     });
   });
 
   suite('Error Handling', () => {
     test('should handle invalid paths gracefully', async () => {
-      const invalidPaths = [
-        '',
-        '   ',
-        '\0invalid\0path',
-        'path\nwith\nnewlines'
-      ];
+      const invalidPaths = ['', '   ', '\0invalid\0path', 'path\nwith\nnewlines'];
 
       for (const invalidPath of invalidPaths) {
         // Should not throw errors
@@ -363,13 +373,10 @@ suite('Platform Utils Tests', () => {
 
     test('should handle permission errors gracefully', async () => {
       // Try to access system files that might have restricted permissions
-      const restrictedPaths = PlatformUtils.getPlatform() === 'windows' ? [
-        'C:\\Windows\\System32\\config\\SAM',
-        'C:\\pagefile.sys'
-      ] : [
-        '/etc/shadow',
-        '/root/.bashrc'
-      ];
+      const restrictedPaths =
+        PlatformUtils.getPlatform() === 'windows'
+          ? ['C:\\Windows\\System32\\config\\SAM', 'C:\\pagefile.sys']
+          : ['/etc/shadow', '/root/.bashrc'];
 
       for (const restrictedPath of restrictedPaths) {
         // Should not throw errors, even if access is denied
@@ -382,13 +389,10 @@ suite('Platform Utils Tests', () => {
     });
 
     test('should handle network paths appropriately', async () => {
-      const networkPaths = PlatformUtils.getPlatform() === 'windows' ? [
-        '\\\\nonexistent\\share\\file',
-        '\\\\localhost\\c$\\Windows'
-      ] : [
-        '/mnt/nonexistent',
-        '/net/nonexistent'
-      ];
+      const networkPaths =
+        PlatformUtils.getPlatform() === 'windows'
+          ? ['\\\\nonexistent\\share\\file', '\\\\localhost\\c$\\Windows']
+          : ['/mnt/nonexistent', '/net/nonexistent'];
 
       for (const networkPath of networkPaths) {
         // Should handle network paths without throwing

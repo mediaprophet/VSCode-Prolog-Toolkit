@@ -1,16 +1,6 @@
-import type {
-  DiagnosticCollection,
-  OutputChannel,
-  Position,
-} from 'vscode';
-import {
-  Diagnostic,
-  DiagnosticSeverity,
-  Selection,
-  TextEditorRevealType,
-  window,
-} from 'vscode';
 import * as path from 'path';
+import type { DiagnosticCollection, OutputChannel, Position } from 'vscode';
+import { Diagnostic, DiagnosticSeverity, Selection, TextEditorRevealType, window } from 'vscode';
 import type { INavigationProvider } from './interfaces.js';
 
 /**
@@ -77,7 +67,11 @@ export class NavigationProvider implements INavigationProvider {
       // If the active line is greater than or equal to the last diagnostic's start line,
       // navigate to the start of the first diagnostic; otherwise, find the next diagnostic
       const lastIndex = sortedIndices[sortedIndices.length - 1];
-      if (lastIndex !== undefined && diagnostics[lastIndex] && activeLine >= diagnostics[lastIndex].range.start.line) {
+      if (
+        lastIndex !== undefined &&
+        diagnostics[lastIndex] &&
+        activeLine >= diagnostics[lastIndex].range.start.line
+      ) {
         const firstIndex = sortedIndices[0];
         if (firstIndex !== undefined && diagnostics[firstIndex]) {
           position = diagnostics[firstIndex].range.start;
@@ -87,7 +81,11 @@ export class NavigationProvider implements INavigationProvider {
         // Find the next diagnostic based on the active line
         while (selectedIndex < sortedIndices.length) {
           const currentIndex = sortedIndices[selectedIndex];
-          if (currentIndex === undefined || !diagnostics[currentIndex] || diagnostics[currentIndex].range.start.line > activeLine) {
+          if (
+            currentIndex === undefined ||
+            !diagnostics[currentIndex] ||
+            diagnostics[currentIndex].range.start.line > activeLine
+          ) {
             break;
           }
           selectedIndex++;
@@ -106,7 +104,11 @@ export class NavigationProvider implements INavigationProvider {
       // If the active line is less than or equal to the first diagnostic's start line,
       // navigate to the start of the last diagnostic; otherwise, find the previous diagnostic
       const firstIndex = sortedIndices[0];
-      if (firstIndex !== undefined && diagnostics[firstIndex] && activeLine <= diagnostics[firstIndex].range.start.line) {
+      if (
+        firstIndex !== undefined &&
+        diagnostics[firstIndex] &&
+        activeLine <= diagnostics[firstIndex].range.start.line
+      ) {
         const lastIndex = sortedIndices[selectedIndex];
         if (lastIndex !== undefined && diagnostics[lastIndex]) {
           position = diagnostics[lastIndex].range.start;
@@ -115,7 +117,11 @@ export class NavigationProvider implements INavigationProvider {
         // Find the previous diagnostic based on the active line
         while (selectedIndex >= 0) {
           const currentIndex = sortedIndices[selectedIndex];
-          if (currentIndex === undefined || !diagnostics[currentIndex] || diagnostics[currentIndex].range.start.line < activeLine) {
+          if (
+            currentIndex === undefined ||
+            !diagnostics[currentIndex] ||
+            diagnostics[currentIndex].range.start.line < activeLine
+          ) {
             break;
           }
           selectedIndex--;
@@ -221,12 +227,16 @@ export class NavigationProvider implements INavigationProvider {
   /**
    * Get diagnostic count for a document
    */
-  public getDiagnosticCount(documentUri: string): { errors: number; warnings: number; total: number } {
+  public getDiagnosticCount(_documentUri: string): {
+    errors: number;
+    warnings: number;
+    total: number;
+  } {
     const editor = window.activeTextEditor;
     if (!editor) {
       return { errors: 0, warnings: 0, total: 0 };
     }
-    
+
     const diagnostics = this.diagnosticCollection.get(editor.document.uri);
     if (!diagnostics) {
       return { errors: 0, warnings: 0, total: 0 };

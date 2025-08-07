@@ -1,3 +1,4 @@
+"use strict";
 //
 // PLEASE DO NOT MODIFY / DELETE UNLESS YOU KNOW WHAT YOU ARE DOING
 //
@@ -9,11 +10,11 @@
 // host can call to run the tests. The test runner is expected to use console.log
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
-var testRunner = require('vscode/lib/testrunner');
-// You can directly control Mocha options by uncommenting the following lines
-// See https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically#set-options for more info
-testRunner.configure({
+Object.defineProperty(exports, "__esModule", { value: true });
+// Mocha test runner setup for ESM
+var mocha_1 = require("mocha");
+var mocha = new mocha_1.default({
     ui: 'tdd',
-    useColors: true // colored output from test results
+    color: true,
 });
-module.exports = testRunner;
+exports.default = mocha;

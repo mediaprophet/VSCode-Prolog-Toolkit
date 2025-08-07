@@ -1,9 +1,10 @@
 import { workspace } from 'vscode';
-import { ExecutableFinder } from '../../utils/executableFinder';
-import { PlatformUtils } from '../../utils/platformUtils';
-import { Utils } from '../../utils/utils';
-import { IConfigurationManager, ILinterConfiguration, RunTrigger } from './interfaces';
 import * as which from 'which';
+import { ExecutableFinder } from '../../utils/executableFinder.js';
+import { PlatformUtils } from '../../utils/platformUtils.js';
+import { Utils } from '../../utils/utils.js';
+import type { IConfigurationManager, ILinterConfiguration } from './interfaces.js';
+import { RunTrigger } from './interfaces.js';
 
 /**
  * Manages linter configuration, executable path resolution, and settings
@@ -16,7 +17,7 @@ export class ConfigurationManager implements IConfigurationManager {
    */
   public async loadConfiguration(): Promise<ILinterConfiguration> {
     const section = workspace.getConfiguration('prolog');
-    
+
     if (!section) {
       throw new Error('Prolog configuration section not found');
     }
@@ -56,7 +57,9 @@ export class ConfigurationManager implements IConfigurationManager {
           return normalizedPath;
         } else {
           // Path exists but is not executable - this will be handled by the main linter
-          console.warn(`[ConfigurationManager] Path exists but lacks execute permissions: ${normalizedPath}`);
+          console.warn(
+            `[ConfigurationManager] Path exists but lacks execute permissions: ${normalizedPath}`
+          );
         }
       }
     }
@@ -71,7 +74,9 @@ export class ConfigurationManager implements IConfigurationManager {
         return detectionResult.path;
       } else {
         // Found executable but has permission issues
-        console.warn(`[ConfigurationManager] Found executable with permission issues: ${detectionResult.path}`);
+        console.warn(
+          `[ConfigurationManager] Found executable with permission issues: ${detectionResult.path}`
+        );
         return detectionResult.path; // Return the path anyway, the spawn will fail with a better error
       }
     }
@@ -80,7 +85,7 @@ export class ConfigurationManager implements IConfigurationManager {
     try {
       const fallbackPath = which.sync(configuredPath);
       return fallbackPath;
-    } catch (_e) {
+    } catch {
       return PlatformUtils.normalizePath(configuredPath);
     }
   }

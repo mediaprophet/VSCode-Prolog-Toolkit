@@ -10,12 +10,20 @@
       "src/extension.ts": {
         "type": "entry_point",
         "description": "Main extension entry point, handles activation and initialization",
-        "dependencies": ["prologBackend.ts", "features/*", "modules/*"]
+        "dependencies": [
+          "prologBackend.ts",
+          "features/*",
+          "modules/*"
+        ]
       },
       "src/prologBackend.ts": {
         "type": "backend_core",
         "description": "Core Prolog backend communication layer, handles queries and process management",
-        "key_features": ["query execution", "process management", "streaming support"]
+        "key_features": [
+          "query execution",
+          "process management",
+          "streaming support"
+        ]
       },
       "src/formatHelpResponse.ts": {
         "type": "utility",
@@ -74,13 +82,13 @@
       },
       "ui_components": {
         "src/features/prologDashboardProvider.ts": {
-          "description": "Provides dashboard webview for extension overview and controls"
+          "description": "Provides dashboard webview for extension overview and controls. NOTE: Must be registered in extension.ts using window.registerWebviewViewProvider with the correct view ID as in package.json."
         },
         "src/features/prologActivityProvider.ts": {
-          "description": "Manages activity bar integration and Prolog-specific views"
+          "description": "Manages activity bar integration and Prolog-specific views. NOTE: Must be registered in extension.ts using window.createTreeView or window.registerTreeDataProvider with the correct view ID as in package.json."
         },
         "src/features/settingsWebviewProvider.ts": {
-          "description": "Custom settings interface with enhanced configuration options"
+          "description": "Custom settings interface with enhanced configuration options. NOTE: Must be registered in extension.ts if contributed as a view."
         },
         "src/features/uiHandler.ts": {
           "description": "Handles general UI interactions and user feedback"
@@ -349,8 +357,14 @@
       "vsplogo.png": "Main extension logo",
       "prolog-activity-icon.svg": "Activity bar icon",
       "demo_gifs": [
-        "debug.gif", "syntax.gif", "format.gif", "linter.gif",
-        "hover.gif", "gotodef.gif", "refactoring.gif", "snippets.gif"
+        "debug.gif",
+        "syntax.gif",
+        "format.gif",
+        "linter.gif",
+        "hover.gif",
+        "gotodef.gif",
+        "refactoring.gif",
+        "snippets.gif"
       ]
     },
     "media/": {
@@ -434,11 +448,12 @@
         "bundler": "esbuild",
         "entry_points": [
           "src/extension.ts",
-          "src/features/prologDebugSession.ts", 
+          "src/features/prologDebugSession.ts",
           "src/features/prologDebugger.ts",
           "src/features/prologLSPServerRefactored.ts"
         ],
-        "output_format": "CommonJS modules for VSCode compatibility"
+        "output_format": "CommonJS modules for VSCode compatibility",
+        "note": "If targeting web/remote, avoid Node.js built-ins in code that runs in the web extension host."
       }
     }
   }

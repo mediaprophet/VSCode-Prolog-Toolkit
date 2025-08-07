@@ -1,33 +1,38 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { SignatureHelp, SignatureInformation, Position } from 'vscode-languageserver/node';
-import { SignatureProvider, LSPContext } from './types';
+import type { LSPContext, SignatureProvider } from './types.js';
+type SignatureHelp = any;
+type SignatureInformation = any;
+type Position = { line: number; character: number };
 
 export class PrologSignatureProvider implements SignatureProvider {
-  async provideSignatureHelp(document: TextDocument, position: Position, context: LSPContext): Promise<SignatureHelp | null> {
+  async provideSignatureHelp(
+    document: TextDocument,
+    position: Position,
+    _context: LSPContext
+  ): Promise<SignatureHelp | null> {
     const text = document.getText();
-    const line = text.split('\n')[position.line];
-
+    const lines = text.split('\n');
+    const line = lines[position.line];
+    if (typeof line !== 'string') return null;
     // Find the predicate being called
     const beforeCursor = line.substring(0, position.character);
     const predicateMatch = beforeCursor.match(/([a-z][a-zA-Z0-9_]*)\s*\([^)]*$/);
-
     if (!predicateMatch) {
       return null;
     }
-
     const predicate = predicateMatch[1];
-
     // Get signature information
+    if (!predicate) {
+      return null;
+    }
     const signature = this.getPredicateSignature(predicate);
     if (!signature) {
       return null;
     }
-
     // Count current parameter
     const openParen = beforeCursor.lastIndexOf('(');
     const args = beforeCursor.substring(openParen + 1);
     const parameterIndex = this.countParameters(args);
-
     return {
       signatures: [signature],
       activeSignature: 0,
@@ -48,14 +53,14 @@ export class PrologSignatureProvider implements SignatureProvider {
 
     for (let i = 0; i < args.length; i++) {
       const char = args[i];
-      
+
       // Handle strings
       if (!inString && (char === '"' || char === "'")) {
         inString = true;
         stringChar = char;
         continue;
       }
-      
+
       if (inString) {
         if (char === stringChar && args[i - 1] !== '\\') {
           inString = false;
@@ -149,51 +154,37 @@ export class PrologSignatureProvider implements SignatureProvider {
       assert: {
         label: 'assert(Clause)',
         documentation: 'Add clause to database',
-        parameters: [
-          { label: 'Clause', documentation: 'The clause to assert' },
-        ],
+        parameters: [{ label: 'Clause', documentation: 'The clause to assert' }],
       },
       retract: {
         label: 'retract(Clause)',
         documentation: 'Remove clause from database',
-        parameters: [
-          { label: 'Clause', documentation: 'The clause to retract' },
-        ],
+        parameters: [{ label: 'Clause', documentation: 'The clause to retract' }],
       },
       asserta: {
         label: 'asserta(Clause)',
         documentation: 'Add clause to beginning of database',
-        parameters: [
-          { label: 'Clause', documentation: 'The clause to assert at beginning' },
-        ],
+        parameters: [{ label: 'Clause', documentation: 'The clause to assert at beginning' }],
       },
       assertz: {
         label: 'assertz(Clause)',
         documentation: 'Add clause to end of database',
-        parameters: [
-          { label: 'Clause', documentation: 'The clause to assert at end' },
-        ],
+        parameters: [{ label: 'Clause', documentation: 'The clause to assert at end' }],
       },
       retractall: {
         label: 'retractall(Goal)',
         documentation: 'Remove all clauses matching Goal',
-        parameters: [
-          { label: 'Goal', documentation: 'Pattern to match for retraction' },
-        ],
+        parameters: [{ label: 'Goal', documentation: 'Pattern to match for retraction' }],
       },
       write: {
         label: 'write(Term)',
         documentation: 'Write term to output',
-        parameters: [
-          { label: 'Term', documentation: 'Term to write' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to write' }],
       },
       writeln: {
         label: 'writeln(Term)',
         documentation: 'Write term followed by newline',
-        parameters: [
-          { label: 'Term', documentation: 'Term to write' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to write' }],
       },
       is: {
         label: 'is(Result, Expression)',
@@ -206,37 +197,27 @@ export class PrologSignatureProvider implements SignatureProvider {
       var: {
         label: 'var(Term)',
         documentation: 'True if Term is an unbound variable',
-        parameters: [
-          { label: 'Term', documentation: 'Term to test' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to test' }],
       },
       nonvar: {
         label: 'nonvar(Term)',
         documentation: 'True if Term is not an unbound variable',
-        parameters: [
-          { label: 'Term', documentation: 'Term to test' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to test' }],
       },
       atom: {
         label: 'atom(Term)',
         documentation: 'True if Term is an atom',
-        parameters: [
-          { label: 'Term', documentation: 'Term to test' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to test' }],
       },
       number: {
         label: 'number(Term)',
         documentation: 'True if Term is a number',
-        parameters: [
-          { label: 'Term', documentation: 'Term to test' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to test' }],
       },
       compound: {
         label: 'compound(Term)',
         documentation: 'True if Term is a compound term',
-        parameters: [
-          { label: 'Term', documentation: 'Term to test' },
-        ],
+        parameters: [{ label: 'Term', documentation: 'Term to test' }],
       },
       functor: {
         label: 'functor(Term, Functor, Arity)',
@@ -267,16 +248,12 @@ export class PrologSignatureProvider implements SignatureProvider {
       call: {
         label: 'call(Goal)',
         documentation: 'Call goal dynamically',
-        parameters: [
-          { label: 'Goal', documentation: 'The goal to call' },
-        ],
+        parameters: [{ label: 'Goal', documentation: 'The goal to call' }],
       },
       once: {
         label: 'once(Goal)',
         documentation: 'Succeed at most once',
-        parameters: [
-          { label: 'Goal', documentation: 'The goal to call once' },
-        ],
+        parameters: [{ label: 'Goal', documentation: 'The goal to call once' }],
       },
       forall: {
         label: 'forall(Condition, Action)',
@@ -309,41 +286,39 @@ export class PrologSignatureProvider implements SignatureProvider {
   }
 
   // Method to get signature for custom predicates (could be extended to parse from comments)
-  private getCustomPredicateSignature(predicate: string, document: TextDocument): SignatureInformation | null {
+  private getCustomPredicateSignature(
+    predicate: string,
+    document: TextDocument
+  ): SignatureInformation | null {
     const text = document.getText();
     const lines = text.split('\n');
-
     // Look for predicate definition with comment above it
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const predicatePattern = new RegExp(`^\\s*${predicate}\\s*\\(`);
-      
       if (predicatePattern.test(line)) {
         // Check previous lines for documentation comment
         let docComment = '';
         let j = i - 1;
-        
-        while (j >= 0 && lines[j].trim().startsWith('%')) {
-          docComment = lines[j].trim().substring(1).trim() + '\n' + docComment;
+        while (j >= 0 && typeof lines[j] === 'string' && lines[j]?.trim()?.startsWith('%')) {
+          docComment = (lines[j]?.trim().substring(1).trim() ?? '') + '\n' + docComment;
           j--;
         }
-
         if (docComment) {
           // Parse the line to extract parameters
           const match = line.match(/\(([^)]*)\)/);
           const parameters = [];
-          
-          if (match && match[1].trim()) {
+          if (match && typeof match[1] === 'string' && match[1].trim()) {
             const args = match[1].split(',');
             for (let k = 0; k < args.length; k++) {
-              const arg = args[k].trim();
+              const arg = args[k]?.trim?.() ?? '';
               parameters.push({
                 label: arg,
                 documentation: `Parameter ${k + 1}`,
               });
             }
           }
-
           return {
             label: line.trim(),
             documentation: docComment.trim(),
@@ -352,7 +327,6 @@ export class PrologSignatureProvider implements SignatureProvider {
         }
       }
     }
-
     return null;
   }
 }

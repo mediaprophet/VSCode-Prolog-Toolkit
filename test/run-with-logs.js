@@ -1,7 +1,13 @@
 // Clean dist/, compile, then run tests with unique log/probs files, splitting logs if >800 lines
+
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 const { spawn, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // 1. Delete all files in dist/
 const distDir = path.join(__dirname, '..', 'dist');
@@ -18,7 +24,7 @@ execSync('npx tsc', { stdio: 'inherit' });
 // 3. Prepare log/probs filenames
 const now = new Date();
 const pad = n => n.toString().padStart(2, '0');
-const datetime = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+const datetime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 const logsDir = path.join(__dirname, 'logs');
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir);
 const base = `prologBackend.test.${datetime}`;
@@ -29,10 +35,25 @@ const problemsFile = path.join(logsDir, `${base}.problems.json`);
 // 4. Support selective test running via command-line argument
 // Usage: node run-with-logs.js [grepPattern]
 const grepPattern = process.argv.slice(2).join(' ').trim();
-const testFiles = [
-  'test/prologBackend.test.ts',
-  'test/prologBackend.pldoc.test.ts'
-];
+
+// Recursively find all .test.ts and .test.js files in the test directory (excluding node_modules, logs, temp, utils, validation, platform, resources, .vscode)
+function findTestFiles(dir) {
+  const skipDirs = new Set(['node_modules', 'logs', 'temp', 'utils', 'validation', 'platform', 'resources', '.vscode']);
+  let results = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!skipDirs.has(entry.name)) {
+        results = results.concat(findTestFiles(path.join(dir, entry.name)));
+      }
+    } else if (entry.isFile() && /\.test\.(ts|js)$/.test(entry.name)) {
+      results.push(path.join(dir, entry.name));
+    }
+  }
+  return results;
+}
+
+const testDir = path.join(__dirname);
+const testFiles = findTestFiles(testDir).sort();
 let allLogLines = [];
 let allProblems = [];
 let allLogFiles = [];
@@ -57,8 +78,8 @@ function runTestFile(testFile, cb) {
     // Split log if >800 lines
     let logFiles = [];
     for (let i = 0; i < logLines.length; i += 800) {
-      const chunk = logLines.slice(i, i+800).join('\n');
-      const chunkFile = logFiles.length === 0 ? logFile.replace('.log', `.${path.basename(testFile)}.log`) : logFile.replace('.log', `.${path.basename(testFile)}.${logFiles.length+1}.log`);
+      const chunk = logLines.slice(i, i + 800).join('\n');
+      const chunkFile = logFiles.length === 0 ? logFile.replace('.log', `.${path.basename(testFile)}.log`) : logFile.replace('.log', `.${path.basename(testFile)}.${logFiles.length + 1}.log`);
       fs.writeFileSync(chunkFile, chunk, 'utf8');
       logFiles.push(path.basename(chunkFile));
     }
@@ -104,7 +125,7 @@ function runAllTests(i) {
     process.exit(0);
     return;
   }
-  runTestFile(testFiles[i], () => runAllTests(i+1));
+  runTestFile(testFiles[i], () => runAllTests(i + 1));
 }
 
 runAllTests(0);

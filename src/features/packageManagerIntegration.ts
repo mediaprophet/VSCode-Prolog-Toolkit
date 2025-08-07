@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import * as vscode from 'vscode';
-import { PlatformType, PlatformUtils } from '../utils/platformUtils';
+import type { PlatformType } from '../utils/platformUtils.js';
+import { PlatformUtils } from '../utils/platformUtils.js';
 
 /**
  * Package manager information interface
@@ -425,7 +426,7 @@ export class PackageManagerIntegration {
             });
           } else {
             resolve({
-              installed: true
+              installed: true,
             });
           }
         } else {

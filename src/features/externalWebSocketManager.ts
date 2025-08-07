@@ -1,9 +1,11 @@
-import WebSocket from 'ws';
-import { EventEmitter } from 'events';
-import { QueryNotificationManager } from './queryNotificationManager';
-import { AuthConfig, verifyJwtToken, hasPermission } from './apiMiddleware';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
+import type { Event } from 'vscode';
+import { EventEmitter } from 'vscode';
+import WebSocket from 'ws';
+import type { AuthConfig } from './apiMiddleware.js';
+import { hasPermission, verifyJwtToken } from './apiMiddleware.js';
+import { QueryNotificationManager } from './queryNotificationManager.js';
 
 export interface ExternalWebSocketConfig {
   enabled: boolean;
@@ -31,16 +33,31 @@ export interface WebSocketClient {
  * External WebSocket manager for AI agent real-time notifications
  * Extends the existing QueryNotificationManager with external access capabilities
  */
-export class ExternalWebSocketManager extends EventEmitter {
-  private server: WebSocket.Server | null = null;
+export class ExternalWebSocketManager {
+  private server: any = null;
   private clients: Map<string, WebSocketClient> = new Map();
   private config: ExternalWebSocketConfig;
   private queryNotificationManager: QueryNotificationManager;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
 
+  // VS Code event emitters
+  private readonly _onError = new EventEmitter<unknown>();
+  private readonly _onClientDisconnected = new EventEmitter<string>();
+  private readonly _onClientConnected = new EventEmitter<{
+    clientId: string;
+    user?: { id: string; role: string; permissions: string[]; method: string };
+  }>();
+
+  // VS Code event properties
+  public readonly onError: Event<unknown> = this._onError.event;
+  public readonly onClientDisconnected: Event<string> = this._onClientDisconnected.event;
+  public readonly onClientConnected: Event<{
+    clientId: string;
+    user?: { id: string; role: string; permissions: string[]; method: string };
+  }> = this._onClientConnected.event;
+
   constructor(config: ExternalWebSocketConfig, queryNotificationManager: QueryNotificationManager) {
-    super();
     this.config = config;
     this.queryNotificationManager = queryNotificationManager;
     this.setupQueryNotificationForwarding();
@@ -61,7 +78,7 @@ export class ExternalWebSocketManager extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       try {
-        this.server = new WebSocket.Server({
+        this.server = new (WebSocket as any).Server({
           port: this.config.port,
           perMessageDeflate: false,
           maxPayload: 1024 * 1024, // 1MB max message size
@@ -73,9 +90,9 @@ export class ExternalWebSocketManager extends EventEmitter {
           this.handleConnection(ws, request);
         });
 
-        this.server.on('error', error => {
+        this.server.on('error', (error: unknown) => {
           console.error('[ExternalWebSocketManager] Server error:', error);
-          this.emit('error', error);
+          this._onError.fire(error);
         });
 
         this.server.on('listening', () => {
@@ -183,19 +200,19 @@ export class ExternalWebSocketManager extends EventEmitter {
     );
 
     // Set up client event handlers
-    ws.on('message', data => {
+    ws.on('message', (data: WebSocket.Data) => {
       this.handleClientMessage(clientId, data);
     });
 
-    ws.on('close', (code, reason) => {
+    ws.on('close', (code: number, reason: Buffer) => {
       console.log(
         `[ExternalWebSocketManager] Client ${clientId} disconnected (${code}: ${reason})`
       );
       this.clients.delete(clientId);
-      this.emit('clientDisconnected', clientId);
+      this._onClientDisconnected.fire(clientId);
     });
 
-    ws.on('error', error => {
+    ws.on('error', (error: Error) => {
       console.error(`[ExternalWebSocketManager] Client ${clientId} error:`, error);
       this.clients.delete(clientId);
     });
@@ -216,7 +233,7 @@ export class ExternalWebSocketManager extends EventEmitter {
       capabilities: ['query_notifications', 'session_events', 'system_status', 'real_time_updates'],
     });
 
-    this.emit('clientConnected', clientId, client.user);
+    this._onClientConnected.fire({ clientId, user: client.user });
   }
 
   /**
@@ -517,7 +534,8 @@ export class ExternalWebSocketManager extends EventEmitter {
    * Set up forwarding from QueryNotificationManager
    */
   private setupQueryNotificationForwarding(): void {
-    this.queryNotificationManager.on('queryStatusUpdated', status => {
+    this.queryNotificationManager.onQueryStatusUpdated((status: any) => {
+      // Always broadcast progress
       this.broadcast(
         {
           type: 'query_progress',
@@ -529,7 +547,6 @@ export class ExternalWebSocketManager extends EventEmitter {
         },
         `query:${status.id}`
       );
-
       this.broadcast(
         {
           type: 'query_progress',
@@ -541,19 +558,19 @@ export class ExternalWebSocketManager extends EventEmitter {
         },
         `event:${status.status}`
       );
-    });
-
-    this.queryNotificationManager.on('query_completed', status => {
-      this.broadcast(
-        {
-          type: 'query_complete',
-          query_id: status.id,
-          results: status.results,
-          execution_time: status.endTime ? status.endTime - status.startTime : 0,
-          timestamp: new Date().toISOString(),
-        },
-        `query:${status.id}`
-      );
+      // If completed, broadcast completion
+      if (status.status === 'completed') {
+        this.broadcast(
+          {
+            type: 'query_complete',
+            query_id: status.id,
+            results: status.results,
+            execution_time: status.endTime ? status.endTime - status.startTime : 0,
+            timestamp: new Date().toISOString(),
+          },
+          `query:${status.id}`
+        );
+      }
     });
   }
 
@@ -619,5 +636,13 @@ export class ExternalWebSocketManager extends EventEmitter {
       connectedClients: this.clients.size,
       maxConnections: this.config.maxConnections,
     };
+  }
+  /**
+   * Dispose of the event emitters
+   */
+  dispose(): void {
+    this._onError.dispose();
+    this._onClientDisconnected.dispose();
+    this._onClientConnected.dispose();
   }
 }

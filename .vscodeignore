@@ -1,4 +1,7 @@
+# Ensure mcp-server directory is included for MCP server integration and documentation
+# Ensure demo-use-cases directory is included for user demos and documentation
 
+# Ensure .lsp directory is included for multi-IDE LSP support
 
 test/
 typings/

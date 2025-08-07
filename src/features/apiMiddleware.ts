@@ -1,19 +1,12 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import type { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 
 export interface AuthConfig {
-  method: 'api_key' | 'jwt_token' | 'local_only' | 'oauth2';
+  method: 'api_key' | 'jwt_token' | 'local_only';
   apiKeys: string[];
   jwtSecret: string;
   localOnly: boolean;
-  oauth2: {
-    providers: string[];
-    clientId?: string;
-    clientSecret?: string;
-    redirectUri?: string;
-    scope?: string;
-  };
   roles: {
     admin: string[];
     agent: string[];
@@ -108,14 +101,7 @@ export function authMiddleware(config: AuthConfig) {
         }
       }
 
-      // 3. Try OAuth2 authentication
-      if (config.method === 'oauth2') {
-        user = await tryOAuth2Auth(req, config);
-        if (user) {
-          req.user = user;
-          return next();
-        }
-      }
+      // OAuth2 authentication removed
 
       // No valid authentication found
       return res.status(401).json({
@@ -182,24 +168,6 @@ async function tryJwtAuth(req: Request, config: AuthConfig): Promise<Authenticat
     console.error('[AuthMiddleware] JWT verification failed:', error);
     return null;
   }
-}
-
-/**
- * Try OAuth2 authentication (placeholder implementation)
- */
-async function tryOAuth2Auth(req: Request, config: AuthConfig): Promise<AuthenticatedUser | null> {
-  // This is a placeholder for OAuth2 implementation
-  // In a full implementation, this would:
-  // 1. Extract the OAuth2 token from the Authorization header
-  // 2. Validate the token with the OAuth2 provider
-  // 3. Extract user information from the token or provider API
-  // 4. Map provider roles to internal permissions
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-
-  // For now, return null to indicate OAuth2 is not implemented
-  return null;
 }
 
 /**

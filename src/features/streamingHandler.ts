@@ -1,5 +1,6 @@
-import { EventEmitter } from 'events';
-import { CancellationToken, Progress, ProgressLocation, window } from 'vscode';
+import type { CancellationToken, Progress } from 'vscode';
+import { ProgressLocation, window } from 'vscode';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
 
 export interface StreamingOptions {
   chunkSize?: number;
@@ -14,16 +15,22 @@ export interface StreamChunk<T> {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  totalCount?: number;
+  totalCount?: number | undefined;
   hasMore: boolean;
 }
 
-export class StreamingHandler<T> extends EventEmitter {
+export interface StreamingHandlerEventMap<T> {
+  chunk: [StreamChunk<T>];
+  complete: [{ totalProcessed: number }];
+  stopped: [];
+}
+
+export class StreamingHandler<T> extends NodeEventEmitter<StreamingHandlerEventMap<T>> {
   private options: Required<StreamingOptions>;
   private buffer: T[] = [];
   private totalProcessed: number = 0;
   private isStreaming: boolean = false;
-  private bufferTimer?: ReturnType<typeof setTimeout>;
+  private bufferTimer?: ReturnType<typeof setTimeout> | undefined;
 
   constructor(options: StreamingOptions = {}) {
     super();
@@ -327,7 +334,7 @@ export function createFileStreamer(options?: StreamingOptions): StreamingHandler
 export class PaginatedStreamer<T> {
   private currentPage: number = 0;
   private pageSize: number;
-  private totalPages?: number;
+  private totalPages?: number | undefined;
 
   constructor(pageSize: number = 20) {
     this.pageSize = pageSize;

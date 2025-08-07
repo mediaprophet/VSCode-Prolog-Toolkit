@@ -1,32 +1,26 @@
-import {
+import type {
   CancellationToken,
-  commands,
   DocumentFormattingEditProvider,
   DocumentRangeFormattingEditProvider,
   FormattingOptions,
   OutputChannel,
   ProviderResult,
-  Range,
   TextDocument,
-  TextEdit,
-  window,
-  workspace,
 } from 'vscode';
-import { ExecutableFinder } from '../utils/executableFinder';
-import { PlatformUtils } from '../utils/platformUtils';
-import { InstallationGuide } from './installationGuide';
+import { commands, Range, TextEdit, window, workspace } from 'vscode';
+import { ExecutableFinder } from '../utils/executableFinder.js';
+import { PlatformUtils } from '../utils/platformUtils.js';
+import { InstallationGuide } from './installationGuide.js';
 
 export class PrologFormatter
-  implements DocumentRangeFormattingEditProvider, DocumentFormattingEditProvider {
+  implements DocumentRangeFormattingEditProvider, DocumentFormattingEditProvider
+{
   private _section: ReturnType<typeof workspace.getConfiguration>;
-  private _tabSize!: number;
-  private _insertSpaces!: boolean;
-  private _tabDistance!: number;
   private _executable: string;
   private _args: string[];
   private _outputChannel: OutputChannel;
   private _textEdits: TextEdit[] = [];
-  private _startChars!: number;
+  // Removed unused private fields for production-grade code
 
   // Constructor for the PrologFormatter class
   constructor() {
@@ -171,17 +165,29 @@ export class PrologFormatter
     let min = 0;
     const clausesArray = [];
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i] && typeof arrayStart[i].index === 'number' && arrayStart[i].index >= min) {
+      const startMatch = arrayStart[i];
+      const startIdx =
+        startMatch && typeof (startMatch as RegExpMatchArray).index === 'number'
+          ? (startMatch as RegExpMatchArray).index
+          : undefined;
+      if (typeof startIdx === 'number' && startIdx >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
-          if (
-            arrayEnd[j] &&
-            typeof arrayEnd[j].index === 'number' &&
-            arrayEnd[j].index > (arrayStart[i]?.index ?? 0)
-          ) {
-            min = arrayEnd[j].index;
+          const endMatch = arrayEnd[j];
+          const start =
+            startMatch && typeof (startMatch as RegExpMatchArray).index === 'number'
+              ? (startMatch as RegExpMatchArray).index
+              : undefined;
+          const end =
+            endMatch && typeof (endMatch as RegExpMatchArray).index === 'number'
+              ? (endMatch as RegExpMatchArray).index
+              : undefined;
+          if (typeof start === 'number' && typeof end === 'number' && end > start) {
+            min = (endMatch as RegExpMatchArray)?.index ?? min;
             clausesArray.push([
-              (arrayStart[i]?.index ?? 0) + (typeof offset === 'number' ? offset : 0),
-              (arrayEnd[j]?.index ?? 0) + (typeof offset === 'number' ? offset : 0),
+              ((startMatch as RegExpMatchArray)?.index ?? 0) +
+                (typeof offset === 'number' ? offset : 0),
+              ((endMatch as RegExpMatchArray)?.index ?? 0) +
+                (typeof offset === 'number' ? offset : 0),
             ]);
             break;
           }
@@ -221,17 +227,27 @@ export class PrologFormatter
     const clausesArray = [];
 
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i] && typeof arrayStart[i].index === 'number' && arrayStart[i].index >= min) {
+      const startMatch = arrayStart[i];
+      const startIdx2 =
+        startMatch && typeof (startMatch as RegExpMatchArray).index === 'number'
+          ? (startMatch as RegExpMatchArray).index
+          : undefined;
+      if (typeof startIdx2 === 'number' && startIdx2 >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
-          if (
-            arrayEnd[j] &&
-            typeof arrayEnd[j].index === 'number' &&
-            arrayEnd[j].index > (arrayStart[i]?.index ?? 0)
-          ) {
-            min = arrayEnd[j].index;
+          const endMatch = arrayEnd[j];
+          const start =
+            startMatch && typeof (startMatch as RegExpMatchArray).index === 'number'
+              ? (startMatch as RegExpMatchArray).index
+              : undefined;
+          const end =
+            endMatch && typeof (endMatch as RegExpMatchArray).index === 'number'
+              ? (endMatch as RegExpMatchArray).index
+              : undefined;
+          if (typeof start === 'number' && typeof end === 'number' && end > start) {
+            min = (endMatch as RegExpMatchArray)?.index ?? min;
             clausesArray.push([
-              arrayStart[i]?.index ?? 0,
-              arrayEnd[j]?.index ?? 0,
+              (startMatch as RegExpMatchArray)?.index ?? 0,
+              (endMatch as RegExpMatchArray)?.index ?? 0,
             ]);
             break;
           }
@@ -282,17 +298,21 @@ export class PrologFormatter
     let clauseComment = clause;
     // Replace comments with placeholder characters in the clause
     arrayComment.forEach(Comment => {
-      clauseComment = clauseComment.replace(Comment[0], new Array(Comment[0].length).join('☻') + '♥');
+      clauseComment = clauseComment.replace(
+        Comment[0],
+        new Array(Comment[0].length).join('☻') + '♥'
+      );
     });
     // STRING
-    let regexpString = /\"((\\\(?:[^"])*\")/gm;
+    let regexpString = /"((\(?:[^"])*")/gm;
     let arrayString = [...clauseComment.matchAll(regexpString)];
     // Replace strings with placeholder characters in the clause
     arrayString.forEach(String => {
       clauseComment = clauseComment.replace(String[0], new Array(String[0].length + 1).join('☺'));
     });
     //EXTRACT HEAD
-    let regexpHead = /^\s*[a-z][a-zA-Z0-9_]*(\\\(?([^.]|\.[^\s])*?(:-|=>|-->)|[^(,\n]*?(\.\s*?$)|\\\(([^.]*|\.[^\s]*?)\\\)\s*\.\s*?)$/gm;
+    let regexpHead =
+      /^\s*[a-z][a-zA-Z0-9_]*(\(?([^.]|\.[^\s])*?(:-|=>|-->)|[^(,\n]*?(\.\s*?$)|\(([^.]*|\.[^\s]*?)\)\s*\.\s*?)$/gm;
     let arrayHead = [...clauseComment.matchAll(regexpHead)];
     if (arrayHead.length === 0 || !arrayHead[0]) {
       return clause; // Return original clause if no head found
@@ -332,8 +352,9 @@ export class PrologFormatter
       offset -= space[0].length;
     });
 
-    //OPERATOR
-    let regexpOperator = /(?<=[\]\)\}])ins|(?<=[\]\)\}])in|[-*]?->|=>|\?-|:-|=?:=|\\\+|(?:<|=|@|@=||:|>:)<|(?:\\?)(?<![><#])=(?:\.\.|@=|=|\\=|)|@?>(?:=|>|)|:|\+|-|\\\/|\/\\|#=|#>|#\\=|#<==>|#/gm;
+    // OPERATOR: Match Prolog operators and special tokens for formatting
+    let regexpOperator =
+      /(?<=\]\)})ins|(?<=\]\)})in|[-*]?->|=>|\?-|:-|=?:=|\+|(?:<|=|@|@=|:|>:)<|(?:\?)(?<![><#])=(?:\.\.|@=|=|=|)|@?>(?:=|>|)|:|\+|-|\/|\/\\|#=|#>|#=|#<==>|#/gm;
     let arrayOperator = [...clauseComment.matchAll(regexpOperator)];
     offset = 0;
     // Add spaces around operators in the clause and clauseComment
@@ -479,10 +500,12 @@ export class PrologFormatter
 
   // Helper method to format nested expressions within a Prolog clause
   private formatNested(clause: string, clauseComment: string): [string, string] {
-    let regexpNested = new RegExp('\\[[^\\[\\]]*?\\]|\\([^()]*?\\)|{\\|[\\w\\W]*?\\|}', 'gm'); // Define regular expression to find 0 deep expressions
-    const array0deep = [...clauseComment.matchAll(regexpNested)]; // Find all occurrences of 0 deep expressions
-    regexpNested = new RegExp('.(?=},?)|,|{|\\[', 'gm'); // Define regular expression to find 0 deep expressions
-    const endLine = [...clauseComment.matchAll(regexpNested)]; // Find all end line
+    // NESTED: Match zero-depth nested Prolog expressions
+    let regexpNested = /\[[^]]*?\]|\([^()]*?\)|\{\|[\w\W]*?\|\}/gm;
+    const array0deep = [...clauseComment.matchAll(regexpNested)];
+    // END LINE: Match any char before '},' or '}', or any of ',', '{', or '['
+    regexpNested = /.(?=},?)|[,{[]/gm;
+    const endLine = [...clauseComment.matchAll(regexpNested)];
 
     let deep = 1;
     let offset = 0;
@@ -507,7 +530,7 @@ export class PrologFormatter
         const endLineLength = endLine[i]?.[0]?.length ?? 0;
         const array0deepIndex = array0deep[j]?.index ?? 0;
         const array0deepLength = array0deep[j]?.[0]?.length ?? 0;
-        
+
         if (
           endLineIndex >= array0deepIndex &&
           endLineIndex + endLineLength < array0deepIndex + array0deepLength

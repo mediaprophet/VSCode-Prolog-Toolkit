@@ -1,0 +1,36 @@
+[
+  {
+    "problem": "Build fails due to missing or incorrect exports in several modules.",
+    "details": [
+      "No matching export in 'src/features/documentHighlightProvider.js' for import 'default' (expected by src/modules/extensionManager.ts)",
+      "No matching export in 'src/features/hoverProvider.js' for import 'default' (expected by src/modules/extensionManager.ts)",
+      "No matching export in 'src/features/linting/prologLinter.js' for import 'default' (expected by src/modules/extensionManager.ts)"
+    ]
+  },
+  {
+    "problem": "CommonJS 'exports' variable used in ES module context.",
+    "details": [
+      "Project uses 'type': 'module' in package.json, but some files use CommonJS 'exports' syntax.",
+      "Node's package format requires CommonJS files in a 'type': 'module' package to use the .cjs extension or be refactored to ES module syntax."
+    ]
+  },
+  {
+    "problem": "Module not found errors during test and build.",
+    "details": [
+      "Cannot find module 'src/prologBackend.js' imported from test/prologBackend.test.ts",
+      "Cannot find module 'src/shim/eventemitter-shim.js' imported from src/prologBackend.ts"
+    ]
+  },
+  {
+    "problem": "Incorrect or missing default/named exports.",
+    "details": [
+      "Some modules do not provide the expected default or named exports, causing import errors."
+    ]
+  },
+  {
+    "problem": "Build warnings about CommonJS 'exports' in ESM context.",
+    "details": [
+      "src/features/prologDebugger.js, src/features/lsp/types.js, src/shim/eventemitter-shim.js all use 'exports' in ESM context, which may not work as expected."
+    ]
+  }
+]

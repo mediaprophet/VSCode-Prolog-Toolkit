@@ -1,29 +1,29 @@
-import {
-  ExtensionContext,
-  languages,
-  workspace,
-  window,
-  commands,
-  Uri,
-  Range,
-  Position,
-  TextDocument,
+import type {
   CancellationToken,
+  CodeActionContext,
+  DiagnosticCollection,
+  ExtensionContext,
   ProviderResult,
+  TextDocument,
+} from 'vscode';
+import {
   CodeAction,
   CodeActionKind,
-  CodeActionContext,
-  Diagnostic,
-  DiagnosticSeverity,
-  DiagnosticCollection,
+  commands,
   CompletionItem,
   CompletionItemKind,
+  Diagnostic,
+  DiagnosticSeverity,
+  languages,
   MarkdownString,
+  Position,
+  Range,
+  Uri,
+  window,
+  workspace,
 } from 'vscode';
-import { PrologBackend } from '../prologBackend';
-
+import { PrologBackend } from '../prologBackend.js';
 /**
- * LSP Extension for Prolog that provides custom requests for queries, help, and N3 diagnostics
  * This works alongside existing language providers to enhance the development experience
  */
 export class PrologLSPExtension {

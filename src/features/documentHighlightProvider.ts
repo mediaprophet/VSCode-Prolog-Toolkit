@@ -1,11 +1,5 @@
-import {
-  CancellationToken,
-  DocumentHighlightProvider,
-  Position,
-  TextDocument,
-  DocumentHighlight,
-  Range,
-} from 'vscode';
+import type { CancellationToken, DocumentHighlightProvider, Position, TextDocument } from 'vscode';
+import { DocumentHighlight, Range } from 'vscode';
 
 export default class PrologDocumentHighlightProvider implements DocumentHighlightProvider {
   // Implement the provideDocumentHighlights method required by DocumentHighlightProvider interface

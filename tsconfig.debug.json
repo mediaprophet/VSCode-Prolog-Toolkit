@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "out/debug",
+    "rootDir": "src/debug",
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": false,
+    "allowImportingTsExtensions": false
+  },
+  "include": [
+    "src/debug/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "typings",
+    "dist",
+    "out",
+    "**/*.js"
+  ]
+}

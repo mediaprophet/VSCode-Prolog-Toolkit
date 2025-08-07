@@ -2,7 +2,7 @@
  * API-related type definitions for HTTP API, WebSocket, and external integrations
  */
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 // API Server Configuration
 export interface ApiServerConfig {

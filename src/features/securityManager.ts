@@ -1,7 +1,5 @@
-import { EventEmitter } from 'events';
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
+import { ChildProcess, spawn } from 'child_process';
+import { NodeEventEmitter } from '../shim/eventemitter-shim.js';
 
 export interface SecurityConfig {
   sandboxing: {
@@ -51,11 +49,16 @@ export interface SecurityViolation {
   severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
+export interface SecurityManagerEventMap {
+  securityViolation: [SecurityViolation];
+  resourceUsage: [{ userId: string; usage: any }];
+}
+
 /**
  * Security Manager for Prolog query execution
  * Handles sandboxing, resource quotas, and query validation
  */
-export class SecurityManager extends EventEmitter {
+export class SecurityManager extends NodeEventEmitter<SecurityManagerEventMap> {
   private config: SecurityConfig;
   private activeProcesses: Map<string, ChildProcess> = new Map();
   private userResourceUsage: Map<
@@ -268,11 +271,12 @@ export class SecurityManager extends EventEmitter {
 
       // Log resource usage
       this.emit('resourceUsage', {
-        queryId,
         userId: context.userId,
-        executionTime,
-        memoryUsage: process.memoryUsage(),
-        resultCount: Array.isArray(result.results) ? result.results.length : 0,
+        usage: {
+          executionTime,
+          memoryUsage: process.memoryUsage(),
+          resultCount: Array.isArray(result.results) ? result.results.length : 0,
+        },
       });
 
       // Check result limits
@@ -369,8 +373,8 @@ export class SecurityManager extends EventEmitter {
           type: 'syntax_error',
           message: 'Invalid Prolog syntax structure',
           query,
-          timestamp: new Date(),
           severity: 'medium',
+          timestamp: new Date(),
         });
       }
     } catch (error) {
@@ -560,7 +564,13 @@ export class SecurityManager extends EventEmitter {
       // Clean up zombie processes
       for (const [queryId, process] of this.activeProcesses.entries()) {
         if (!process.killed && process.exitCode === null) {
-          const age = now.getTime() - parseInt(queryId.split('_')[1]);
+          let age = 0;
+          if (queryId) {
+            const parts = queryId.split('_');
+            if (parts.length > 1 && parts[1]) {
+              age = now.getTime() - parseInt(parts[1]);
+            }
+          }
           if (age > maxAge) {
             process.kill('SIGTERM');
             this.activeProcesses.delete(queryId);
@@ -697,5 +707,5 @@ export function getDefaultResourceQuota(role: string): ResourceQuota {
     },
   };
 
-  return quotas[role] || quotas['limited'];
+  return quotas[role] ?? quotas['limited']!;
 }

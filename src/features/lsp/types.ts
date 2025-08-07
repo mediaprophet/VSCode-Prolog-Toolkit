@@ -1,24 +1,24 @@
-import {
-  TextDocument,
-  Diagnostic,
-  CompletionItem,
-  Hover,
+import type {
   CodeAction,
+  CompletionItem,
   Definition,
-  DocumentSymbol,
-  SymbolInformation,
-  Location,
+  Diagnostic,
   DocumentHighlight,
-  SignatureHelp,
-  TextEdit,
-  WorkspaceEdit,
-  Range,
+  DocumentSymbol,
   FoldingRange,
+  Hover,
+  Location,
+  Position,
+  Range,
   SemanticTokens,
   SemanticTokensLegend,
-  Position,
-} from 'vscode-languageserver/node';
-import { PrologBackend } from '../../prologBackend';
+  SignatureHelp,
+  SymbolInformation,
+  TextDocument,
+  TextEdit,
+  WorkspaceEdit,
+} from 'vscode-languageserver';
+import { PrologBackend } from '../../prologBackend.js';
 
 // Configuration interfaces
 export interface PrologSettings {
@@ -69,33 +69,67 @@ export interface ValidationProvider {
 }
 
 export interface CompletionProvider {
-  provideCompletions(document: TextDocument, position: Position, context: LSPContext): Promise<CompletionItem[]>;
+  provideCompletions(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<CompletionItem[]>;
 }
 
 export interface HoverProvider {
-  provideHover(document: TextDocument, position: Position, context: LSPContext): Promise<Hover | null>;
+  provideHover(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<Hover | null>;
 }
 
 export interface CodeActionProvider {
-  provideCodeActions(document: TextDocument, range: Range, diagnostics: Diagnostic[], context: LSPContext): Promise<CodeAction[]>;
+  provideCodeActions(
+    document: TextDocument,
+    range: Range,
+    diagnostics: Diagnostic[],
+    context: LSPContext
+  ): Promise<CodeAction[]>;
 }
 
 export interface DefinitionProvider {
-  provideDefinition(document: TextDocument, position: Position, context: LSPContext): Promise<Definition | null>;
+  provideDefinition(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<Definition | null>;
 }
 
 export interface SymbolProvider {
   provideDocumentSymbols(document: TextDocument, context: LSPContext): Promise<DocumentSymbol[]>;
-  provideWorkspaceSymbols(query: string, documents: TextDocument[], context: LSPContext): Promise<SymbolInformation[]>;
+  provideWorkspaceSymbols(
+    query: string,
+    documents: TextDocument[],
+    context: LSPContext
+  ): Promise<SymbolInformation[]>;
 }
 
 export interface ReferencesProvider {
-  provideReferences(document: TextDocument, position: Position, includeDeclaration: boolean, context: LSPContext): Promise<Location[]>;
-  provideDocumentHighlights(document: TextDocument, position: Position, context: LSPContext): Promise<DocumentHighlight[]>;
+  provideReferences(
+    document: TextDocument,
+    position: Position,
+    includeDeclaration: boolean,
+    context: LSPContext
+  ): Promise<Location[]>;
+  provideDocumentHighlights(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<DocumentHighlight[]>;
 }
 
 export interface SignatureProvider {
-  provideSignatureHelp(document: TextDocument, position: Position, context: LSPContext): Promise<SignatureHelp | null>;
+  provideSignatureHelp(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<SignatureHelp | null>;
 }
 
 export interface FormattingProvider {
@@ -104,8 +138,17 @@ export interface FormattingProvider {
 }
 
 export interface RenameProvider {
-  prepareRename(document: TextDocument, position: Position, context: LSPContext): Promise<Range | null>;
-  provideRename(document: TextDocument, position: Position, newName: string, context: LSPContext): Promise<WorkspaceEdit | null>;
+  prepareRename(
+    document: TextDocument,
+    position: Position,
+    context: LSPContext
+  ): Promise<Range | null>;
+  provideRename(
+    document: TextDocument,
+    position: Position,
+    newName: string,
+    context: LSPContext
+  ): Promise<WorkspaceEdit | null>;
 }
 
 export interface FoldingProvider {

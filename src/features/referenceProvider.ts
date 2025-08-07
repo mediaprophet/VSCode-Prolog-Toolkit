@@ -1,15 +1,15 @@
-import { Utils } from '../utils/utils';
-import {
-  ReferenceProvider,
-  TextDocument,
-  Position,
-  ReferenceContext,
-  CancellationToken,
-  Location,
-  workspace,
-  Uri,
-} from 'vscode';
 import * as fs from 'fs';
+import {
+  type CancellationToken,
+  Location,
+  type Position,
+  type ReferenceContext,
+  type ReferenceProvider,
+  type TextDocument,
+  Uri,
+  workspace,
+} from 'vscode';
+import { Utils } from '../utils/utils.js';
 export class PrologReferenceProvider implements ReferenceProvider {
   constructor() {
     // No initialization required for reference provider
@@ -44,36 +44,37 @@ export class PrologReferenceProvider implements ReferenceProvider {
       .filter(loc => loc !== null); // Create an array to store Location objects
     // Iterate through "use_module" declarations
     for (let i = 0; i < arrayModule.length; i++) {
-      if (arrayModule[i]?.[1]) {
-        var modpath = arrayModule[i][1].replace(new RegExp("'", 'gm'), '');
-        modpath = modpath.replace(new RegExp('"', 'gm'), '');
-        var text = '';
+      const modMatch = arrayModule[i];
+      const modPathRaw = modMatch && modMatch[1] ? modMatch[1] : undefined;
+      if (modPathRaw && workspace.workspaceFolders && workspace.workspaceFolders[0]) {
+        let modpath = modPathRaw.replace(/'/g, '').replace(/"/g, '');
+        let text = '';
         try {
-          if (workspace.workspaceFolders?.[0]) {
-            text = fs.readFileSync(
-              workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog,
-              'utf8'
-            ); // Read the content of the referenced module file
-          }
+          text = fs.readFileSync(
+            workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog,
+            'utf8'
+          );
         } catch (error) {
           console.error('Error reading file:', error);
         }
-        const array = [...text.matchAll(regexp)]; // Extract occurrences of the predicate in the referenced module file
-        if (workspace.workspaceFolders?.[0]) {
-          const newLocations = array
+        const array = [...text.matchAll(regexp)];
+        let newLocations: Location[] = [];
+        if (workspace.workspaceFolders && workspace.workspaceFolders[0]) {
+          const wsFolderPath = workspace.workspaceFolders[0].uri.fsPath;
+          newLocations = array
             .map(elem =>
               elem.index !== undefined
                 ? new Location(
-                    Uri.file(
-                      workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog
-                    ),
-                    Utils.findLineColForByte(text, elem.index)
-                  )
+                  Uri.file(
+                    wsFolderPath + '/' + modpath + '.' + prolog
+                  ),
+                  Utils.findLineColForByte(text, elem.index)
+                )
                 : null
             )
-            .filter(loc => loc !== null);
-          locations = locations.concat(newLocations); // Append the new occurrences to the locations array
+            .filter(loc => loc !== null) as Location[];
         }
+        locations = locations.concat(newLocations);
       }
     }
     // Return the array of Location objects

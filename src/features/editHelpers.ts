@@ -1,9 +1,5 @@
 'use strict';
-import {
-  Disposable,
-  IndentAction,
-  languages,
-} from 'vscode';
+import { Disposable, IndentAction, languages } from 'vscode';
 // automatic indentation on change
 export function loadEditHelpers(subscriptions: Disposable[]) {
   subscriptions.push(
@@ -12,8 +8,7 @@ export function loadEditHelpers(subscriptions: Disposable[]) {
         decreaseIndentPattern: /(\s*\)|\s*\])$/,
         increaseIndentPattern: /(.*:-\s*|.*-->\s*|.*:->\s*|.*:<-\s*|.+\[|.+\()$/,
       },
-      wordPattern:
-        /(-?\d*\.\d\w*)|([^`~!@%^&*()\-=+[{}\\|;:'",./<>??\s]+)/g,
+      wordPattern: /(-?\d*\.\d\w*)|([^`~!@%^&*()\-=+[{}\\|;:'",./<>??\s]+)/g,
       onEnterRules: [
         // {
         //   beforeText: /.+:-|:- begin_tests.+\.$/,

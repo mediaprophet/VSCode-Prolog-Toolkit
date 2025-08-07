@@ -10,60 +10,50 @@
 
 // Main API Client
 export {
-  PrologApiClient,
-  createPrologApiClient,
   createApiKeyClient,
   createJwtClient,
-  createLocalClient,
-} from './prologApiClient';
+  createLocalClient, createPrologApiClient, PrologApiClient
+} from './prologApiClient.js';
 
 // WebSocket Client
 export {
-  PrologWebSocketClient,
-  createPrologWebSocketClient,
   createApiKeyWebSocketClient,
   createJwtWebSocketClient,
-  createLocalWebSocketClient,
-} from './prologWebSocketClient';
+  createLocalWebSocketClient, createPrologWebSocketClient, PrologWebSocketClient
+} from './prologWebSocketClient.js';
 
 // Type Definitions
-export * from './types';
+export * from './types.js';
 
 // Re-export specific types for convenience
 export type {
-  PrologApiClientConfig,
-  QueryRequest,
-  QueryResponse,
   BatchRequest,
-  BatchResponse,
-  SessionConfig,
-  Session,
-  CLPRequest,
-  ProbabilisticRequest,
-  N3Request,
-} from './prologApiClient';
+  BatchResponse, CLPRequest, N3Request, ProbabilisticRequest, PrologApiClientConfig,
+  QueryRequest,
+  QueryResponse, Session, SessionConfig
+} from './prologApiClient.js';
 
 export type {
   PrologWebSocketConfig,
   QueryNotification,
   SessionEvent,
-  SystemStatus,
-} from './prologWebSocketClient';
+  SystemStatus
+} from './prologWebSocketClient.js';
 
 // Import the classes for use in the SDK
-import { PrologApiClient } from './prologApiClient';
-import { PrologWebSocketClient } from './prologWebSocketClient';
+import { PrologApiClient } from './prologApiClient.js';
+import { PrologWebSocketClient } from './prologWebSocketClient.js';
 
 /**
  * Combined SDK class that provides both HTTP and WebSocket functionality
  */
 export class PrologSDK {
-  public readonly api: import('./prologApiClient').PrologApiClient;
-  public readonly ws: import('./prologWebSocketClient').PrologWebSocketClient;
+  public readonly api: import('./prologApiClient.js').PrologApiClient;
+  public readonly ws: import('./prologWebSocketClient.js').PrologWebSocketClient;
 
   constructor(config: {
-    apiConfig: import('./prologApiClient').PrologApiClientConfig;
-    wsConfig?: import('./prologWebSocketClient').PrologWebSocketConfig;
+    apiConfig: import('./prologApiClient.js').PrologApiClientConfig;
+    wsConfig?: import('./prologWebSocketClient.js').PrologWebSocketConfig;
   }) {
     this.api = new PrologApiClient(config.apiConfig);
 
@@ -75,7 +65,7 @@ export class PrologSDK {
         config.apiConfig.baseUrl.replace(/^https?:/, 'ws:').replace(/^http:/, 'ws:') + ':8081';
       this.ws = new PrologWebSocketClient({
         url: wsUrl,
-        auth: config.apiConfig.auth,
+        auth: config.apiConfig.auth ?? { type: 'none' },
       });
     }
   }
@@ -98,9 +88,9 @@ export class PrologSDK {
    * Execute a query with real-time progress notifications
    */
   async queryWithNotifications(
-    request: import('./prologApiClient').QueryRequest,
-    onProgress?: (notification: import('./prologWebSocketClient').QueryNotification) => void
-  ): Promise<import('./prologApiClient').QueryResponse> {
+    request: import('./prologApiClient.js').QueryRequest,
+    onProgress?: (notification: import('./prologWebSocketClient.js').QueryNotification) => void
+  ): Promise<import('./prologApiClient.js').QueryResponse> {
     // Subscribe to query notifications if WebSocket is connected
     if (this.ws.isConnectedToServer() && onProgress) {
       const response = await this.api.query(request);
@@ -110,7 +100,7 @@ export class PrologSDK {
 
       // Set up progress listener
       const progressHandler = (
-        notification: import('./prologWebSocketClient').QueryNotification
+        notification: import('./prologWebSocketClient.js').QueryNotification
       ) => {
         if (notification.query_id === response.query_id) {
           onProgress(notification);
@@ -171,12 +161,12 @@ export function createPrologSDK(config: {
 }): PrologSDK {
   const apiConfig = {
     baseUrl: config.baseUrl,
-    auth: config.auth,
+    auth: config.auth ?? { type: 'none' },
   };
 
   const wsConfig = {
     url: config.wsUrl || config.baseUrl.replace(/^https?:/, 'ws:') + ':8081',
-    auth: config.auth,
+    auth: config.auth ?? { type: 'none' },
   };
 
   return new PrologSDK({ apiConfig, wsConfig });
@@ -202,7 +192,7 @@ export function createLocalSDK(
 export function createApiKeySDK(baseUrl: string, apiKey: string, wsUrl?: string): PrologSDK {
   return createPrologSDK({
     baseUrl,
-    wsUrl,
+    wsUrl: wsUrl || baseUrl.replace(/^https?:/, 'ws:') + ':8081',
     auth: {
       type: 'api_key',
       apiKey,
@@ -216,7 +206,7 @@ export function createApiKeySDK(baseUrl: string, apiKey: string, wsUrl?: string)
 export function createJwtSDK(baseUrl: string, jwtToken: string, wsUrl?: string): PrologSDK {
   return createPrologSDK({
     baseUrl,
-    wsUrl,
+    wsUrl: wsUrl || baseUrl.replace(/^https?:/, 'ws:') + ':8081',
     auth: {
       type: 'jwt_token',
       jwtToken,

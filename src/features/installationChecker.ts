@@ -189,7 +189,6 @@ export class InstallationChecker {
     return result.version || null;
   }
 
-
   /**
    * Check if the current configuration is valid and update if needed
    */
@@ -270,7 +269,12 @@ export class InstallationChecker {
     const minMinor = minParts[1];
     const minPatch = minParts[2];
 
-    if (typeof major !== 'number' || typeof minMajor !== 'number' || typeof minMinor !== 'number' || typeof minPatch !== 'number') {
+    if (
+      typeof major !== 'number' ||
+      typeof minMajor !== 'number' ||
+      typeof minMinor !== 'number' ||
+      typeof minPatch !== 'number'
+    ) {
       return { compatible: false, message: `Invalid version format: ${version}` };
     }
 
@@ -373,9 +377,7 @@ export class InstallationChecker {
         const { PackageManagerIntegration } = await import('./packageManagerIntegration.js');
         const packageManager = PackageManagerIntegration.getInstance();
         if ((await packageManager.detectAvailableManagers()).length > 0) {
-          recommendations.push(
-            'Quick Install: Use the "Prolog: Install SWI-Prolog" command.'
-          );
+          recommendations.push('Quick Install: Use the "Prolog: Install SWI-Prolog" command.');
         }
       } catch (error) {
         console.warn('Package manager integration check failed:', error);

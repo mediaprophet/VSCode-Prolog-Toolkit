@@ -1,15 +1,8 @@
 'use strict';
-import {
-  HoverProvider,
-  MarkdownString,
-  Position,
-  TextDocument,
-  CancellationToken,
-  Hover,
-  Range,
-} from 'vscode';
 import * as cp from 'child_process';
-import { Utils } from '../utils/utils';
+import type { CancellationToken, HoverProvider, Position, Range, TextDocument } from 'vscode';
+import { Hover, MarkdownString } from 'vscode';
+import { Utils } from '../utils/utils.js';
 
 export default class PrologHoverProvider implements HoverProvider {
   // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash

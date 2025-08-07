@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { TextEdit, Range } from 'vscode-languageserver/node';
-import { FormattingProvider, LSPContext, PrologSettings } from './types';
+import type { Range, TextEdit } from 'vscode-languageserver-types';
+import type { FormattingProvider, LSPContext, PrologSettings } from './types.js';
 
 export class PrologFormattingProvider implements FormattingProvider {
   async formatDocument(document: TextDocument, context: LSPContext): Promise<TextEdit[]> {
@@ -11,6 +11,7 @@ export class PrologFormattingProvider implements FormattingProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const formatted = this.formatPrologLine(line, settings, i, lines);
 
       if (formatted !== line) {
@@ -27,7 +28,11 @@ export class PrologFormattingProvider implements FormattingProvider {
     return edits;
   }
 
-  async formatRange(document: TextDocument, range: Range, context: LSPContext): Promise<TextEdit[]> {
+  async formatRange(
+    document: TextDocument,
+    range: Range,
+    context: LSPContext
+  ): Promise<TextEdit[]> {
     const settings = await context.getDocumentSettings(document.uri);
     const text = document.getText(range);
     const lines = text.split('\n');
@@ -36,6 +41,7 @@ export class PrologFormattingProvider implements FormattingProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const documentLineIndex = range.start.line + i;
       const formatted = this.formatPrologLine(line, settings, documentLineIndex, documentLines);
 
@@ -53,7 +59,12 @@ export class PrologFormattingProvider implements FormattingProvider {
     return edits;
   }
 
-  private formatPrologLine(line: string, settings: PrologSettings, lineIndex: number, allLines: string[]): string {
+  private formatPrologLine(
+    line: string,
+    settings: PrologSettings,
+    lineIndex: number,
+    allLines: string[]
+  ): string {
     let formatted = line;
 
     // Skip empty lines and preserve them as-is
@@ -85,7 +96,7 @@ export class PrologFormattingProvider implements FormattingProvider {
 
   private formatComment(line: string): string {
     const match = line.match(/^(\s*)(%.*)$/);
-    if (match) {
+    if (match && typeof match[1] === 'string' && typeof match[2] === 'string') {
       const [, indentation, comment] = match;
       // Ensure single space after % if there's content
       const cleanComment = comment.replace(/^%\s*/, '% ').replace(/^% $/, '%');
@@ -96,7 +107,10 @@ export class PrologFormattingProvider implements FormattingProvider {
 
   private addSpacesAfterCommas(text: string): string {
     // Add spaces after commas, but not inside strings or when already spaced
-    return text.replace(/,(?!\s)(?![^"]*"(?:[^"]*"[^"]*")*[^"]*$)(?![^']*'(?:[^']*'[^']*')*[^']*$)/g, ', ');
+    return text.replace(
+      /,(?!\s)(?![^"]*"(?:[^"]*"[^"]*")*[^"]*$)(?![^']*'(?:[^']*'[^']*')*[^']*$)/g,
+      ', '
+    );
   }
 
   private formatOperators(text: string): string {
@@ -141,19 +155,23 @@ export class PrologFormattingProvider implements FormattingProvider {
     return /(?<!\\)["']/.test(text);
   }
 
-  private formatOperatorsPreservingStrings(text: string, pattern: RegExp, replacement: string): string {
+  private formatOperatorsPreservingStrings(
+    text: string,
+    pattern: RegExp,
+    replacement: string
+  ): string {
     // Split by strings and format only non-string parts
-    const parts: Array<{text: string, isString: boolean}> = [];
+    const parts: Array<{ text: string; isString: boolean }> = [];
     let current = '';
     let inString = false;
     let stringChar = '';
 
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
-      
+
       if (!inString && (char === '"' || char === "'")) {
         if (current) {
-          parts.push({text: current, isString: false});
+          parts.push({ text: current, isString: false });
           current = '';
         }
         inString = true;
@@ -161,7 +179,7 @@ export class PrologFormattingProvider implements FormattingProvider {
         current = char;
       } else if (inString && char === stringChar && text[i - 1] !== '\\') {
         current += char;
-        parts.push({text: current, isString: true});
+        parts.push({ text: current, isString: true });
         current = '';
         inString = false;
         stringChar = '';
@@ -171,18 +189,18 @@ export class PrologFormattingProvider implements FormattingProvider {
     }
 
     if (current) {
-      parts.push({text: current, isString: inString});
+      parts.push({ text: current, isString: inString });
     }
 
     // Format only non-string parts
-    return parts.map(part => 
-      part.isString ? part.text : part.text.replace(pattern, replacement)
-    ).join('');
+    return parts
+      .map(part => (part.isString ? part.text : part.text.replace(pattern, replacement)))
+      .join('');
   }
 
   private formatIndentation(text: string, lineIndex: number, allLines: string[]): string {
     const trimmed = text.trim();
-    
+
     if (trimmed === '') {
       return '';
     }
@@ -193,7 +211,7 @@ export class PrologFormattingProvider implements FormattingProvider {
 
     // Rules for indentation:
     // 1. Directives (:-) at start - no indentation
-    // 2. Facts - no indentation  
+    // 2. Facts - no indentation
     // 3. Rule heads - no indentation
     // 4. Rule bodies - indent
     // 5. Continuation lines - additional indent
@@ -228,34 +246,40 @@ export class PrologFormattingProvider implements FormattingProvider {
     // Check if this line is part of a rule body
     // Look backwards for a rule head
     for (let i = lineIndex - 1; i >= 0; i--) {
-      const prevLine = allLines[i].trim();
+      const prevLineRaw = allLines[i];
+      if (typeof prevLineRaw !== 'string') continue;
+      const prevLine = prevLineRaw.trim();
       if (prevLine === '' || prevLine.startsWith('%')) {
         continue;
       }
-      
+
       if (this.isRuleHead(prevLine)) {
         return !line.includes(':-') && !line.startsWith(':-');
       }
-      
+
       // If we hit another rule or directive, this isn't a rule body
       if (prevLine.includes(':-') || this.looksLikeFact(prevLine)) {
         break;
       }
     }
-    
+
     return false;
   }
 
   private isContinuationLine(line: string, lineIndex: number, allLines: string[]): boolean {
     if (lineIndex === 0) return false;
-    
-    const prevLine = allLines[lineIndex - 1].trim();
-    
+
+    const prevLineRaw = allLines[lineIndex - 1];
+    if (typeof prevLineRaw !== 'string') return false;
+    const prevLine = prevLineRaw.trim();
+
     // If previous line doesn't end with a period, this might be a continuation
-    return prevLine.length > 0 && 
-           !prevLine.endsWith('.') && 
-           !prevLine.startsWith('%') &&
-           (line.startsWith(',') || line.startsWith(';') || line.startsWith('->'));
+    return (
+      prevLine.length > 0 &&
+      !prevLine.endsWith('.') &&
+      !prevLine.startsWith('%') &&
+      (line.startsWith(',') || line.startsWith(';') || line.startsWith('->'))
+    );
   }
 
   private looksLikeFact(line: string): boolean {
@@ -266,15 +290,15 @@ export class PrologFormattingProvider implements FormattingProvider {
   private cleanupWhitespace(text: string): string {
     // Remove trailing whitespace
     let cleaned = text.replace(/\s+$/, '');
-    
+
     // Normalize multiple spaces to single spaces (except indentation)
     const match = cleaned.match(/^(\s*)(.*)/);
     if (match) {
       const [, indentation, content] = match;
-      const normalizedContent = content.replace(/\s+/g, ' ');
+      const normalizedContent = typeof content === 'string' ? content.replace(/\s+/g, ' ') : '';
       cleaned = indentation + normalizedContent;
     }
-    
+
     return cleaned;
   }
 
@@ -286,14 +310,14 @@ export class PrologFormattingProvider implements FormattingProvider {
 
   public formatTerm(term: string, settings: PrologSettings): string {
     let formatted = term;
-    
+
     if (settings.format.addSpace) {
       formatted = this.addSpacesAfterCommas(formatted);
     }
-    
+
     formatted = this.formatOperators(formatted);
     formatted = this.cleanupWhitespace(formatted);
-    
+
     return formatted;
   }
 
@@ -305,18 +329,19 @@ export class PrologFormattingProvider implements FormattingProvider {
   public organizeImports(document: TextDocument): TextEdit[] {
     const text = document.getText();
     const lines = text.split('\n');
-    const imports: Array<{line: string, index: number}> = [];
-    const otherLines: Array<{line: string, index: number}> = [];
-    
+    const imports: Array<{ line: string; index: number }> = [];
+    const otherLines: Array<{ line: string; index: number }> = [];
+
     // Separate imports from other content
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      if (typeof line !== 'string') continue;
       const trimmed = line.trim();
-      
+
       if (trimmed.startsWith(':- use_module(') || trimmed.startsWith(':- include(')) {
-        imports.push({line, index: i});
+        imports.push({ line, index: i });
       } else {
-        otherLines.push({line, index: i});
+        otherLines.push({ line, index: i });
       }
     }
 
@@ -329,16 +354,7 @@ export class PrologFormattingProvider implements FormattingProvider {
 
     // Create the new content structure
     const sortedImportLines = imports.map(imp => imp.line);
-    const nonImportLines = otherLines.map(other => other.line);
-    
-    // Find the first non-empty, non-comment line after imports
-    let insertionPoint = 0;
-    for (const other of otherLines) {
-      if (other.line.trim() && !other.line.trim().startsWith('%')) {
-        insertionPoint = other.index;
-        break;
-      }
-    }
+    // Removed unused variables 'nonImportLines' and 'insertionPoint'
 
     // Create edits to reorganize
     const edits: TextEdit[] = [];

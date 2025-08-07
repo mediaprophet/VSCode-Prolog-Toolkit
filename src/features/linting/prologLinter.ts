@@ -1,37 +1,38 @@
-import {
+
+import type {
   CancellationToken,
   CodeActionContext,
   CodeActionProvider,
   Command,
-  commands,
   Diagnostic,
   DiagnosticCollection,
   Disposable,
   ExtensionContext,
-  languages,
   OutputChannel,
   Range,
   TextDocument,
-  Uri,
-  window,
-  workspace,
 } from 'vscode';
-import { InstallationGuide } from '../installationGuide';
-import { ConfigurationManager } from './configurationManager';
-import { ProcessExecutor } from './processExecutor';
-import { DiagnosticParser } from './diagnosticParser';
-import { CodeActionProvider as PrologCodeActionProvider } from './codeActionProvider';
-import { NavigationProvider } from './navigationProvider';
-import { CommandManager } from './commandManager';
 import {
-  IConfigurationManager,
-  IProcessExecutor,
-  IDiagnosticParser,
+  commands,
+  languages, Uri, window,
+  workspace
+} from 'vscode';
+import { InstallationGuide } from '../installationGuide.js';
+import { CodeActionProvider as PrologCodeActionProvider } from './codeActionProvider.js';
+import { CommandManager } from './commandManager.js';
+import { ConfigurationManager } from './configurationManager.js';
+import { DiagnosticParser } from './diagnosticParser.js';
+import type {
   ICodeActionProvider,
-  INavigationProvider,
   ICommandManager,
-  RunTrigger,
-} from './interfaces';
+  IConfigurationManager,
+  IDiagnosticParser,
+  INavigationProvider,
+  IProcessExecutor,
+} from './interfaces.js';
+import { RunTrigger } from './interfaces.js';
+import { NavigationProvider } from './navigationProvider.js';
+import { ProcessExecutor } from './processExecutor.js';
 
 /**
  * Main Prolog Linter class that orchestrates all linting functionality
@@ -52,8 +53,8 @@ export default class PrologLinter implements CodeActionProvider {
   private outputChannel: OutputChannel | null = null;
 
   // Document listeners
-  private documentListener: Disposable;
-  private openDocumentListener: Disposable;
+  private documentListener: Disposable | undefined = undefined;
+  private openDocumentListener: Disposable | undefined = undefined;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private context: ExtensionContext) {
@@ -62,13 +63,16 @@ export default class PrologLinter implements CodeActionProvider {
     this.processExecutor = new ProcessExecutor(context);
     this.diagnosticParser = new DiagnosticParser();
     this.codeActionProvider = new PrologCodeActionProvider();
-    
+
     // Initialize output channel
     this.initializeOutputChannel();
-    
+
     // Initialize navigation and command managers (they need the diagnostic collection)
     this.diagnosticCollection = languages.createDiagnosticCollection();
-    this.navigationProvider = new NavigationProvider(this.diagnosticCollection, this.outputChannel!);
+    this.navigationProvider = new NavigationProvider(
+      this.diagnosticCollection,
+      this.outputChannel!
+    );
     this.commandManager = new CommandManager();
   }
 
@@ -184,52 +188,6 @@ export default class PrologLinter implements CodeActionProvider {
         default:
           break;
       }
-    } else {
-      message = error.message
-        ? error.message
-        : `Failed to run prolog executable. Reason is unknown.`;
-    }
-
-    this.outputMsg(message);
-  }
-
-  /**
-   * Load configuration settings and set up listeners
-   */
-  private async loadConfiguration(): Promise<void> {
-    try {
-      const config = await this.configurationManager.loadConfiguration();
-
-      // Dispose existing listeners
-      if (this.documentListener) {
-        this.documentListener.dispose();
-      }
-      if (this.openDocumentListener) {
-        this.openDocumentListener.dispose();
-      }
-
-      // Set up open document listener
-      this.openDocumentListener = workspace.onDidOpenTextDocument(e => {
-        this.triggerLinter(e);
-      });
-
-      // Set up document change/save listeners based on trigger
-      if (config.trigger === RunTrigger.onType) {
-        this.documentListener = workspace.onDidChangeTextDocument(e => {
-          this.triggerLinter(e.document);
-        });
-      } else if (config.trigger === RunTrigger.onSave) {
-        if (this.timer) {
-          clearTimeout(this.timer);
-        }
-        this.documentListener = workspace.onDidSaveTextDocument(this.doPlint, this);
-      }
-
-      // Trigger linting for existing documents
-      workspace.textDocuments.forEach(this.triggerLinter, this);
-    } catch (error) {
-      console.error('Failed to load linter configuration:', error);
-      this.outputMsg(`Configuration error: ${error.message || error}`);
     }
   }
 
@@ -271,10 +229,10 @@ export default class PrologLinter implements CodeActionProvider {
     this.commandManager.registerCommands();
 
     // Register configuration change listener
-    workspace.onDidChangeConfiguration(() => this.loadConfiguration(), this, subscriptions);
+    workspace.onDidChangeConfiguration(() => this.configurationManager.loadConfiguration(), this, subscriptions);
 
     // Load initial configuration
-    this.loadConfiguration();
+    this.configurationManager.loadConfiguration();
 
     // Register listeners based on trigger
     workspace.onDidCloseTextDocument(

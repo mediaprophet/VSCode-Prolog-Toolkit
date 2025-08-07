@@ -12,12 +12,23 @@
     "allowJs": true,
     "declaration": false,
     "sourceMap": false,
-    "types": ["node", "mocha", "chai"],
+    "types": [
+      "node",
+      "mocha",
+      "chai"
+    ],
     "baseUrl": "..",
     "paths": {
-      "*": ["node_modules/*", "out/src/*"],
-      "vscode": ["../test/vscode-mock"]
-    }
+      "*": [
+        "node_modules/*",
+        "out/src/*"
+      ],
+      "vscode": [
+        "../test/vscode-mock"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
   "include": [
     "../src/**/*",

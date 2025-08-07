@@ -1,22 +1,26 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { WorkspaceEdit, Range, Position } from 'vscode-languageserver/node';
-import { RenameProvider, LSPContext } from './types';
+import type { LSPContext, RenameProvider } from './types.js';
+type WorkspaceEdit = any;
+type Range = any;
+type Position = { line: number; character: number };
 
 export class PrologRenameProvider implements RenameProvider {
-  async prepareRename(document: TextDocument, position: Position, context: LSPContext): Promise<Range | null> {
+  async prepareRename(
+    document: TextDocument,
+    position: Position,
+    _context: LSPContext
+  ): Promise<Range | null> {
     const word = this.getWordAtPosition(document.getText(), position);
-
     if (!word || !this.isValidPredicateName(word)) {
       return null;
     }
-
-    const line = document.getText().split('\n')[position.line];
+    const lines = document.getText().split('\n');
+    const line = lines[position.line];
+    if (typeof line !== 'string') return null;
     const start = line.indexOf(word, position.character - word.length);
-
     if (start === -1) {
       return null;
     }
-
     return {
       start: { line: position.line, character: start },
       end: { line: position.line, character: start + word.length },
@@ -24,10 +28,10 @@ export class PrologRenameProvider implements RenameProvider {
   }
 
   async provideRename(
-    document: TextDocument, 
-    position: Position, 
-    newName: string, 
-    context: LSPContext
+    document: TextDocument,
+    position: Position,
+    newName: string,
+    _context: LSPContext
   ): Promise<WorkspaceEdit | null> {
     const oldName = this.getWordAtPosition(document.getText(), position);
 
@@ -57,22 +61,19 @@ export class PrologRenameProvider implements RenameProvider {
   private getWordAtPosition(text: string, position: Position): string | null {
     const lines = text.split('\n');
     const line = lines[position.line];
-    if (!line) {
+    if (typeof line !== 'string') {
       return null;
     }
-
     const char = position.character;
     let start = char;
     let end = char;
-
     // Find word boundaries
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1] ?? '')) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end] ?? '')) {
       end++;
     }
-
     return start < end ? line.substring(start, end) : null;
   }
 
@@ -82,21 +83,20 @@ export class PrologRenameProvider implements RenameProvider {
   }
 
   private findAndReplacePredicateOccurrences(
-    document: TextDocument, 
-    oldName: string, 
+    document: TextDocument,
+    oldName: string,
     newName: string
-  ): Array<{range: Range, newText: string}> {
+  ): Array<{ range: Range; newText: string }> {
     const text = document.getText();
     const lines = text.split('\n');
-    const changes: Array<{range: Range, newText: string}> = [];
+    const changes: Array<{ range: Range; newText: string }> = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
       // Find all occurrences of the predicate in this line
       const regex = new RegExp(`\\b${this.escapeRegex(oldName)}\\b`, 'g');
       let match;
-
       while ((match = regex.exec(line)) !== null) {
         // Check if this occurrence should be renamed
         if (this.shouldRenameOccurrence(line, match.index, oldName)) {
@@ -110,12 +110,12 @@ export class PrologRenameProvider implements RenameProvider {
         }
       }
     }
-
     return changes;
   }
 
   private shouldRenameOccurrence(line: string, index: number, predicateName: string): boolean {
     // Don't rename if it's inside a comment
+    if (typeof line !== 'string') return false;
     const beforeMatch = line.substring(0, index);
     if (beforeMatch.includes('%')) {
       return false;
@@ -128,15 +128,15 @@ export class PrologRenameProvider implements RenameProvider {
 
     // Check context to determine if this is a predicate reference
     const afterPredicate = line.substring(index + predicateName.length);
-    
+
     // It's likely a predicate if:
     // 1. It's followed by an opening parenthesis (predicate call or definition)
     // 2. It's at the start of a line (fact or rule head)
     // 3. It's preceded by common Prolog constructs
-    
+
     const followedByParen = afterPredicate.trim().startsWith('(');
     const startsLine = beforeMatch.trim() === '' || beforeMatch.trim() === ':-';
-    
+
     return followedByParen || startsLine;
   }
 
@@ -144,9 +144,9 @@ export class PrologRenameProvider implements RenameProvider {
     let inString = false;
     let stringChar = '';
 
+    if (typeof line !== 'string') return false;
     for (let i = 0; i < index; i++) {
       const char = line[i];
-      
       if (!inString && (char === '"' || char === "'")) {
         inString = true;
         stringChar = char;
@@ -154,7 +154,6 @@ export class PrologRenameProvider implements RenameProvider {
         inString = false;
       }
     }
-
     return inString;
   }
 
@@ -178,7 +177,7 @@ export class PrologRenameProvider implements RenameProvider {
       return null;
     }
 
-    const allChanges: { [uri: string]: Array<{range: Range, newText: string}> } = {};
+    const allChanges: { [uri: string]: Array<{ range: Range; newText: string }> } = {};
 
     // Process each document
     for (const document of documents) {
@@ -205,7 +204,7 @@ export class PrologRenameProvider implements RenameProvider {
 
     // Check if the new name conflicts with existing predicates
     const existingPredicates = this.findExistingPredicates(document);
-    
+
     if (existingPredicates.includes(newName)) {
       conflicts.push(`Predicate '${newName}' already exists`);
     }
@@ -232,28 +231,67 @@ export class PrologRenameProvider implements RenameProvider {
     const predicates: string[] = [];
 
     for (const line of lines) {
+      if (typeof line !== 'string') continue;
       const match = line.match(/^([a-z][a-zA-Z0-9_]*)\s*\(/);
-      if (match) {
-        const predicateName = match[1];
-        if (!predicates.includes(predicateName)) {
-          predicates.push(predicateName);
-        }
+      if (match && typeof match[1] === 'string' && !predicates.includes(match[1])) {
+        predicates.push(match[1]);
       }
     }
-
     return predicates;
   }
 
   private isBuiltinPredicate(name: string): boolean {
     const builtins = [
-      'member', 'append', 'length', 'reverse', 'sort', 'findall', 'bagof', 'setof',
-      'assert', 'retract', 'asserta', 'assertz', 'retractall',
-      'write', 'writeln', 'read', 'get', 'put', 'nl', 'tab',
-      'is', 'var', 'nonvar', 'atom', 'number', 'compound', 'atomic',
-      'functor', 'arg', 'univ', 'copy_term', 'numbervars',
-      'call', 'once', 'ignore', 'forall', 'between', 'succ',
-      'true', 'fail', 'halt', 'abort', 'trace', 'notrace', 'spy', 'nospy',
-      'cut', 'if', 'then', 'else'
+      'member',
+      'append',
+      'length',
+      'reverse',
+      'sort',
+      'findall',
+      'bagof',
+      'setof',
+      'assert',
+      'retract',
+      'asserta',
+      'assertz',
+      'retractall',
+      'write',
+      'writeln',
+      'read',
+      'get',
+      'put',
+      'nl',
+      'tab',
+      'is',
+      'var',
+      'nonvar',
+      'atom',
+      'number',
+      'compound',
+      'atomic',
+      'functor',
+      'arg',
+      'univ',
+      'copy_term',
+      'numbervars',
+      'call',
+      'once',
+      'ignore',
+      'forall',
+      'between',
+      'succ',
+      'true',
+      'fail',
+      'halt',
+      'abort',
+      'trace',
+      'notrace',
+      'spy',
+      'nospy',
+      'cut',
+      'if',
+      'then',
+      'else',
     ];
 
     return builtins.includes(name);
@@ -292,17 +330,17 @@ export class PrologRenameProvider implements RenameProvider {
     for (const change of changes) {
       const lineNumber = change.range.start.line;
       const oldText = lines[lineNumber];
-      const newText = oldText.substring(0, change.range.start.character) +
-                     change.newText +
-                     oldText.substring(change.range.end.character);
-      
+      if (typeof oldText !== 'string') continue;
+      const newText =
+        oldText.substring(0, change.range.start.character) +
+        change.newText +
+        oldText.substring(change.range.end.character);
       preview.push({
         line: lineNumber,
         oldText,
         newText,
       });
     }
-
     return preview;
   }
 }

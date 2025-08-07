@@ -1,39 +1,22 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Definition, Location, Position } from 'vscode-languageserver/node';
-import { DefinitionProvider, LSPContext, BackendResponse } from './types';
+import type { DefinitionProvider, LSPContext } from './types.js';
+type Definition = any;
+type Location = any;
+type Position = { line: number; character: number };
 
 export class PrologDefinitionProvider implements DefinitionProvider {
-  async provideDefinition(document: TextDocument, position: Position, context: LSPContext): Promise<Definition | null> {
+  async provideDefinition(
+    document: TextDocument,
+    position: Position,
+    _context: LSPContext
+  ): Promise<Definition | null> {
     const word = this.getWordAtPosition(document.getText(), position);
 
     if (!word) {
       return null;
     }
 
-    // Try to find definition using backend
-    if (context.prologBackend?.isRunning()) {
-      try {
-        const response: BackendResponse = await context.prologBackend.sendRequest('definition', {
-          predicate: word,
-          uri: document.uri,
-          line: position.line,
-          character: position.character,
-          timeoutMs: 3000,
-        });
-
-        if (response.status === 'ok' && response.locations) {
-          return response.locations.map((loc: { uri: string; line: number; character: number }) => ({
-            uri: loc.uri,
-            range: {
-              start: { line: loc.line, character: loc.character },
-              end: { line: loc.line, character: loc.character + word.length },
-            },
-          }));
-        }
-      } catch (_error: unknown) {
-        // Fall back to local search
-      }
-    }
+    // Try to find definition using backend (disabled in this context)
 
     // Local definition search
     return this.findLocalDefinition(document, word);
@@ -42,7 +25,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
   private getWordAtPosition(text: string, position: Position): string | null {
     const lines = text.split('\n');
     const line = lines[position.line];
-    if (!line) {
+    if (typeof line !== 'string') {
       return null;
     }
 
@@ -51,10 +34,10 @@ export class PrologDefinitionProvider implements DefinitionProvider {
     let end = char;
 
     // Find word boundaries
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1] ?? '')) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end] ?? '')) {
       end++;
     }
 
@@ -68,7 +51,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
       // Look for predicate definitions (both facts and rule heads)
       const patterns = [
         // Rule definition: predicate(...) :-
@@ -104,21 +87,24 @@ export class PrologDefinitionProvider implements DefinitionProvider {
   }
 
   // Additional method to find all references to a predicate (used by references provider)
-  public findAllReferences(document: TextDocument, predicate: string, includeDeclaration = true): Location[] {
+  public findAllReferences(
+    document: TextDocument,
+    predicate: string,
+    includeDeclaration = true
+  ): Location[] {
     const text = document.getText();
     const lines = text.split('\n');
     const locations: Location[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
       // Find all occurrences of the predicate
       const regex = new RegExp(`\\b${this.escapeRegex(predicate)}\\b`, 'g');
       let match;
 
       while ((match = regex.exec(line)) !== null) {
         const isDeclaration = this.isPredicateDeclaration(line, match.index, predicate);
-        
         // Include this occurrence if we want declarations or it's not a declaration
         if (includeDeclaration || !isDeclaration) {
           locations.push({
@@ -136,9 +122,9 @@ export class PrologDefinitionProvider implements DefinitionProvider {
   }
 
   private isPredicateDeclaration(line: string, predicateIndex: number, predicate: string): boolean {
+    if (typeof line !== 'string') return false;
     const beforePredicate = line.substring(0, predicateIndex).trim();
     const afterPredicate = line.substring(predicateIndex + predicate.length);
-    
     // It's a declaration if:
     // 1. It starts the line (possibly after whitespace or :-)
     // 2. It's followed by an opening parenthesis
@@ -146,7 +132,6 @@ export class PrologDefinitionProvider implements DefinitionProvider {
     const startsLine = beforePredicate === '' || beforePredicate === ':-';
     const followedByParen = afterPredicate.trim().startsWith('(');
     const isRuleOrFact = line.includes(':-') || line.trim().endsWith('.');
-    
     return startsLine && followedByParen && isRuleOrFact;
   }
 
@@ -163,7 +148,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+      if (typeof line !== 'string') continue;
       // Find all occurrences of the predicate
       const regex = new RegExp(`\\b${this.escapeRegex(predicate)}\\b`, 'g');
       let match;

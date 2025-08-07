@@ -1,12 +1,13 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CodeAction, CodeActionKind, Diagnostic, Range } from 'vscode-languageserver/node';
-import { CodeActionProvider, LSPContext } from './types';
+import type { CodeAction, Diagnostic, Range } from 'vscode-languageserver-types';
+import { CodeActionKind } from 'vscode-languageserver-types';
+import type { CodeActionProvider, LSPContext } from './types.js';
 
 export class PrologCodeActionsProvider implements CodeActionProvider {
   async provideCodeActions(
-    document: TextDocument, 
-    range: Range, 
-    diagnostics: Diagnostic[], 
+    document: TextDocument,
+    range: Range,
+    diagnostics: Diagnostic[],
     context: LSPContext
   ): Promise<CodeAction[]> {
     const actions: CodeAction[] = [];

@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { InstallationChecker } from './installationChecker';
-import { QueryHistoryManager } from './queryHistoryManager';
+import * as vscode from 'vscode';
+import { InstallationChecker } from './installationChecker.js';
+import { QueryHistoryManager } from './queryHistoryManager.js';
 
 export class PrologDashboardProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'prologDashboard';
@@ -187,10 +187,10 @@ export class PrologDashboardProvider implements vscode.WebviewViewProvider {
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const _scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'dashboard.js')
+      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.js')
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'dashboard.css')
+      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.css')
     );
 
     return `<!DOCTYPE html>

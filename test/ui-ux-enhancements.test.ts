@@ -24,7 +24,8 @@ describe('UI/UX Enhancements', () => {
       logUri: {} as any,
       storageUri: {} as any,
       secrets: {} as any,
-      extension: {} as any
+      extension: {} as any,
+      languageModelAccessInformation: {} as any,
     };
 
     lspExtension = new PrologLSPExtension(mockContext, null);
@@ -57,6 +58,7 @@ describe('UI/UX Enhancements', () => {
 
   describe('Chat Participant Configuration', () => {
     it('should have enhanced chat participant configuration in package.json', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const packageJson = require('../package.json');
 
       expect(packageJson.contributes.chatParticipants).to.be.an('array');
@@ -70,11 +72,21 @@ describe('UI/UX Enhancements', () => {
     });
 
     it('should have all required chat commands defined', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const packageJson = require('../package.json');
       const chatParticipant = packageJson.contributes.chatParticipants[0];
       const commandNames = chatParticipant.commands.map((cmd: any) => cmd.name);
 
-      const expectedCommands = ['query', 'consult', 'help', 'status', 'n3_load', 'n3_list', 'n3_reason', 'n3_explain'];
+      const expectedCommands = [
+        'query',
+        'consult',
+        'help',
+        'status',
+        'n3_load',
+        'n3_list',
+        'n3_reason',
+        'n3_explain',
+      ];
       expectedCommands.forEach(cmd => {
         expect(commandNames).to.include(cmd);
       });
@@ -83,6 +95,7 @@ describe('UI/UX Enhancements', () => {
 
   describe('LSP Commands', () => {
     it('should have LSP commands registered in package.json', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const packageJson = require('../package.json');
       const commands = packageJson.contributes.commands;
       const commandIds = commands.map((cmd: any) => cmd.command);
@@ -93,6 +106,7 @@ describe('UI/UX Enhancements', () => {
     });
 
     it('should have keybindings for LSP commands', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const packageJson = require('../package.json');
       const keybindings = packageJson.contributes.keybindings;
       const commandIds = keybindings.map((kb: any) => kb.command);
@@ -102,6 +116,7 @@ describe('UI/UX Enhancements', () => {
     });
 
     it('should have context menu entries for LSP commands', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const packageJson = require('../package.json');
       const contextMenus = packageJson.contributes.menus['editor/context'];
       const commandIds = contextMenus.map((menu: any) => menu.command);
