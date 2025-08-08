@@ -114,7 +114,7 @@ export class PrologApiClient extends EventEmitter {
 
     this.client = axios.create({
       baseURL: this.config.baseUrl,
-      timeout: this.config.timeout,
+      timeout: this.config.timeout ?? 30000,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'PrologApiClient/1.0.0',
@@ -379,7 +379,7 @@ export class PrologApiClient extends EventEmitter {
    * Update authentication
    */
   updateAuth(auth: PrologApiClientConfig['auth']): void {
-    this.config.auth = auth;
+    this.config.auth = auth ?? { type: 'none' };
 
     // Clear existing auth headers
     delete this.client.defaults.headers['X-API-Key'];

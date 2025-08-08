@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
-import WebSocket from 'ws';
+
+import { WebSocket, WebSocketServer } from 'ws';
 
 export interface QueryStatus {
   id: string;
@@ -7,12 +8,12 @@ export interface QueryStatus {
   startTime: number;
   endTime?: number;
   progress?: number;
-  message?: string;
+  message?: string | undefined;
   results?: any;
   error?: any;
   isBatch?: boolean;
-  batchIndex?: number;
-  totalBatchSize?: number;
+  batchIndex?: number | undefined;
+  totalBatchSize?: number | undefined;
 }
 
 export interface QueryNotificationOptions {
@@ -35,7 +36,7 @@ export interface QueryCallback {
 export class QueryNotificationManager extends EventEmitter {
   private queries: Map<string, QueryStatus> = new Map();
   private callbacks: Map<string, QueryCallback> = new Map();
-  private wsServer?: WebSocket.Server;
+  private wsServer: WebSocketServer | undefined;
   private wsClients: Set<WebSocket> = new Set();
   private options: QueryNotificationOptions;
 
@@ -59,7 +60,7 @@ export class QueryNotificationManager extends EventEmitter {
    */
   private initializeWebSocketServer(): void {
     try {
-      this.wsServer = new WebSocket.Server({
+      this.wsServer = new WebSocketServer({
         port: this.options.webSocketPort!,
         perMessageDeflate: false,
       });
@@ -71,12 +72,16 @@ export class QueryNotificationManager extends EventEmitter {
         // Send current query statuses to new client
         const currentQueries = Array.from(this.queries.values());
         if (currentQueries.length > 0) {
-          ws.send(
-            JSON.stringify({
-              type: 'query_status_batch',
-              queries: currentQueries,
-            })
-          );
+          try {
+            ws.send(
+              JSON.stringify({
+                type: 'query_status_batch',
+                queries: currentQueries,
+              })
+            );
+          } catch (err) {
+            console.error('[QueryNotificationManager] Failed to send initial status batch:', err);
+          }
         }
 
         ws.on('close', () => {
@@ -92,16 +97,34 @@ export class QueryNotificationManager extends EventEmitter {
         // Handle client messages (e.g., cancel requests)
         ws.on('message', data => {
           try {
+            // Validate message is JSON and has a type
             const message = JSON.parse(data.toString());
+            if (!message || typeof message.type !== 'string') {
+              throw new Error('Missing or invalid message type');
+            }
             this.handleWebSocketMessage(message, ws);
           } catch (error: unknown) {
-            console.error('[QueryNotificationManager] Invalid WebSocket message:', error);
+            console.error('[QueryNotificationManager] Invalid WebSocket message:', error, 'Raw:', data?.toString());
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Invalid message format or type.'
+              })
+            );
           }
         });
       });
 
       this.wsServer.on('error', error => {
-        console.error('[QueryNotificationManager] WebSocket server error:', error);
+        if ((error as any).code === 'EADDRINUSE') {
+          console.error(`[QueryNotificationManager] WebSocket port ${this.options.webSocketPort} already in use. Choose a different port.`);
+        } else {
+          console.error('[QueryNotificationManager] WebSocket server error:', error);
+        }
+      });
+
+      this.wsServer.on('close', () => {
+        console.log('[QueryNotificationManager] WebSocket server closed.');
       });
 
       console.log(
@@ -109,6 +132,10 @@ export class QueryNotificationManager extends EventEmitter {
       );
     } catch (error: unknown) {
       console.error('[QueryNotificationManager] Failed to start WebSocket server:', error);
+      if (this.wsServer) {
+        try { this.wsServer.close(); } catch { }
+        this.wsServer = undefined;
+      }
     }
   }
 
@@ -414,7 +441,14 @@ export class QueryNotificationManager extends EventEmitter {
    */
   close(): void {
     if (this.wsServer) {
-      this.wsServer.close();
+      try {
+        this.wsServer.close(() => {
+          console.log('[QueryNotificationManager] WebSocket server closed.');
+        });
+      } catch (err) {
+        console.error('[QueryNotificationManager] Error closing WebSocket server:', err);
+      }
+      this.wsServer = undefined;
       this.wsClients.clear();
     }
     this.queries.clear();

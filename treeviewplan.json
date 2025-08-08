@@ -1,0 +1,62 @@
+{
+  "title": "VSCode Prolog Toolkit Tree View Enhancement Plan",
+  "overview": "Refactor and enhance the activity bar tree views to provide specialized, production-grade panels for Prolog Explorer, Query History, and Prolog Files.",
+  "panels": [
+    {
+      "id": "prologExplorer",
+      "title": "Prolog Explorer",
+      "description": "Shows workspace Prolog files, folders, and project structure. Supports file actions (open, consult, new file, etc.).",
+      "features": [
+        "Workspace/project folder tree",
+        "Prolog file detection (.pl, .prolog, .pro)",
+        "Context menu: open, consult, new file, reveal in explorer",
+        "Icons for files/folders",
+        "Live refresh on file changes",
+        "Collapsible folders",
+        "Multi-root workspace support"
+      ]
+    },
+    {
+      "id": "queryHistory",
+      "title": "Query History",
+      "description": "Displays recent queries, results, errors, and allows re-running or copying queries. Supports filtering and grouping.",
+      "features": [
+        "List of recent queries with status (success/error)",
+        "Grouping by session, file, or time",
+        "Context menu: re-run, copy, delete, view result",
+        "Icons for query type/status",
+        "Live update on query execution",
+        "Quick actions: clear history, filter queries"
+      ]
+    },
+    {
+      "id": "prologFiles",
+      "title": "Prolog Files",
+      "description": "Lists all Prolog files in the workspace for quick access and actions.",
+      "features": [
+        "Flat or grouped list of .pl/.prolog files",
+        "Context menu: open, consult, reveal in explorer",
+        "Quick actions: add file, refresh list",
+        "Live update on file changes"
+      ]
+    }
+  ],
+  "sharedEnhancements": [
+    "Context menus for all nodes",
+    "VS Code icons and badges",
+    "Efficient event-driven refresh",
+    "Robust error handling",
+    "Accessibility (ARIA labels, keyboard navigation)",
+    "Localization support",
+    "Unit and integration tests for all providers"
+  ],
+  "implementationSteps": [
+    "Scaffold separate TreeDataProvider classes for each panel",
+    "Register each provider with its own view ID in extensionManager.ts",
+    "Implement core data logic and event listeners for each provider",
+    "Add context menus and icons",
+    "Wire up live refresh and event-driven updates",
+    "Add tests and documentation"
+  ],
+  "notes": "This plan ensures each panel is focused, robust, and user-friendly, supporting advanced workflows for Prolog development."
+}

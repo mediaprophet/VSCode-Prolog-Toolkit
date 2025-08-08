@@ -5,7 +5,7 @@
       "name": "Launch Prolog LSP Server",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/out/pub/features/prologLSPServer.js",
+      "program": "${workspaceFolder}/out/pub/features/lsp/server.js",
       "args": [
         "--stdio"
       ],
@@ -19,7 +19,7 @@
       "name": "Debug Prolog LSP Server",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/out/pub/features/prologLSPServer.js",
+      "program": "${workspaceFolder}/out/pub/features/lsp/server.js",
       "args": [
         "--stdio"
       ],

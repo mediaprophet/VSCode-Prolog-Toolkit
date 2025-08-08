@@ -1,0 +1,65 @@
+{
+  "project": "VSCode Prolog Debugger Modularization & Production-Grade Refactor",
+  "steps": [
+    {
+      "step": 1,
+      "description": "Scaffold modular directory structure for debugger components (ProcessManager, ProtocolAdapter, BreakpointManager, StackFrameManager, VariableManager, OutputFilter, DebuggerController)."
+    },
+    {
+      "step": 2,
+      "description": "Extract process management logic from PrologDebugger into PrologProcessManager. Implement robust process lifecycle, error handling, and cross-platform support."
+    },
+    {
+      "step": 3,
+      "description": "Extract protocol parsing, JSON handling, and message dispatch into PrologProtocolAdapter. Add strict validation and error handling for protocol messages."
+    },
+    {
+      "step": 4,
+      "description": "Move breakpoint logic (set, clear, persist, source mapping) into BreakpointManager. Support persistent and function breakpoints, and robust source mapping."
+    },
+    {
+      "step": 5,
+      "description": "Move stack frame and call stack logic into StackFrameManager. Ensure accurate frame navigation and source highlighting."
+    },
+    {
+      "step": 6,
+      "description": "Move variable inspection, watch, and evaluation logic into VariableManager. Support complex terms and nested structures."
+    },
+    {
+      "step": 7,
+      "description": "Move output filtering and routing logic into OutputFilter. Ensure all output types (stdout, stderr, debug, user) are handled and logged appropriately."
+    },
+    {
+      "step": 8,
+      "description": "Implement DebuggerController to orchestrate all managers and expose a clean API to the debug session. Inject all dependencies."
+    },
+    {
+      "step": 9,
+      "description": "Refactor PrologDebugSession to use only the DebuggerController. Remove all direct process/protocol logic from the session."
+    },
+    {
+      "step": 10,
+      "description": "Add robust error handling, logging, and user feedback throughout all modules. Ensure all errors are actionable and surfaced to the user."
+    },
+    {
+      "step": 11,
+      "description": "Implement timeouts and retry logic for all process and protocol operations."
+    },
+    {
+      "step": 12,
+      "description": "Add comprehensive unit and integration tests for all modules and workflows."
+    },
+    {
+      "step": 13,
+      "description": "Document all public APIs, configuration options, and extension points."
+    },
+    {
+      "step": 14,
+      "description": "Validate cross-platform support (Windows, macOS, Linux) and handle all file/process edge cases."
+    },
+    {
+      "step": 15,
+      "description": "Review, optimize, and finalize for production release."
+    }
+  ]
+}

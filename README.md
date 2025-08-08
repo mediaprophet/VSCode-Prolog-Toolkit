@@ -1,11 +1,11 @@
 
-# VSCode Prolog Toolkit
+# VSCode Prolog Toolkit (v1.4.0)
 
 A comprehensive, production-grade VS Code extension for SWI-Prolog with **full multi-platform support** across Windows, macOS, and Linux. Building on [AmauryRabouan/new-vsc-prolog](https://github.com/AmauryRabouan/new-vsc-prolog) and [Arthur Wang's VSC-Prolog](https://marketplace.visualstudio.com/items?itemName=arthurwang.vsc-prolog).
 
 **Repository:** https://github.com/mediaprophet/VSCode-Prolog-Toolkit
 **Author:** Timothy Holborn
-**Credits:** Major features and inspiration from [Amaury Rabouan](https://github.com/AmauryRabouan/new-vsc-prolog) and contributors.
+**Version:** 1.4.0
 
 ---
 
@@ -26,6 +26,18 @@ A comprehensive, production-grade VS Code extension for SWI-Prolog with **full m
 
 ___________________
   [Quick Start](#quick-start) | [Platform Support](#platform-support) | [Features](#features) | [Installation](#installation) | [Documentation](#documentation) | [Bug Reporting](https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues)
+
+---
+
+## New in 1.4.0
+
+- **New Chat Commands:**
+  - `/clp` — Constraint Logic Programming (CLP) solver (e.g. `/clp X+Y#=10, X#>Y | fd | X,Y`)
+  - `/probabilistic` — Probabilistic inference (e.g. `/probabilistic rain | rain:0.3,sprinkler:0.5 | 1000`)
+  - `/batch` — Batch query execution (e.g. `/batch member(X,[1,2,3]);length([a,b],X)`)
+  - `/history` — Show recent Prolog query history
+- All major MCP server tools/resources are now accessible via chat commands.
+- Improved backend packaging and UI integration.
 
 ## Quick Start
 
@@ -136,8 +148,10 @@ Tested extensively across all platforms with SWI-Prolog 8.0+ and VS Code 1.102+.
     * Proof tree generation and explanation
     * Semantic web reasoning with RDFS inference
   * [Enhanced Reasoning Features](#enhanced-reasoning-features)
-    * Constraint Logic Programming (CLP) with CLP(FD), CLP(R), and CLP(Q) support
-    * Probabilistic logic with Monte Carlo sampling and uncertainty quantification
+    * Constraint Logic Programming (CLP) with CLP(FD), CLP(R), and CLP(Q) support (now accessible via `/clp` chat command)
+    * Probabilistic logic with Monte Carlo sampling and uncertainty quantification (now accessible via `/probabilistic` chat command)
+    * Batch query execution (now accessible via `/batch` chat command)
+    * Query history retrieval (now accessible via `/history` chat command)
     * User-defined logic modules with custom meta-interpreters
     * Integration with existing N3/semantic web reasoning
   * [Debugger(experimental, SWI ONLY)](#debugger)

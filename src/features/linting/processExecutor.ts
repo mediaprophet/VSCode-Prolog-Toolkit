@@ -1,10 +1,10 @@
-import * as path from 'path';
 import jsesc from 'jsesc';
+import * as path from 'path';
 import { spawn } from 'process-promises';
 import { TextDocument, workspace } from 'vscode';
-import { Utils } from '../../utils/utils';
 import { PlatformUtils } from '../../utils/platformUtils';
-import { IProcessExecutor, IProcessResult, ILinterConfiguration, RunTrigger } from './interfaces';
+import { PrologExecUtils } from '../../utils/utils';
+import { ILinterConfiguration, IProcessExecutor, IProcessResult, RunTrigger } from './interfaces';
 
 /**
  * Handles execution of Prolog processes with dialect-specific configurations
@@ -85,7 +85,7 @@ export class ProcessExecutor implements IProcessExecutor {
     let goals: string = '';
 
     // Determine Prolog dialect and set arguments accordingly
-    switch (Utils.DIALECT) {
+    switch (PrologExecUtils.DIALECT) {
       case 'swi': {
         if (trigger === RunTrigger.onSave) {
           args = ['-g', 'halt', fileName];

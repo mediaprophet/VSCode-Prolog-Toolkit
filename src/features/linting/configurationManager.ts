@@ -1,9 +1,8 @@
 import { workspace } from 'vscode';
+import * as which from 'which';
 import { ExecutableFinder } from '../../utils/executableFinder';
 import { PlatformUtils } from '../../utils/platformUtils';
-import { Utils } from '../../utils/utils';
 import { IConfigurationManager, ILinterConfiguration, RunTrigger } from './interfaces';
-import * as which from 'which';
 
 /**
  * Manages linter configuration, executable path resolution, and settings
@@ -16,7 +15,7 @@ export class ConfigurationManager implements IConfigurationManager {
    */
   public async loadConfiguration(): Promise<ILinterConfiguration> {
     const section = workspace.getConfiguration('prolog');
-    
+
     if (!section) {
       throw new Error('Prolog configuration section not found');
     }
@@ -89,13 +88,8 @@ export class ConfigurationManager implements IConfigurationManager {
    * Determine the trigger type for the linter
    */
   private determineTrigger(): RunTrigger {
-    if (Utils.LINTERTRIGGER === 'onSave') {
-      return RunTrigger.onSave;
-    } else if (Utils.LINTERTRIGGER === 'onType') {
-      return RunTrigger.onType;
-    } else {
-      return RunTrigger.never;
-    }
+    // TODO: Refactor trigger logic to use new modular config if needed
+    return RunTrigger.never;
   }
 
   /**

@@ -1,0 +1,22 @@
+{
+  "title": "General Enhancements for Extension Activation and Setup Wizard",
+  "date": "2025-08-08",
+  "enhancements": [
+    {
+      "id": "setup-wizard-prolog-verification",
+      "description": "After detecting SWI-Prolog, the setup wizard should run a test command (e.g., 'swipl --version' or a simple query) to ensure SWI-Prolog is actually usable. If the test fails, display a clear error message and troubleshooting steps (e.g., check PATH, permissions, or installation)."
+    },
+    {
+      "id": "backend-startup-error-handling",
+      "description": "When starting the backend, capture and display any errors (e.g., missing files, permission issues, port conflicts). If backend startup fails, show a notification or message in the UI with actionable guidance."
+    },
+    {
+      "id": "ui-feedback-troubleshooting",
+      "description": "In the settings/setup wizard, add a 'Test Prolog' button to re-check configuration and show detailed results. Provide direct links to documentation or logs for advanced troubleshooting."
+    },
+    {
+      "id": "logging-diagnostics",
+      "description": "Log all setup and backend startup steps, including command outputs and errors, to a dedicated log file. Make logs easily accessible from the extension UI for user support."
+    }
+  ]
+}

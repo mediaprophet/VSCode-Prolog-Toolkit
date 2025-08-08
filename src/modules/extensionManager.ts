@@ -1,6 +1,12 @@
+
+'use strict';
+
+'use strict';
+
 'use strict';
 
 import * as path from 'path';
+import * as vscode from 'vscode';
 import {
   type CancellationToken,
   chat,
@@ -16,35 +22,41 @@ import {
   workspace,
   WorkspaceEdit,
 } from 'vscode';
-import { ApiServer, ApiServerConfig } from '../features/apiServer.js';
+import { ApiServer, ApiServerConfig } from '../features/apiServer';
 import { PrologDefinitionProvider } from '../features/definitionProvider.js';
 import PrologDocumentHighlightProvider from '../features/documentHighlightProvider.js';
-import { loadEditHelpers } from '../features/editHelpers.js';
-import { ExternalWebSocketManager } from '../features/externalWebSocketManager.js';
 import type { ExternalWebSocketConfig } from '../features/externalWebSocketManager.js';
+import { ExternalWebSocketManager } from '../features/externalWebSocketManager.js';
 import PrologHoverProvider from '../features/hoverProvider.js';
 import PrologLinter from '../features/linting/prologLinter.js';
 import { MultiIDESupport } from '../features/multiIDESupport.js';
-import { PrologActivityProvider } from '../features/prologActivityProvider.js';
 import { PrologDashboardProvider } from '../features/prologDashboardProvider.js';
 import { PrologFormatter } from '../features/prologFormatter.js';
 import { PrologLSPClient } from '../features/prologLSPClient.js';
-import { PrologLSPExtension } from '../features/prologLSPExtension.js';
 import { PrologRefactor } from '../features/prologRefactor.js';
 import PrologTerminal from '../features/prologTerminal.js';
+import { QueryHistoryOrchestrator } from '../features/queryHistoryManager/QueryHistoryOrchestrator';
 import { PrologReferenceProvider } from '../features/referenceProvider.js';
+import { registerQueryHistoryWebview } from '../features/registerQueryHistoryWebview';
 import { SettingsWebviewProvider } from '../features/settingsWebviewProvider.js';
+import { PrologExplorerProvider } from '../features/tree/PrologExplorerProvider';
+import { PrologFilesProvider } from '../features/tree/PrologFilesProvider';
+import { QueryHistoryItem, QueryHistoryProvider } from '../features/tree/QueryHistoryProvider';
 import {
   PrologCompletionProvider,
   SnippetUpdater,
   SnippetUpdaterController,
 } from '../features/updateSnippets.js';
 import { PrologBackend } from '../prologBackend.js';
-import { Utils } from '../utils/utils.js';
+// Utils import removed; use modular utilities instead
+
 import { ChatHandler } from './chatHandler.js';
 import { ConfigurationManager } from './configurationManager.js';
 import { InstallationManager } from './installationManager.js';
-import { TelemetryCollector } from './telemetryCollector.js';
+
+import { ChatCommandRegistry } from './chatCommandRegistry';
+import { ChatInputCompletionProvider } from './chatInputCompletionProvider';
+import { TelemetryCollector } from './telemetryCollector';
 
 export class ExtensionManager {
   private static instance: ExtensionManager;
@@ -61,11 +73,133 @@ export class ExtensionManager {
   private installationManager: InstallationManager;
   private configurationManager: ConfigurationManager;
 
+  // Query History Orchestrator
+  private queryHistoryOrchestrator: QueryHistoryOrchestrator;
+
   private constructor() {
     this.telemetry = new TelemetryCollector();
     this.chatHandler = new ChatHandler(null, this.telemetry);
     this.installationManager = InstallationManager.getInstance();
     this.configurationManager = ConfigurationManager.getInstance();
+    this.queryHistoryOrchestrator = new QueryHistoryOrchestrator();
+  }
+
+  // Register filter commands for Query History and Prolog Files panels
+  private registerFilterCommands(
+    context: vscode.ExtensionContext,
+    queryHistoryProvider: QueryHistoryProvider,
+    prologFilesProvider: PrologFilesProvider
+  ) {
+    context.subscriptions.push(
+      vscode.commands.registerCommand('prolog.queryHistory.setFilter', async () => {
+        const value = await vscode.window.showInputBox({ prompt: 'Filter Query History' });
+        queryHistoryProvider.setFilterText(value || '');
+      }),
+      vscode.commands.registerCommand('prolog.prologFiles.setFilter', async () => {
+        const value = await vscode.window.showInputBox({ prompt: 'Filter Prolog Files' });
+        prologFilesProvider.setFilterText(value || '');
+      })
+    );
+    // Quick action toolbar commands
+    context.subscriptions.push(
+      vscode.commands.registerCommand('prolog.queryHistory.clearHistory', async () => {
+        // Clear the query history (provider should expose a clear method)
+        if (typeof queryHistoryProvider.clearHistory === 'function') {
+          await queryHistoryProvider.clearHistory();
+        } else {
+          vscode.window.showInformationMessage('Query history cleared (UI only).');
+          queryHistoryProvider.setFilterText(''); // fallback: clear filter
+        }
+      }),
+      vscode.commands.registerCommand('prolog.queryHistory.newQuery', async () => {
+        const value = await vscode.window.showInputBox({ prompt: 'Enter new Prolog query' });
+        if (value) {
+          // Optionally, add to history or trigger query logic
+          vscode.commands.executeCommand('prolog.query.goal', value);
+        }
+      }),
+      vscode.commands.registerCommand('prolog.prologFiles.addFile', async () => {
+        const uri = await vscode.window.showSaveDialog({ filters: { 'Prolog Files': ['pl', 'prolog', 'pro'] } });
+        if (uri) {
+          await vscode.workspace.fs.writeFile(uri, new Uint8Array());
+          vscode.window.showTextDocument(uri);
+        }
+      }),
+      vscode.commands.registerCommand('prolog.prologFiles.refresh', () => {
+        prologFilesProvider.refresh();
+      })
+    );
+  }
+
+  private registerTreeViewCommands(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+      vscode.commands.registerCommand('prolog.openFile', (item: vscode.TreeItem) => {
+        if (item.resourceUri) {
+          vscode.window.showTextDocument(item.resourceUri);
+        }
+      }),
+      vscode.commands.registerCommand('prolog.consultFile', (item: vscode.TreeItem) => {
+        if (item.resourceUri) {
+          vscode.window.showInformationMessage(`Consulting file: ${item.resourceUri.fsPath}`);
+          // TODO: Implement consult logic
+        }
+      }),
+      vscode.commands.registerCommand('prolog.revealFile', (item: vscode.TreeItem) => {
+        if (item.resourceUri) {
+          vscode.commands.executeCommand('revealFileInOS', item.resourceUri);
+        }
+      }),
+      vscode.commands.registerCommand('prolog.deleteFile', async (item: vscode.TreeItem) => {
+        if (item.resourceUri) {
+          const confirm = await vscode.window.showWarningMessage(`Delete file ${item.resourceUri.fsPath}?`, { modal: true }, 'Delete');
+          if (confirm === 'Delete') {
+            await vscode.workspace.fs.delete(item.resourceUri);
+            vscode.window.showInformationMessage('File deleted.');
+          }
+        }
+      }),
+      vscode.commands.registerCommand('prolog.renameFile', async (item: vscode.TreeItem) => {
+        if (item.resourceUri) {
+          const newName = await vscode.window.showInputBox({ prompt: 'New file name', value: item.resourceUri.fsPath });
+          if (newName && newName !== item.resourceUri.fsPath) {
+            const newUri = vscode.Uri.file(newName);
+            await vscode.workspace.fs.rename(item.resourceUri, newUri);
+            vscode.window.showInformationMessage('File renamed.');
+          }
+        }
+      }),
+      vscode.commands.registerCommand('prolog.rerunQuery', (item: any) => {
+        if (item.query) {
+          vscode.window.showInformationMessage(`Re-running query: ${item.query}`);
+          // TODO: Implement rerun logic
+        }
+      }),
+      vscode.commands.registerCommand('prolog.copyQuery', (item: any) => {
+        if (item.query) {
+          vscode.env.clipboard.writeText(item.query);
+          vscode.window.showInformationMessage('Query copied to clipboard.');
+        }
+      }),
+      vscode.commands.registerCommand('prolog.viewQueryResult', (item: any) => {
+        vscode.window.showInformationMessage('View Query Result: Not yet implemented.');
+      }),
+      vscode.commands.registerCommand('prolog.deleteQueryHistoryEntry', (item: any) => {
+        vscode.window.showInformationMessage('Delete Query History Entry: Not yet implemented.');
+      }),
+      vscode.commands.registerCommand('prolog.newPrologFile', async () => {
+        const uri = await vscode.window.showSaveDialog({ filters: { 'Prolog Files': ['pl', 'prolog', 'pro'] } });
+        if (uri) {
+          await vscode.workspace.fs.writeFile(uri, new Uint8Array());
+          vscode.window.showTextDocument(uri);
+        }
+      }),
+      vscode.commands.registerCommand('prolog.refreshExplorer', () => {
+        vscode.commands.executeCommand('prologExplorer.refresh');
+      }),
+      vscode.commands.registerCommand('prolog.collapseAllExplorer', () => {
+        vscode.commands.executeCommand('prologExplorer.collapseAll');
+      })
+    );
   }
 
   static getInstance(): ExtensionManager {
@@ -83,46 +217,13 @@ export class ExtensionManager {
     await this.installationManager.checkAndHandleInstallation(context);
 
     // Initialize workspace for dialect
-    await this.configurationManager.initForDialect(context);
 
-    // Initialize core extension features
-    await this.initializeCoreFeatures(context);
-
-    // Initialize backend and services
-    await this.initializeBackendServices(context);
-
-    // Register providers and UI components
-    this.registerProvidersAndUI(context);
-
-    // Start backend automatically (with error handling)
-    this.startBackend();
-  }
-
-  // Initialize core extension features
-  private async initializeCoreFeatures(context: ExtensionContext): Promise<void> {
-    // Filter the files to process
+    // Define PROLOG_MODE before use
     const PROLOG_MODE: DocumentFilter = { language: 'prolog', scheme: 'file' };
-
-    // Initialize utils class and load snippets file with its predicates
-    Utils.init(context);
-
-    // Automatic indent on change
-    loadEditHelpers(context.subscriptions);
-
-    // Register extension commands
-    this.registerExtensionCommands(context);
-
-    // Register installation commands
-    this.installationManager.registerInstallationCommands(context);
-
-    // Initialize linter if enabled
-    this.initializeLinter(context, PROLOG_MODE);
-
-    // Register language providers
-    this.registerLanguageProviders(context, PROLOG_MODE);
-
-    // Initialize terminal and snippets
     this.initializeTerminalAndSnippets(context, PROLOG_MODE);
+
+    // Register all tree and webview providers (UI)
+    this.registerProvidersAndUI(context);
   }
 
   // Register extension-specific commands
@@ -194,7 +295,7 @@ export class ExtensionManager {
   // Initialize linter if enabled
   private initializeLinter(context: ExtensionContext, PROLOG_MODE: DocumentFilter): void {
     let linter: PrologLinter | undefined;
-    if (Utils.LINTERTRIGGER !== 'never') {
+    if (this.configurationManager.getConfiguration().linterTrigger !== 'never') {
       linter = new PrologLinter(context);
       linter.activate();
 
@@ -351,12 +452,8 @@ export class ExtensionManager {
 
   // Initialize LSP services
   private async initializeLSPServices(context: ExtensionContext): Promise<void> {
-    if (!this.prologBackend) return;
 
-    // Initialize LSP Extension (legacy support)
-    const lspExtension = new PrologLSPExtension(context, this.prologBackend);
-    lspExtension.registerFeatures();
-    context.subscriptions.push(lspExtension);
+    if (!this.prologBackend) return;
 
     // Initialize full LSP Client
     this.prologLSPClient = new PrologLSPClient(context);
@@ -397,28 +494,57 @@ export class ExtensionManager {
     if (!this.prologBackend) return;
 
     this.prologBackend.on('ready', () => {
-      console.log('[Extension] Prolog backend ready');
-      window.showInformationMessage('Prolog backend started successfully');
+      try {
+        console.log('[Extension] Prolog backend ready');
+        window.showInformationMessage('Prolog backend started successfully');
+      } catch (err) {
+        console.error('[Extension] Event handler error (ready):', err);
+      }
     });
 
     this.prologBackend.on('stopped', () => {
-      console.log('[Extension] Prolog backend stopped');
-      window.showWarningMessage('Prolog backend stopped');
+      try {
+        console.log('[Extension] Prolog backend stopped');
+        window.showWarningMessage('Prolog backend stopped');
+      } catch (err) {
+        console.error('[Extension] Event handler error (stopped):', err);
+      }
     });
 
     this.prologBackend.on('restarted', () => {
-      console.log('[Extension] Prolog backend restarted');
-      window.showInformationMessage('Prolog backend restarted successfully');
+      try {
+        console.log('[Extension] Prolog backend restarted');
+        window.showInformationMessage('Prolog backend restarted successfully');
+      } catch (err) {
+        console.error('[Extension] Event handler error (restarted):', err);
+      }
     });
 
     this.prologBackend.on('error', error => {
-      console.error('[Extension] Prolog backend error:', error);
-      window.showErrorMessage(`Prolog backend error: ${error}`);
+      try {
+        console.error('[Extension] Prolog backend error:', error);
+        window.showErrorMessage(`Prolog backend error: ${error && error.stack ? error.stack : error}`);
+      } catch (err) {
+        console.error('[Extension] Event handler error (error):', err);
+      }
+    });
+
+    this.prologBackend.on('backendStartupFailed', ({ error, troubleshooting }) => {
+      try {
+        console.error('[Extension] Prolog backend startup failed:', error);
+        if (Array.isArray(troubleshooting)) {
+          troubleshooting.forEach(msg => console.error('[Troubleshooting]', msg));
+        }
+        window.showErrorMessage(`Prolog backend startup failed: ${error}`);
+      } catch (err) {
+        console.error('[Extension] Event handler error (backendStartupFailed):', err);
+      }
     });
   }
 
   // Register providers and UI components
   private registerProvidersAndUI(context: ExtensionContext): void {
+
     // Register chat participant with enhanced followup provider
     const chatParticipant = chat.createChatParticipant('prolog',
       (request: ChatRequest, context: any, stream: ChatResponseStream, token: CancellationToken) =>
@@ -432,33 +558,67 @@ export class ExtensionManager {
     };
     context.subscriptions.push(chatParticipant);
 
+    // Register chat input inline completion provider
+    const chatCommandRegistry = new ChatCommandRegistry();
+    const chatInputCompletionProvider = new ChatInputCompletionProvider(chatCommandRegistry);
+    // Use a document selector for the chat input. Adjust language if needed.
+    const chatInputSelector = { language: 'prolog-chat', scheme: 'untitled' };
+    context.subscriptions.push(
+      languages.registerInlineCompletionItemProvider(chatInputSelector, chatInputCompletionProvider)
+    );
+
     // Register settings webview provider
     const settingsProvider = new SettingsWebviewProvider(context.extensionUri);
     context.subscriptions.push(
       window.registerWebviewViewProvider(SettingsWebviewProvider.viewType, settingsProvider)
     );
 
-    // Register activity bar providers
-    const prologActivityProvider = new PrologActivityProvider(context);
+
+
+    // Register Query History Webview
+    registerQueryHistoryWebview(context, this.queryHistoryOrchestrator);
+
+
+    // Register new, specialized tree providers for each panel, respecting user customization
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    const prologExplorerProvider = new PrologExplorerProvider(workspaceRoot);
+    const getHistory = async () => {
+      const history = await this.queryHistoryOrchestrator.getHistory();
+      return (history || []).map((entry: any) =>
+        new QueryHistoryItem(
+          entry.label || entry.query || 'Query',
+          vscode.TreeItemCollapsibleState.None,
+          entry.status === 'success' ? 'success' : 'error',
+          entry.query || ''
+        )
+      );
+    };
+    const queryHistoryProvider = new QueryHistoryProvider(getHistory);
+    const prologFilesProvider = new PrologFilesProvider(workspaceRoot);
     const prologDashboardProvider = new PrologDashboardProvider(context.extensionUri);
 
+    // Register tree data providers for built-in views
     context.subscriptions.push(
-      window.registerTreeDataProvider('prologActivity', prologActivityProvider),
-      window.registerTreeDataProvider('prologQueries', prologActivityProvider),
-      window.registerTreeDataProvider('prologFiles', prologActivityProvider),
-      window.registerWebviewViewProvider(PrologDashboardProvider.viewType, prologDashboardProvider)
+      vscode.window.registerTreeDataProvider('prologExplorer', prologExplorerProvider),
+      vscode.window.registerTreeDataProvider('queryHistory', queryHistoryProvider),
+      vscode.window.registerTreeDataProvider('prologFiles', prologFilesProvider)
     );
 
-    // Refresh activity bar when installation status changes
-    const refreshActivityBar = () => {
-      prologActivityProvider.refresh();
-    };
+    // Register filter commands
+    this.registerFilterCommands(context, queryHistoryProvider, prologFilesProvider);
 
-    // Listen for configuration changes to refresh activity bar
+    // (Badge update logic removed: not needed with registerTreeDataProvider)
+
+    // Register context menu command handlers
+    this.registerTreeViewCommands(context);
+
+    // Listen for configuration changes to refresh all panels
     context.subscriptions.push(
-      workspace.onDidChangeConfiguration(event => {
+      vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('prolog')) {
-          refreshActivityBar();
+          prologExplorerProvider.refresh();
+          queryHistoryProvider.refresh();
+          prologFilesProvider.refresh();
         }
       })
     );

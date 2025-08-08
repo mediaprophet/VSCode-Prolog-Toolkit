@@ -88,7 +88,7 @@ export class MultiIDESupport {
       languageserver: {
         prolog: {
           command: 'node',
-          args: ['./out/pub/features/prologLSPServer.js', '--stdio'],
+          args: ['./out/pub/features/lsp/server.js', '--stdio'],
           filetypes: ['prolog'],
           rootPatterns: ['.git', '*.pl', '*.pro', '*.prolog'],
           settings: {
@@ -230,6 +230,7 @@ augroup END
   (lsp-register-client
    (make-lsp-client
     :new-connection (lsp-stdio-connection '("node" "./out/pub/features/prologLSPServer.js" "--stdio"))
+    :new-connection (lsp-stdio-connection '("node" "./out/pub/features/lsp/server.js" "--stdio"))
     :major-modes '(prolog-mode)
     :server-id 'prolog-lsp
     :root-uri (lsp-workspace-root)
@@ -271,7 +272,7 @@ augroup END
         clients: {
           'prolog-lsp': {
             enabled: true,
-            command: ['node', './out/pub/features/prologLSPServer.js', '--stdio'],
+            command: ['node', './out/pub/features/lsp/server.js', '--stdio'],
             selector: 'source.prolog',
             settings: {
               prolog: {
@@ -395,6 +396,7 @@ public class PrologLanguageServerFactory implements LanguageServerFactory {
             "prolog-lsp",
             "Prolog Language Server",
             Arrays.asList("node", "./out/pub/features/prologLSPServer.js", "--stdio"),
+              Arrays.asList("node", "./out/pub/features/lsp/server.js", "--stdio"),
             Arrays.asList("pl", "pro", "prolog", "plt", "ecl")
         );
     }
@@ -415,6 +417,7 @@ public class PrologLanguageServerFactory implements LanguageServerFactory {
          <commandline>
             <arg>node</arg>
             <arg>./out/pub/features/prologLSPServer.js</arg>
+              <arg>./out/pub/features/lsp/server.js</arg>
             <arg>--stdio</arg>
          </commandline>
       </server>
@@ -477,6 +480,7 @@ export class PrologLanguageClientContribution implements LanguageClientContribut
     start(languageClient: ILanguageClient): void {
         const command = 'node';
         const args = ['./out/pub/features/prologLSPServer.js', '--stdio'];
+    const args = ['./out/pub/features/lsp/server.js', '--stdio'];
         
         languageClient.start({
             command,
@@ -766,7 +770,7 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
           name: 'Launch Prolog LSP Server',
           type: 'node',
           request: 'launch',
-          program: '${workspaceFolder}/out/pub/features/prologLSPServer.js',
+          program: '${workspaceFolder}/out/pub/features/lsp/server.js',
           args: ['--stdio'],
           console: 'integratedTerminal',
           internalConsoleOptions: 'neverOpen',
@@ -778,7 +782,8 @@ This multi-IDE support is part of the VSCode Prolog Toolkit and follows the same
           name: 'Debug Prolog LSP Server',
           type: 'node',
           request: 'launch',
-          program: '${workspaceFolder}/out/pub/features/prologLSPServer.js',
+          // program: '${workspaceFolder}/out/pub/features/prologLSPServer.js',
+          program: '${workspaceFolder}/out/pub/features/lsp/server.js',
           args: ['--stdio'],
           console: 'integratedTerminal',
           internalConsoleOptions: 'neverOpen',

@@ -1,3 +1,6 @@
+import * as cp from 'child_process';
+import jsesc from 'jsesc';
+import * as path from 'path';
 import {
   CancellationToken,
   DefinitionProvider,
@@ -7,10 +10,7 @@ import {
   Uri,
   workspace,
 } from 'vscode';
-import * as cp from 'child_process';
-import { Utils } from '../utils/utils';
-import * as path from 'path';
-import jsesc from 'jsesc';
+import { PrologExecUtils, SnippetUtils } from '../utils/utils';
 export class PrologDefinitionProvider implements DefinitionProvider {
   // Implement the provideDefinition method required by DefinitionProvider interface
   public provideDefinition(
@@ -19,7 +19,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
     _token: CancellationToken
   ): Location | undefined | Promise<Location | undefined> {
     let location: Location | undefined = undefined;
-    const pred = Utils.getPredicateUnderCursor(doc, position); // Get the predicate under the cursor using utility function
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, position); // Get the predicate under the cursor using utility function
     // Return early if no predicate is found
     if (!pred) {
       return undefined;
@@ -33,7 +33,7 @@ export class PrologDefinitionProvider implements DefinitionProvider {
       runOptions: cp.SpawnSyncOptions;
     const fileLineRe = /File:(.+);Line:(\d+)/;
     // Switch based on the Prolog dialect (e.g., "swi" or "ecl")
-    switch (Utils.DIALECT) {
+    switch (PrologExecUtils.DIALECT) {
       case 'swi':
         // Construct a predicate with void arguments (e.g., pred_void = pred.functor(_,_,_,...,_) )
         var pred_void = pred.functor + '(';
@@ -54,10 +54,10 @@ export class PrologDefinitionProvider implements DefinitionProvider {
         // Check if the document is dirty (unsaved) and save it if needed
         if (doc.isDirty) {
           doc.save().then(_ => {
-            result = Utils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
+            result = PrologExecUtils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
           });
         } else {
-          result = Utils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
+          result = PrologExecUtils.execPrologSync(args, prologCode, 'source_location', '', fileLineRe);
         }
         break;
 
@@ -83,20 +83,20 @@ export class PrologDefinitionProvider implements DefinitionProvider {
           input: prologCode,
         };
         // Check if the document is dirty (unsaved) and save it if needed
-        if (!Utils.RUNTIMEPATH) {
+        if (!PrologExecUtils.RUNTIMEPATH) {
           return undefined;
         }
 
         if (doc.isDirty) {
           doc.save().then(_ => {
-            const syncPro = cp.spawnSync(Utils.RUNTIMEPATH!, args, runOptions);
+            const syncPro = cp.spawnSync(PrologExecUtils.RUNTIMEPATH!, args, runOptions);
             if (syncPro.status === 0) {
               const matchResult = syncPro.stdout.toString().match(fileLineRe);
               result = matchResult ? Array.from(matchResult) : [];
             }
           });
         } else {
-          const syncPro = cp.spawnSync(Utils.RUNTIMEPATH, args, runOptions);
+          const syncPro = cp.spawnSync(PrologExecUtils.RUNTIMEPATH, args, runOptions);
           if (syncPro.status === 0) {
             const matchResult = syncPro.stdout.toString().match(fileLineRe);
             result = matchResult ? Array.from(matchResult) : [];

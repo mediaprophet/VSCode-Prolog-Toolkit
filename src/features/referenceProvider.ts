@@ -1,15 +1,15 @@
-import { Utils } from '../utils/utils';
+import * as fs from 'fs';
 import {
-  ReferenceProvider,
-  TextDocument,
-  Position,
-  ReferenceContext,
   CancellationToken,
   Location,
-  workspace,
+  Position,
+  ReferenceContext,
+  ReferenceProvider,
+  TextDocument,
   Uri,
+  workspace,
 } from 'vscode';
-import * as fs from 'fs';
+import { PositionUtils, SnippetUtils } from '../utils/utils';
 export class PrologReferenceProvider implements ReferenceProvider {
   constructor() {
     // No initialization required for reference provider
@@ -23,7 +23,7 @@ export class PrologReferenceProvider implements ReferenceProvider {
   ): Location[] {
     const docContent = doc.getText(); // Get the content of the entire document as a string
     // Define a regular expression for finding occurrences of the predicate in the document
-    const pred = Utils.getPredicateUnderCursor(doc, position);
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, position);
     if (!pred) {
       return [];
     }
@@ -44,37 +44,42 @@ export class PrologReferenceProvider implements ReferenceProvider {
       .filter(loc => loc !== null); // Create an array to store Location objects
     // Iterate through "use_module" declarations
     for (let i = 0; i < arrayModule.length; i++) {
-      if (arrayModule[i]?.[1]) {
-        var modpath = arrayModule[i][1].replace(new RegExp("'", 'gm'), '');
-        modpath = modpath.replace(new RegExp('"', 'gm'), '');
-        var text = '';
-        try {
-          if (workspace.workspaceFolders?.[0]) {
-            text = fs.readFileSync(
-              workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog,
-              'utf8'
-            ); // Read the content of the referenced module file
-          }
-        } catch (error) {
-          console.error('Error reading file:', error);
-        }
-        const array = [...text.matchAll(regexp)]; // Extract occurrences of the predicate in the referenced module file
-        if (workspace.workspaceFolders?.[0]) {
-          const newLocations = array
-            .map(elem =>
-              elem.index !== undefined
-                ? new Location(
-                    Uri.file(
-                      workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog
-                    ),
-                    Utils.findLineColForByte(text, elem.index)
-                  )
-                : null
-            )
-            .filter(loc => loc !== null);
-          locations = locations.concat(newLocations); // Append the new occurrences to the locations array
-        }
+      const modpathRaw = arrayModule?.[i]?.[1] ?? '';
+      if (!modpathRaw) {
+        continue;
       }
+      let modpath = modpathRaw.replace(new RegExp("'", 'gm'), '');
+      if (!modpath) {
+        continue;
+      }
+      modpath = modpath.replace(new RegExp('"', 'gm'), '');
+      let text = '';
+      try {
+        const wsRoot = workspace.workspaceFolders?.[0]?.uri?.fsPath;
+        if (!wsRoot) {
+          continue;
+        }
+        text = fs.readFileSync(wsRoot + '/' + modpath + '.' + prolog, 'utf8');
+      } catch (error) {
+        console.error('Error reading file:', error);
+        continue;
+      }
+      const array = [...text.matchAll(regexp)]; // Extract occurrences of the predicate in the referenced module file
+      const wsRoot = workspace.workspaceFolders?.[0]?.uri?.fsPath;
+      if (!wsRoot) {
+        continue;
+      }
+      const newLocations = array
+        .map(elem =>
+          elem.index !== undefined
+            ? new Location(
+              Uri.file(wsRoot + '/' + modpath + '.' + prolog),
+              PositionUtils.findLineColForByte(text, elem.index)
+            )
+            : null
+        )
+        .filter(loc => loc !== null);
+      locations = locations.concat(newLocations); // Append the new occurrences to the locations array
     }
     // Return the array of Location objects
     return locations;

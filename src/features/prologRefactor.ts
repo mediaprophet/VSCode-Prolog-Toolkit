@@ -1,19 +1,19 @@
-import {
-  Location,
-  TextDocument,
-  Position,
-  workspace,
-  Uri,
-  Range,
-  OutputChannel,
-  WorkspaceEdit,
-  window,
-} from 'vscode';
-import { IPredicate, Utils } from '../utils/utils';
-import { spawn } from 'process-promises';
 import fg from 'fast-glob';
 import * as fs from 'fs';
 import jsesc from 'jsesc';
+import { spawn } from 'process-promises';
+import {
+  Location,
+  OutputChannel,
+  Position,
+  Range,
+  TextDocument,
+  Uri,
+  WorkspaceEdit,
+  window,
+  workspace,
+} from 'vscode';
+import { IPredicate, PositionUtils, PrologExecUtils, SnippetUtils } from '../utils/utils';
 // import { resolve } from 'path';
 import * as path from 'path';
 
@@ -31,7 +31,7 @@ export class PrologRefactor {
 
   // pick predicate at pos in doc
   constructor() {
-    this._executable = Utils.RUNTIMEPATH || '';
+    this._executable = PrologExecUtils.RUNTIMEPATH || '';
     this._outputChannel = window.createOutputChannel('PrologFormatter');
     this._locations = [];
     this._clauseRefs = {};
@@ -46,7 +46,10 @@ export class PrologRefactor {
     const doc: TextDocument = window.activeTextEditor.document;
     const pos: Position = window.activeTextEditor.selection.active;
 
-    const pred: IPredicate = Utils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    if (!pred) {
+      return;
+    }
     // Find all references to the predicate
     this.findFilesAndRefs(pred, true, doc).then(refLocs => {
       // Check if the predicate is a built-in predicate
@@ -132,7 +135,10 @@ export class PrologRefactor {
     const doc: TextDocument = window.activeTextEditor.document;
     const pos: Position = window.activeTextEditor.selection.active;
 
-    const pred: IPredicate = Utils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, pos); // Get the predicate information under the cursor using utility function
+    if (!pred) {
+      return Promise.resolve([]);
+    }
     return this.findFilesAndRefs(pred, false, doc); // Call the findFilesAndRefs method to find references and return the result
   }
 
@@ -162,7 +168,13 @@ export class PrologRefactor {
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
       return this._locations;
     }
-    const root = workspace.workspaceFolders[0].uri.fsPath;
+    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+      return this._locations;
+    }
+    const root = workspace.workspaceFolders[0]?.uri?.fsPath;
+    if (!root) {
+      return this._locations;
+    }
     const patterns = ['**/*.pl', '**/*.ecl'];
     const filePaths = await fg(patterns, { cwd: root, absolute: true });
     for (const file of filePaths) {
@@ -186,7 +198,7 @@ export class PrologRefactor {
     let input: string,
       args: string[] = [];
     // Construct the appropriate input and arguments based on the Prolog dialect
-    switch (Utils.DIALECT) {
+    switch (PrologExecUtils.DIALECT) {
       case 'swi': {
         const pfile = jsesc(path.resolve(`${__dirname}/features/findallrefs_swi`));
         input = `
@@ -213,7 +225,14 @@ export class PrologRefactor {
       if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         return;
       }
-      await spawn(this._executable, args, { cwd: workspace.workspaceFolders[0].uri.fsPath })
+      if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+        return;
+      }
+      const cwd = workspace.workspaceFolders[0]?.uri?.fsPath;
+      if (!cwd) {
+        return;
+      }
+      await spawn(this._executable, args, { cwd })
         .on('process', (proc: any) => {
           if (proc.pid) {
             // Write the input to the stdin of the spawned process
@@ -223,7 +242,7 @@ export class PrologRefactor {
         })
         .on('stdout', (output: any) => {
           // Parse the output based on the Prolog dialect
-          switch (Utils.DIALECT) {
+          switch (PrologExecUtils.DIALECT) {
             case 'swi':
               this.findRefsFromOutputSwi(pred, output, doc);
               break;
@@ -252,9 +271,9 @@ export class PrologRefactor {
       } else {
         message =
           error &&
-          typeof error === 'object' &&
-          'message' in error &&
-          typeof (error as any).message === 'string'
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as any).message === 'string'
             ? (error as any).message
             : `Failed to run swipl using path: ${this._executable}. Reason is unknown.`;
       }
@@ -304,15 +323,25 @@ export class PrologRefactor {
       if (!arrayModule[i]?.[1]) {
         continue;
       }
-      var modpath = arrayModule[i][1].replace(new RegExp("'", 'gm'), '');
+      const modpathRaw = arrayModule?.[i]?.[1] ?? '';
+      if (!modpathRaw) {
+        continue;
+      }
+      let modpath = modpathRaw.replace(new RegExp("'", 'gm'), '');
+      if (!modpath) {
+        continue;
+      }
       modpath = modpath.replace(new RegExp('"', 'gm'), '');
       var text = '';
       try {
         if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
           continue;
         }
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+          continue;
+        }
         text = fs.readFileSync(
-          workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog,
+          workspace.workspaceFolders[0]?.uri?.fsPath + '/' + modpath + '.' + prolog,
           'utf8'
         ); // Read the content of the referenced module file
       } catch (error: unknown) {
@@ -324,10 +353,10 @@ export class PrologRefactor {
           array.map(
             elem =>
               new Location(
-                Uri.file(workspace.workspaceFolders[0].uri.fsPath + '/' + modpath + '.' + prolog),
+                Uri.file((workspace.workspaceFolders?.[0]?.uri?.fsPath || '') + '/' + modpath + '.' + prolog),
                 new Range(
-                  Utils.findLineColForByte(text, elem.index),
-                  Utils.findLineColForByte(text, elem.index + elem[0].length)
+                  PositionUtils.findLineColForByte(text, elem.index),
+                  PositionUtils.findLineColForByte(text, elem.index + elem[0].length)
                 )
               )
           )
@@ -400,8 +429,14 @@ export class PrologRefactor {
     if (!match || match[1] === '') {
       return;
     }
-    const predLen = pi.split(':')[1].split('/')[0].length; // Extract the length of the predicate name
-    const locs = match[1].split(','); // Split the references string into an array of location strings
+    if (!match || !pi) {
+      return;
+    }
+    const predLen = pi.split(':')[1]?.split('/')[0]?.length || 0; // Extract the length of the predicate name
+    const locs = match[1]?.split(',') || []; // Split the references string into an array of location strings
+    if (locs.length === 0) {
+      return;
+    }
     workspace.openTextDocument(Uri.file(file)).then(doc => {
       // Open the Prolog document to map character positions to positions in the file
       // Iterate through each location string and create Location objects

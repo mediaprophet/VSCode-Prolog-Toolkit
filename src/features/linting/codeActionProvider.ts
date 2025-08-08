@@ -5,7 +5,7 @@ import {
   type Range,
   type TextDocument,
 } from 'vscode';
-import { Utils } from '../../utils/utils';
+import { SnippetUtils } from '../../utils/utils';
 import { type ICodeActionProvider } from './interfaces';
 
 /**
@@ -41,7 +41,7 @@ export class CodeActionProvider implements ICodeActionProvider {
         let pred = match[1];
 
         // Get modules associated with the predicate using utility function
-        const modules = Utils.getPredModules(pred);
+        const modules = SnippetUtils.getPredModules(pred);
 
         // Check if modules are found for the predicate
         if (modules.length > 0) {
@@ -112,7 +112,7 @@ export class CodeActionProvider implements ICodeActionProvider {
    * Get available modules for a predicate
    */
   public getAvailableModules(predicate: string): string[] {
-    return Utils.getPredModules(predicate);
+    return SnippetUtils.getPredModules(predicate);
   }
 
   /**

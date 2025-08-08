@@ -5,7 +5,7 @@
         "enabled": true,
         "command": [
           "node",
-          "./out/pub/features/prologLSPServer.js",
+          "./out/pub/features/lsp/server.js",
           "--stdio"
         ],
         "selector": "source.prolog",

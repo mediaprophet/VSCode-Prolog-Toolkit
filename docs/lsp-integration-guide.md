@@ -31,7 +31,7 @@ The Prolog LSP implementation provides a full-featured language server that supp
    - Provides setup scripts and documentation
    - Detects available IDEs on the system
 
-4. **PrologLSPExtension** (`src/features/prologLSPExtension.ts`)
+4. ~~PrologLSPExtension (`src/features/prologLSPExtension.ts`)~~ (removed; logic migrated to modular LSP server/client)
    - Legacy LSP-style extension (maintained for compatibility)
    - Custom commands and code actions
    - N3 diagnostics and validation
@@ -250,7 +250,7 @@ local configs = require('lspconfig.configs')
 if not configs.prolog_lsp then
   configs.prolog_lsp = {
     default_config = {
-      cmd = {'node', './out/pub/features/prologLSPServer.js', '--stdio'},
+  cmd = {'node', './out/pub/features/lsp/server.js', '--stdio'},
       filetypes = {'prolog'},
       root_dir = lspconfig.util.root_pattern('.git', '*.pl'),
       settings = {
@@ -274,7 +274,7 @@ if executable('node')
     autocmd!
     autocmd User lsp_setup call lsp#register_server({
       \ 'name': 'prolog-lsp',
-      \ 'cmd': {server_info->['node', './out/pub/features/prologLSPServer.js', '--stdio']},
+  \ 'cmd': {server_info->['node', './out/pub/features/lsp/server.js', '--stdio']},
       \ 'allowlist': ['prolog'],
       \ })
   augroup END
@@ -289,7 +289,7 @@ endif
   :config
   (lsp-register-client
    (make-lsp-client
-    :new-connection (lsp-stdio-connection '("node" "./out/pub/features/prologLSPServer.js" "--stdio"))
+  :new-connection (lsp-stdio-connection '("node" "./out/pub/features/lsp/server.js" "--stdio"))
     :major-modes '(prolog-mode)
     :server-id 'prolog-lsp)))
 ```
@@ -301,7 +301,7 @@ endif
   "clients": {
     "prolog-lsp": {
       "enabled": true,
-      "command": ["node", "./out/pub/features/prologLSPServer.js", "--stdio"],
+  "command": ["node", "./out/pub/features/lsp/server.js", "--stdio"],
       "selector": "source.prolog"
     }
   }
@@ -360,7 +360,7 @@ The extension automatically generates IDE configurations:
 {
   "prolog.lsp": {
     "enabled": true,
-    "serverPath": "./out/pub/features/prologLSPServer.js",
+  "serverPath": "./out/pub/features/lsp/server.js",
     "trace": {
       "server": "verbose"
     },
@@ -412,7 +412,7 @@ npm run test:lsp:performance
 #### Server Debugging
 ```bash
 # Start server in debug mode
-node --inspect=9229 ./out/pub/features/prologLSPServer.js --stdio
+node --inspect=9229 ./out/pub/features/lsp/server.js --stdio
 
 # Attach debugger in VS Code
 # Use launch configuration "Debug Prolog LSP Server"
@@ -431,7 +431,7 @@ node --inspect=9229 ./out/pub/features/prologLSPServer.js --stdio
 ```bash
 # Enable LSP protocol tracing
 export LSP_TRACE=1
-node ./out/pub/features/prologLSPServer.js --stdio
+node ./out/pub/features/lsp/server.js --stdio
 ```
 
 ## Performance
@@ -474,10 +474,10 @@ node ./out/pub/features/prologLSPServer.js --stdio
 node --version  # Should be v14+
 
 # Check server file exists
-ls -la ./out/pub/features/prologLSPServer.js
+ls -la ./out/pub/features/lsp/server.js
 
 # Check permissions
-chmod +x ./out/pub/features/prologLSPServer.js
+chmod +x ./out/pub/features/lsp/server.js
 
 # Check logs
 tail -f ~/.vscode/logs/*/exthost*/output.log
@@ -524,7 +524,7 @@ node -e "console.log(require('./package.json').contributes.configuration)"
 
 # Test server directly
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
-  node ./out/pub/features/prologLSPServer.js --stdio
+  node ./out/pub/features/lsp/server.js --stdio
 ```
 
 ## Contributing

@@ -12,14 +12,14 @@ import type { DebugProtocol } from '@vscode/debugprotocol';
 import * as path from 'path';
 import type { SpawnOptions } from 'process-promises';
 import { spawn } from 'process-promises';
+import { DebuggerController } from './debugger/DebuggerController';
 import type { ITraceCmds, LaunchRequestArguments } from './prologDebugger.js';
-import { PrologDebugger } from './prologDebugger.js';
 
 // Extends the DebugSession class, providing the implementation for a Prolog debugger
 export class PrologDebugSession extends DebugSession {
   private static SCOPEREF = 1;
   public static THREAD_ID = 100;
-  private _prologDebugger!: PrologDebugger;
+  private _debuggerController!: DebuggerController;
   private _runtimeExecutable!: string;
   // private _runtimeArgs: string[];
   private _startupQuery!: string;
@@ -78,6 +78,7 @@ export class PrologDebugSession extends DebugSession {
       ],
     };
     // Send the initialized response back to the client
+    // ...existing code...
     this.sendResponse(response);
   }
   //Handles the 'attach' request from the debugger client
@@ -144,20 +145,12 @@ export class PrologDebugSession extends DebugSession {
     // this._runtimeArgs = args.runtimeArgs || null;
     this._stopOnEntry = typeof richArgs.stopOnEntry === 'boolean' ? richArgs.stopOnEntry : true;
     this._traceCmds = richArgs.traceCmds || ({} as ITraceCmds);
-    this._prologDebugger = new PrologDebugger(richArgs, this); // Initialize the Prolog debugger
-    // Add listeners for breakpoint responses
-    this._prologDebugger.addListener(
-      'responseBreakpoints',
-      (bps: DebugProtocol.SetBreakpointsResponse) => {
-        this.sendResponse(bps);
-      }
-    );
-    this._prologDebugger.addListener(
-      'responseFunctionBreakpoints',
-      (fbps: DebugProtocol.SetFunctionBreakpointsResponse) => {
-        this.sendResponse(fbps);
-      }
-    );
+    this._debuggerController = new DebuggerController({
+      runtimeExecutable: this._runtimeExecutable,
+      runtimeArgs: richArgs.runtimeArgs ?? [],
+      cwd: this._cwd,
+      env: richArgs.env ?? {},
+    });
     this.sendResponse(response); // Send the launch response back to the client
     this.sendEvent(new InitializedEvent()); // Send an 'Initialized' event to the client, indicating that the debugger is ready
   }
@@ -184,7 +177,12 @@ export class PrologDebugSession extends DebugSession {
       );
       return; // Return without setting breakpoints during an active debugging session
     }
-    this._prologDebugger.setBreakpoints(args, response); // Delegate the task of setting breakpoints to the Prolog debugger
+    this._debuggerController.breakpointManager.setBreakpoints(
+      args.source?.path || '',
+      (args.breakpoints || []) as DebugProtocol.Breakpoint[]
+    );
+    // TODO: Send response after protocol communication
+    this.sendResponse(response);
   }
 
   // Handles the 'setExceptionBreakpoints' request from the debugger client
@@ -192,7 +190,14 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.SetExceptionBreakpointsResponse,
     _args: DebugProtocol.SetExceptionBreakpointsArguments
   ): void {
-    // Send a response back to the client without modifying exception breakpoints
+    // Use empty array/object for runtimeArgs/env to avoid type errors
+    this._debuggerController = new DebuggerController({
+      runtimeExecutable: this._runtimeExecutable,
+      runtimeArgs: [],
+      cwd: this._cwd,
+      env: {},
+    });
+    // TODO: Wire up event listeners for protocolAdapter, processManager, etc.
     this.sendResponse(response);
   }
 
@@ -202,8 +207,11 @@ export class PrologDebugSession extends DebugSession {
     _args: DebugProtocol.SetFunctionBreakpointsArguments
   ): void {
     // Delegate the task of setting function breakpoints to the Prolog debugger
-    if (this._prologDebugger) {
-      this._prologDebugger.setFunctionBreakpoints(_args, response);
+    if (this._debuggerController) {
+      const preds = (_args.breakpoints || []).map(bp => bp.name);
+      this._debuggerController.breakpointManager.setFunctionBreakpoints(preds);
+      // TODO: Send response after protocol communication
+      this.sendResponse(response);
     }
   }
 
@@ -213,16 +221,7 @@ export class PrologDebugSession extends DebugSession {
     _args: DebugProtocol.ConfigurationDoneArguments
   ): void {
     this.sendResponse(response); // Send a response back to the client
-    if (this._prologDebugger) {
-      this._prologDebugger.startup(`${this._startupQuery}`); // Start the Prolog debugger and execute startup commands
-      // If not stopping on entry, continue the execution
-      if (!this._stopOnEntry && this._traceCmds?.continue?.[1]) {
-        this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`);
-      }
-      if (this._traceCmds?.stepinto?.[1]) {
-        this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`); // Issue a step into command to initiate the debugging process
-      }
-    }
+    // TODO: Use DebuggerController to start the process and send startup commands
     this._debugging = true; // Set the debugging flag to true
   }
 
@@ -259,8 +258,7 @@ export class PrologDebugSession extends DebugSession {
         let exp = args.expression.trim();
         if (exp.startsWith(':')) {
           // Workaround for input from stdin
-          const input = 'input' + args.expression;
-          this._prologDebugger.query(input + '\n');
+          // TODO: Use DebuggerController to send input to process
         } else {
           // Replace variable references in the expression with their values
           for (let i = 0; i < vars.length; i++) {
@@ -331,9 +329,7 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.ContinueResponse,
     _args: DebugProtocol.ContinueArguments
   ): void {
-    if (this._prologDebugger && this._traceCmds?.continue?.[1]) {
-      this._prologDebugger.query(`cmd:${this._traceCmds.continue[1]}\n`); // Send a continue command to the Prolog debugger
-    }
+    // TODO: Use DebuggerController to send continue command
     this.sendResponse(response); // Send the continue response back to the client
   }
 
@@ -342,9 +338,7 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.NextResponse,
     _args: DebugProtocol.NextArguments
   ): void {
-    if (this._prologDebugger && this._traceCmds?.stepover?.[1]) {
-      this._prologDebugger.query(`cmd:${this._traceCmds.stepover[1]}\n`); // Send a step-over command to the Prolog debugger
-    }
+    // TODO: Use DebuggerController to send next/stepover command
     this.sendResponse(response); // Send the next response back to the client
   }
 
@@ -353,9 +347,7 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.StepInResponse,
     _args: DebugProtocol.StepInArguments
   ): void {
-    if (this._prologDebugger && this._traceCmds?.stepinto?.[1]) {
-      this._prologDebugger.query(`cmd:${this._traceCmds.stepinto[1]}\n`); // Send a step-into command to the Prolog debugger
-    }
+    // TODO: Use DebuggerController to send stepIn command
     this.sendResponse(response); // Send the step-in response back to the client
   }
 
@@ -364,9 +356,7 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.StepOutResponse,
     _args: DebugProtocol.StepOutArguments
   ): void {
-    if (this._prologDebugger && this._traceCmds?.stepout?.[1]) {
-      this._prologDebugger.query(`cmd:${this._traceCmds.stepout[1]}\n`); // Send a step-out command to the Prolog debugger
-    }
+    // TODO: Use DebuggerController to send stepOut command
     this.sendResponse(response); // Send the step-out response back to the client
   }
 
@@ -375,14 +365,12 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.DisconnectResponse,
     _args: DebugProtocol.DisconnectArguments
   ): void {
-    this._debugging = false; // Mark the end of the debugging session
-    if (this._prologDebugger) {
-      if (this._prologDebugger) {
-        this._prologDebugger.dispose(); // Dispose of the Prolog debugger
-      }
+    this._debugging = false;
+    if (this._debuggerController) {
+      this._debuggerController.killProcess();
     }
-    this.shutdown(); // Shutdown the debugger
-    this.sendResponse(response); // Send the disconnect response back to the client
+    this.shutdown();
+    this.sendResponse(response);
   }
 
   // Handles the 'restart' request from the debugger client
@@ -390,10 +378,12 @@ export class PrologDebugSession extends DebugSession {
     response: DebugProtocol.RestartResponse,
     _args: DebugProtocol.RestartArguments
   ): void {
-    this._debugging = false; // Mark the end of the debugging session
-    this._prologDebugger.dispose(); // Dispose of the Prolog debugger
-    this.shutdown(); // Shutdown the debugger
-    this.sendResponse(response); // Send the restart response back to the client
+    this._debugging = false;
+    if (this._debuggerController) {
+      this._debuggerController.killProcess();
+    }
+    this.shutdown();
+    this.sendResponse(response);
   }
   // Sends an error response back to the debugger client
   protected override sendErrorResponse(

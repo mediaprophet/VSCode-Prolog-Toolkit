@@ -115,7 +115,7 @@ export interface ResourceUsage {
 
 // Query Priority and Scheduling Types
 export interface QueryPriority {
-  level: 'low' | 'medium' | 'high' | 'critical';
+  level: 'low' | 'normal' | 'high' | 'critical';
   weight: number;
   deadline?: Date;
   userId?: string;

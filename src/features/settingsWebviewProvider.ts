@@ -1,9 +1,8 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
-import { InstallationChecker, InstallationStatus } from './installationChecker';
-import { InstallationGuide } from './installationGuide';
+import * as vscode from 'vscode';
 import { PlatformUtils } from '../utils/platformUtils';
+import { InstallationChecker } from './installationChecker';
+import { InstallationGuide } from './installationGuide';
 
 export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'prologSettings';
@@ -34,6 +33,23 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       async message => {
         switch (message.type) {
+          case 'saveAllSettings': {
+            // Save all settings in one go
+            for (const [key, value] of Object.entries(message.settings || {})) {
+              this._updateSetting(key, value);
+            }
+            vscode.window.showInformationMessage('All settings saved.');
+            break;
+          }
+          case 'viewLogs': {
+            // Show the extension log in a new webview panel for easy copy/save
+            await this._showExtensionLogPanel();
+            break;
+          }
+          case 'openDocs': {
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/mediaprophet/VSCode-Prolog-Toolkit#readme'));
+            break;
+          }
           case 'updateSetting': {
             this._updateSetting(message.key, message.value);
             break;
@@ -86,6 +102,73 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
 
     // Send initial settings
     this._sendCurrentSettings();
+  }
+
+  // Show the extension log in a new webview panel for easy copy/save
+  private async _showExtensionLogPanel() {
+    try {
+      const { ExtensionLogProvider } = await import('../utils/extensionLogProvider');
+      const logContent = ExtensionLogProvider.getLogContents();
+      const panel = vscode.window.createWebviewPanel(
+        'prologExtensionLog',
+        'Prolog Extension Log',
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = this._getLogPanelHtml(logContent);
+      // Handle copy/save requests from the webview
+      panel.webview.onDidReceiveMessage(async msg => {
+        if (msg.type === 'copyLog') {
+          await vscode.env.clipboard.writeText(logContent);
+          vscode.window.showInformationMessage('Extension log copied to clipboard.');
+        } else if (msg.type === 'saveLog') {
+          const uri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file('extension.log'),
+            filters: { 'Log files': ['log'], 'Text files': ['txt'] },
+          });
+          if (uri) {
+            fs.writeFileSync(uri.fsPath, logContent, 'utf8');
+            vscode.window.showInformationMessage('Extension log saved.');
+          }
+        }
+      });
+    } catch (err) {
+      vscode.window.showErrorMessage('Failed to show extension log: ' + err);
+    }
+  }
+
+  // HTML for the log panel
+  private _getLogPanelHtml(logContent: string): string {
+    const safeLog = String(logContent ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] || ''));
+    return `<!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Prolog Extension Log</title>
+        <style>
+          body { font-family: monospace; margin: 0; padding: 0; background: #1e1e1e; color: #d4d4d4; }
+          .log-container { padding: 1em; }
+          .log-actions { margin-bottom: 1em; }
+          button { margin-right: 1em; }
+          textarea { width: 100%; height: 60vh; background: #232323; color: #d4d4d4; border: 1px solid #444; resize: vertical; }
+        </style>
+      </head>
+      <body>
+        <div class="log-container">
+          <div class="log-actions">
+            <button onclick="copyLog()">Copy</button>
+            <button onclick="saveLog()">Save As...</button>
+          </div>
+          <textarea readonly id="logArea">${safeLog}</textarea>
+        </div>
+        <script>
+          const vscode = acquireVsCodeApi();
+          function copyLog() { vscode.postMessage({ type: 'copyLog' }); }
+          function saveLog() { vscode.postMessage({ type: 'saveLog' }); }
+        </script>
+      </body>
+      </html>`;
   }
 
   private _updateSetting(key: string, value: any) {
@@ -625,20 +708,36 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
     try {
       const config = vscode.workspace.getConfiguration('prolog');
       const executablePath = config.get<string>('executablePath', 'swipl');
-
-      const isValid = await this.installationChecker.validateSwiplPath(executablePath);
-      if (isValid) {
-        const version = await this.installationChecker.getSwiplVersion(executablePath);
+      const detailedResult = await this.installationChecker.validateSwiplPathDetailed(executablePath);
+      if (detailedResult.found) {
+        const version = detailedResult.version || (await this.installationChecker.getSwiplVersion(executablePath));
         this._view.webview.postMessage({
           type: 'testResult',
           success: true,
           message: `SWI-Prolog is working correctly (version ${version})`,
+          details: {
+            path: detailedResult.path,
+            version,
+            permissions: detailedResult.permissions,
+            issues: detailedResult.issues || [],
+          },
         });
       } else {
         this._view.webview.postMessage({
           type: 'testResult',
           success: false,
-          message: 'SWI-Prolog executable is not valid or not accessible',
+          message: 'SWI-Prolog executable is not valid or not accessible.',
+          details: {
+            path: detailedResult.path,
+            permissions: detailedResult.permissions,
+            issues: detailedResult.issues || ['Unknown error'],
+          },
+          troubleshooting: [
+            'Check that SWI-Prolog is installed and accessible in your PATH.',
+            'Verify the executable path in settings.',
+            'Ensure you have permission to execute the file.',
+            'See the documentation or click "Installation Guide" for help.',
+          ],
         });
       }
     } catch (error) {
@@ -646,16 +745,22 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
         type: 'testResult',
         success: false,
         message: `Test failed: ${error}`,
+        troubleshooting: [
+          'Check that SWI-Prolog is installed and accessible in your PATH.',
+          'Verify the executable path in settings.',
+          'Ensure you have permission to execute the file.',
+          'See the documentation or click "Installation Guide" for help.',
+        ],
       });
     }
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.js')
+      vscode.Uri.joinPath(this._extensionUri, 'out', 'pub', 'media', 'settings.js')
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'settings.css')
+      vscode.Uri.joinPath(this._extensionUri, 'out', 'pub', 'media', 'settings.css')
     );
 
     return `<!DOCTYPE html>
@@ -670,12 +775,13 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
             <div class="settings-container">
                 <div class="settings-header">
                     <h1>🔧 Prolog Extension Settings</h1>
-                    <div class="settings-actions">
-                        <button id="searchBtn" class="action-btn" title="Search Settings">🔍</button>
-                        <button id="exportBtn" class="action-btn" title="Export Settings">📤</button>
-                        <button id="importBtn" class="action-btn" title="Import Settings">📥</button>
-                        <button id="resetBtn" class="action-btn danger" title="Reset All Settings">🔄</button>
-                    </div>
+          <div class="settings-actions">
+            <button id="searchBtn" class="action-btn" title="Search Settings">🔍</button>
+            <button id="exportBtn" class="action-btn" title="Export Settings">📤</button>
+            <button id="importBtn" class="action-btn" title="Import Settings">📥</button>
+            <button id="resetBtn" class="action-btn danger" title="Reset All Settings">🔄</button>
+            <button id="saveBtn" class="action-btn primary" title="Save Settings">💾 Save</button>
+          </div>
                 </div>
 
                 <div class="search-container" id="searchContainer" style="display: none;">
@@ -709,12 +815,19 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
                                         <ul id="issuesList"></ul>
                                     </div>
                                 </div>
-                                <div class="installation-actions">
-                                    <button class="action-btn" id="autoDetectBtn" title="Auto-detect SWI-Prolog">🔍 Auto-Detect</button>
-                                    <button class="action-btn" id="testInstallationBtn" title="Test Installation">🧪 Test</button>
-                                    <button class="action-btn" id="setupWizardBtn" title="Setup Wizard">🧙‍♂️ Setup Wizard</button>
-                                    <button class="action-btn" id="installationGuideBtn" title="Installation Guide">📖 Install Guide</button>
-                                </div>
+                <div class="installation-actions">
+                  <button class="action-btn" id="autoDetectBtn" title="Auto-detect SWI-Prolog">🔍 Auto-Detect</button>
+                  <button class="action-btn" id="testInstallationBtn" title="Test Installation">🧪 Test Installation</button>
+                  <button class="action-btn" id="setupWizardBtn" title="Setup Wizard">🧙‍♂️ Setup Wizard</button>
+                  <button class="action-btn" id="installationGuideBtn" title="Installation Guide">📖 Install Guide</button>
+                  <button class="action-btn" id="viewLogsBtn" title="View Logs">📄 View Logs</button>
+                  <button class="action-btn" id="docsBtn" title="Open Documentation">📚 Documentation</button>
+                  <button class="action-btn" id="reportIssueBtn" title="Report Issue">🐞 Report Issue</button>
+                </div>
+                <div id="backendErrorArea" class="backend-error-area" style="display:none;">
+                  <div class="backend-error-message"></div>
+                  <ul class="backend-error-troubleshooting"></ul>
+                </div>
                             </div>
                         </div>
                     </div>

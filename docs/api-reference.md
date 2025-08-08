@@ -1,4 +1,63 @@
+
 # VSCode Prolog Toolkit API Reference
+
+---
+
+## Extension API / Developer Guide
+
+This section describes how to integrate the VSCode Prolog Toolkit API into your own VS Code extensions, custom dashboards, or AI agent workflows.
+
+### Extension Integration Overview
+
+- **Backend Communication:** Use Node.js `child_process` to communicate with the MCP server via JSON protocol (see [MCP Protocol Usage Guide](./mcp-protocol-usage-guide.md)).
+- **Chat Command API:** Register new chat commands in `src/modules/chatCommandRegistry.ts` and implement handlers in `src/modules/chat-commands/`.
+- **Webview UI:** Extend dashboard panels by adding new webview components in `webview-ui/`.
+- **Testing:** All extension features should be covered by automated tests (see [Automated Testing Guide](./automated-testing-guide.md)).
+
+### Example: Registering a Chat Command
+
+```typescript
+// src/modules/chat-commands/myCustomCommand.ts
+import { ChatCommand, ChatContext } from '../chatCommandTypes';
+
+export const myCustomCommand: ChatCommand = {
+  name: 'mycustom',
+  description: 'My custom Prolog command',
+  async run(args, context: ChatContext) {
+    // Call backend or perform logic
+    return { success: true, message: 'Custom command executed.' };
+  }
+};
+```
+
+Register in `chatCommandRegistry.ts`:
+```typescript
+import { myCustomCommand } from './chat-commands/myCustomCommand';
+chatCommandRegistry.register(myCustomCommand);
+```
+
+### Example: Invoking Backend from Extension
+
+```typescript
+import { spawn } from 'child_process';
+
+const prologBackend = spawn('node', ['src/prologBackend.js']);
+prologBackend.stdin.write(JSON.stringify({ tool: 'prolog_query', params: { query: 'member(X,[a,b,c])' }, id: 'req-1' }) + '\n');
+prologBackend.stdout.on('data', (data) => {
+  const response = JSON.parse(data.toString());
+  // Handle response
+});
+```
+
+### Best Practices for Extension Developers
+
+1. **Use JSON protocol for all backend communication.**
+2. **Validate all inputs and outputs using schemas.**
+3. **Handle errors and timeouts robustly.**
+4. **Document all new commands and UI features.**
+5. **Write integration and unit tests for all new features.**
+
+---
 
 ## Overview
 

@@ -1,0 +1,27 @@
+[
+  {
+    "category": "Query History & Analytics UI Enhancements",
+    "enhancements": [
+      "Geo/IP Tracking: Record the user's location or IP (if relevant).",
+      "Query Source: Track if the query was triggered by UI, API, or automation.",
+      "Resource Usage: Log CPU/memory/time per query for deeper analytics.",
+      "Linked Files/Artifacts: Attach related files or outputs to each query.",
+      "Multi-criteria Filtering: Allow combining filters (e.g., by user + tag + status + date range).",
+      "Saved Searches/Filters: Let users save and quickly re-apply common filter sets.",
+      "Bulk Tagging/Editing: Enable users to select multiple queries and apply/remove tags in bulk.",
+      "Tag Suggestions/Autocomplete: Suggest tags based on history or common usage.",
+      "Resource Usage Charts: Add charts for CPU, memory, or other resource metrics per query/session.",
+      "Time Series & Heatmaps: Show query activity by hour/day (heatmap), or trends over time.",
+      "Error Drilldown: Click on error segments in charts to see details or affected queries.",
+      "Customizable Dashboards: Let users choose which charts/metrics to display.",
+      "Export/Import History: Allow exporting query history/analytics as CSV/JSON for offline analysis.",
+      "Live Updates: Push real-time updates to the dashboard as new queries run or complete.",
+      "Undo/Redo for Tagging: Support undo/redo for tag and metadata changes.",
+      "Accessibility Improvements: Ensure keyboard navigation and screen reader support.",
+      "API/Webhook Integration: Expose analytics data via API or webhook for external dashboards.",
+      "Plugin Support: Allow third-party plugins to add custom analytics or visualizations.",
+      "Audit Trails: Show who viewed/edited query history or analytics.",
+      "Data Retention Policies: Let users/admins configure how long history/analytics are kept."
+    ]
+  }
+]

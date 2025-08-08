@@ -1,22 +1,20 @@
+import { SnippetUtils } from '../utils/utils';
 'use strict';
 
-import { Utils } from '../utils/utils';
+import { spawn } from 'child_process';
+import jsesc from 'jsesc';
 import {
-  Terminal,
-  window,
-  workspace,
-  TextDocument,
   Disposable,
-  OutputChannel,
+  Terminal,
+  TextDocument,
   TextEditor,
   commands,
+  window,
+  workspace
 } from 'vscode';
-import jsesc from 'jsesc';
-import { InstallationGuide } from './installationGuide';
-import { PlatformUtils, PlatformType } from '../utils/platformUtils';
 import { ExecutableFinder } from '../utils/executableFinder';
-import { spawn } from 'child_process';
-import * as os from 'os';
+import { PlatformType, PlatformUtils } from '../utils/platformUtils';
+import { InstallationGuide } from './installationGuide';
 
 /**
  * Shell information interface
@@ -588,7 +586,7 @@ export default class PrologTerminal {
     }
     const editor: TextEditor = window.activeTextEditor;
     const doc: TextDocument = editor.document;
-    const pred = Utils.getPredicateUnderCursor(doc, editor.selection.active); // Get the predicate under the cursor using utility function
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, editor.selection.active); // Get the predicate under the cursor using utility function
     // if no predicate under cursor
     if (!pred) {
       return;
@@ -598,7 +596,7 @@ export default class PrologTerminal {
     // Separate the module if present
     if (goal.indexOf(':') > -1) {
       const parts = goal.split(':');
-      goal = parts.length > 1 ? parts[1] : goal;
+      goal = (parts.length > 1 && typeof parts[1] === 'string') ? parts[1] : goal;
     }
     PrologTerminal.sendString(goal);
   }

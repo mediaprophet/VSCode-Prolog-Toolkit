@@ -53,70 +53,77 @@ The extension now includes **intelligent installation detection and setup assist
    # macOS (Homebrew)
    brew install swi-prolog
    
-   # macOS (MacPorts)
-   sudo port install swi-prolog
-   
-   # Windows (Chocolatey)
-   choco install swi-prolog
-   
-   # Windows (Scoop)
-   scoop install swi-prolog
-   ```
+   # Troubleshooting Guide
 
-2. **Configure executable path:**
-   - Open VS Code Settings (Ctrl+,)
-   - Search for "prolog.executablePath"
-   - Set the correct path to your SWI-Prolog installation:
-     - **Windows:** `C:\Program Files\swipl\bin\swipl.exe` or `C:\swipl\bin\swipl.exe`
-     - **macOS:** `/usr/local/bin/swipl`, `/opt/homebrew/bin/swipl`, or `/opt/local/bin/swipl`
-     - **Linux:** `/usr/bin/swipl`, `/usr/local/bin/swipl`, or `/snap/bin/swipl`
+   This guide provides solutions to common issues encountered when using the VSCode Prolog Toolkit, including installation, backend, UI, and automated testing problems.
 
-3. **Verify installation:**
-   ```bash
-   swipl --version
-   ```
+   ---
 
-### Configuration Migration Issues
+   ## Table of Contents
+   - [Installation Issues](#installation-issues)
+   - [Backend/Prolog Issues](#backendprolog-issues)
+   - [UI/Extension Issues](#uiextension-issues)
+   - [Testing and Logging](#testing-and-logging)
+   - [Automated Testing Guide](#automated-testing-guide)
+   - [Getting Help](#getting-help)
+   - [References](#references)
 
-**Symptoms:**
-- Extension detects outdated SWI-Prolog paths
-- Warning about invalid configuration
-- Migration dialog appears on startup
+   ---
 
-**Automatic Solutions:**
+   ## Installation Issues
 
-1. **Automatic Migration:**
-   - The extension automatically detects outdated or invalid paths
-   - Offers to migrate to valid SWI-Prolog installations
-   - Creates configuration backups before making changes
+   - **SWI-Prolog not found:** Ensure SWI-Prolog is installed and in your PATH. See [installation-guide.md](./installation-guide.md).
+   - **Extension activation fails:** Check VS Code output panel for errors.
+   - **Dependency errors:** Run `npm install` in the extension root.
 
-2. **Configuration Backup and Restore:**
-   - All configuration changes are automatically backed up
-   - Use "Undo Migration" option if automatic changes cause issues
-   - Manual restore available through extension settings
+   ---
 
-**Manual Solutions:**
+   ## Backend/Prolog Issues
 
-1. **Check Installation Status:**
-   - Open the Prolog settings panel in VS Code
-   - View current installation status and detected issues
-   - Use "Test Installation" button to validate configuration
+   - **Prolog process crashes:** Check logs in `test/logs/` and Problems panel.
+   - **Query returns no results:** Validate query syntax and loaded files.
+   - **Timeouts:** Increase timeout settings in extension configuration.
 
-2. **Manual Path Update:**
-   - Update `prolog.executablePath` in VS Code settings
-   - The extension will validate the new path automatically
-   - Error messages provide specific guidance for path issues
+   ---
 
-### Installation Path Detection
+   ## UI/Extension Issues
 
-**Common Installation Paths:**
+   - **Chat commands not recognized:** Ensure you are using the correct syntax (see [chat-commands.md](./chat-commands.md)).
+   - **Dashboard panels missing:** Reload VS Code or reinstall the extension.
+   - **Results not displayed:** Check Problems panel and logs for errors.
 
-**Windows:**
-- `C:\Program Files\swipl\bin\swipl.exe`
-- `C:\swipl\bin\swipl.exe`
-- `C:\Program Files (x86)\swipl\bin\swipl.exe`
-- `%LOCALAPPDATA%\Programs\swipl\bin\swipl.exe`
+   ---
 
+   ## Testing and Logging
+
+   - **Test failures:** Review log and problems files in `test/logs/`.
+   - **Logs missing:** Ensure test scripts have write permissions.
+   - **Problems file not generated:** Check for errors in test runner output.
+
+   ---
+
+   ## Automated Testing Guide
+
+   For a comprehensive overview of automated testing, including test structure, logging, and best practices, see the [Automated Testing Guide](./automated-testing-guide.md).
+
+   ---
+
+   ## Getting Help
+
+   - **Documentation:** See [docs/](../docs/) for guides and references.
+   - **Report Issues:** Use the GitHub issue tracker for bug reports.
+
+   ---
+
+   ## References
+   - [Automated Testing Guide](./automated-testing-guide.md)
+   - [UI Integration Guide](./ui-integration-guide.md)
+   - [MCP Protocol Usage Guide](./mcp-protocol-usage-guide.md)
+   - [Installation Guide](./installation-guide.md)
+   - [Chat Commands](./chat-commands.md)
+
+   ---
+   _Last updated: 2025-08-08_
 **macOS:**
 - `/usr/local/bin/swipl` (Homebrew Intel)
 - `/opt/homebrew/bin/swipl` (Homebrew Apple Silicon)

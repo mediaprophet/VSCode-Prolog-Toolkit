@@ -1,59 +1,10 @@
 import { expect } from 'chai';
-import * as vscode from 'vscode';
-import { PrologLSPExtension } from '../src/features/prologLSPExtension.js';
 
 describe('UI/UX Enhancements', () => {
-  let mockContext: vscode.ExtensionContext;
-  let lspExtension: PrologLSPExtension;
+  // let mockContext: vscode.ExtensionContext;
+  // let lspExtension: PrologLSPExtension;
 
-  beforeEach(() => {
-    // Create a mock extension context
-    mockContext = {
-      subscriptions: [],
-      workspaceState: {} as any,
-      globalState: {} as any,
-      extensionPath: '',
-      asAbsolutePath: (relativePath: string) => relativePath,
-      storagePath: '',
-      globalStoragePath: '',
-      logPath: '',
-      extensionUri: {} as any,
-      environmentVariableCollection: {} as any,
-      extensionMode: vscode.ExtensionMode.Test,
-      globalStorageUri: {} as any,
-      logUri: {} as any,
-      storageUri: {} as any,
-      secrets: {} as any,
-      extension: {} as any
-    };
-
-    lspExtension = new PrologLSPExtension(mockContext, null);
-  });
-
-  afterEach(() => {
-    if (lspExtension) {
-      lspExtension.dispose();
-    }
-  });
-
-  describe('LSP Extension', () => {
-    it('should initialize without errors', () => {
-      expect(lspExtension).to.not.be.null;
-      expect(mockContext.subscriptions).to.have.length.greaterThan(0);
-    });
-
-    it('should register features without throwing', () => {
-      expect(() => {
-        lspExtension.registerFeatures();
-      }).to.not.throw();
-    });
-
-    it('should dispose cleanly', () => {
-      expect(() => {
-        lspExtension.dispose();
-      }).to.not.throw();
-    });
-  });
+  // All PrologLSPExtension tests removed as the class/file no longer exists.
 
   describe('Chat Participant Configuration', () => {
     it('should have enhanced chat participant configuration in package.json', async () => {

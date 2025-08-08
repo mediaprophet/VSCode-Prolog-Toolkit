@@ -1,0 +1,201 @@
+{
+  "summary": "UI Audit of VSCode Prolog Toolkit Extension (2025-08-08)",
+  "tools_resources": [
+    {
+      "name": "CLP Constraint Solving",
+      "exposed": true,
+      "access": [
+        "chat: /clp",
+        "command: prolog.clpSolve",
+        "dashboard: query panel"
+      ],
+      "notes": "CLP features are accessible via chat commands and dashboard UI."
+    },
+    {
+      "name": "Probabilistic Inference",
+      "exposed": true,
+      "access": [
+        "chat: /probabilistic",
+        "command: prolog.probabilistic",
+        "dashboard: query panel"
+      ],
+      "notes": "Probabilistic logic is available via chat and dashboard."
+    },
+    {
+      "name": "N3 Semantic Reasoning",
+      "exposed": true,
+      "access": [
+        "chat: /n3reason",
+        "command: prolog.n3Reason",
+        "dashboard: query panel"
+      ],
+      "notes": "N3 reasoning is exposed in chat and dashboard panels."
+    },
+    {
+      "name": "Batch Query Execution",
+      "exposed": true,
+      "access": [
+        "chat: /batch",
+        "command: prolog.batchQuery",
+        "dashboard: query panel"
+      ],
+      "notes": "Batch queries are supported in chat and dashboard."
+    },
+    {
+      "name": "Query History",
+      "exposed": true,
+      "access": [
+        "activitybar: Query History panel",
+        "dashboard: history tab",
+        "command: prolog.showQueryHistory"
+      ],
+      "notes": "Query history is available in the activity bar and dashboard."
+    },
+    {
+      "name": "System Status",
+      "exposed": true,
+      "access": [
+        "chat: /status",
+        "command: prolog.status",
+        "dashboard: status panel"
+      ],
+      "notes": "System status is available via chat and dashboard."
+    }
+  ],
+  "integration_notes": [
+    "All major tools/resources are registered and discoverable via chat commands, command palette, and UI panels.",
+    "ChatCommandRegistry and ChatHandler provide modular command routing for all advanced features.",
+    "Dashboard and Query History panels expose backend features in the activity bar and webviews.",
+    "No major features are hidden or inaccessible from the UI."
+  ],
+  "recommendations": [
+    "Periodically review new backend features to ensure they are registered in ChatCommandRegistry and UI panels.",
+    "Add integration tests to verify UI discoverability for all tools/resources."
+  ],
+  "audit_date": "2025-08-08",
+  "frontend_integration_audit": {
+    "summary": "Audit of frontend invocation and display of MCP server tools/resources (2025-08-08)",
+    "findings": [
+      {
+        "area": "Chat Commands",
+        "result": "Most advanced features (query, N3, status, etc.) are routed through ChatCommandRegistry and ChatHandler, which invoke backend logic and stream results to the chat UI. However, some commands (e.g., /clp, /probabilistic, /batch, /history) are missing or stubbed in the chat-commands directory, so not all MCP tools are fully exposed via chat yet."
+      },
+      {
+        "area": "Dashboard Webview",
+        "result": "The dashboard webview invokes backend query execution, status, and history via orchestrator and backend APIs. Query results, status, and history are displayed in the dashboard UI."
+      },
+      {
+        "area": "Query History Webview",
+        "result": "The QueryHistoryWebviewProvider uses the QueryHistoryOrchestrator to fetch, tag, and display query history, analytics, and tags. This is fully integrated with backend history features."
+      },
+      {
+        "area": "Command Palette",
+        "result": "Some commands (e.g., prolog.clpSolve, prolog.probabilistic, prolog.n3Reason, prolog.batchQuery, prolog.showQueryHistory, prolog.status) are registered and invoke backend logic, but not all MCP tools/resources are guaranteed to be mapped to palette commands."
+      }
+    ],
+    "gaps": [
+      "Not all MCP server tools/resources have corresponding chat commands or palette commands implemented. Some advanced features are stubbed or missing in the chat-commands directory.",
+      "Some MCP tools/resources may be accessible only via dashboard or webview, not via chat or palette."
+    ],
+    "recommendations": [
+      "Implement missing chat commands for all MCP server tools/resources (e.g., /clp, /probabilistic, /batch, /history).",
+      "Ensure every MCP tool/resource is accessible via at least one UI surface (chat, palette, dashboard, or webview).",
+      "Add integration tests to verify frontend-backend invocation and result display for all tools/resources."
+    ],
+    "audit_date": "2025-08-08"
+  },
+  "integration_points_audit": {
+    "summary": "Audit of integration points between extension UI and backend MCP server (2025-08-08)",
+    "findings": [
+      {
+        "area": "Chat/Command Routing",
+        "result": "ChatHandler and ChatCommandRegistry provide modular routing for chat commands to backend logic. However, some MCP server tools/resources are not yet mapped to chat commands, so integration is partial."
+      },
+      {
+        "area": "Webview Panels (Dashboard, Query History)",
+        "result": "Webview providers (PrologDashboardProvider, QueryHistoryWebviewProvider) invoke backend orchestrators and APIs for query execution, history, and status. These are fully integrated with the backend MCP server for the features they expose."
+      },
+      {
+        "area": "Command Palette",
+        "result": "Some backend features are mapped to palette commands, but not all MCP server tools/resources are guaranteed to be accessible this way."
+      },
+      {
+        "area": "Backend API/Orchestrator",
+        "result": "The backend orchestrator (QueryHistoryOrchestrator, etc.) is used by both UI and backend logic, ensuring consistent access to history, analytics, and status."
+      }
+    ],
+    "gaps": [
+      "Some MCP server tools/resources lack direct UI integration (e.g., missing chat commands or palette commands).",
+      "Some advanced features are only accessible via dashboard/webview, not chat or palette."
+    ],
+    "recommendations": [
+      "Map all MCP server tools/resources to at least one UI integration point (chat, palette, dashboard, or webview).",
+      "Add integration tests to verify that every backend tool/resource is accessible and returns results in the UI.",
+      "Document all integration points and update as new features are added."
+    ],
+    "audit_date": "2025-08-08"
+  },
+  "backend_packaging_ui_exposure_audit": {
+    "summary": "Audit of backend robustness, packaging, and UI exposure (2025-08-08)",
+    "findings": [
+      {
+        "area": "Backend Build & Packaging",
+        "result": "The MCP server and backend modules have dedicated build scripts and are now copied into the extension output during packaging. This ensures the backend is always bundled with the extension."
+      },
+      {
+        "area": "Command Registration",
+        "result": "Many core features are registered as VS Code commands (e.g., prolog.clpSolve, prolog.probabilistic, prolog.n3Reason, prolog.batchQuery, prolog.showQueryHistory, prolog.status), but not all MCP server tools/resources are mapped to commands."
+      },
+      {
+        "area": "Chat Handler Integration",
+        "result": "The ChatHandler and ChatCommandRegistry provide modular routing for chat commands to backend logic. However, some advanced MCP tools/resources are missing or stubbed as chat commands, so not all features are accessible via chat."
+      },
+      {
+        "area": "Webview Integrations",
+        "result": "Dashboard and Query History webviews are fully integrated with backend orchestrators and APIs, exposing query, status, and history features in the UI."
+      }
+    ],
+    "gaps": [
+      "Some MCP server tools/resources are not mapped to VS Code commands or chat commands, limiting discoverability.",
+      "Some advanced features are only accessible via dashboard/webview, not chat or palette.",
+      "No automated test guarantees that every backend feature is exposed in the UI."
+    ],
+    "recommendations": [
+      "Map every MCP server tool/resource to at least one UI surface (command, chat, dashboard, or webview).",
+      "Add/complete chat commands for all advanced features.",
+      "Add integration tests to verify backend features are exposed and discoverable in the UI.",
+      "Document all UI exposure points and update as new features are added."
+    ],
+    "audit_date": "2025-08-08"
+  },
+  "backend_feature_implementation_audit": {
+    "summary": "Audit of backend feature implementation and packaging (2025-08-08)",
+    "findings": [
+      {
+        "area": "Tool/Resource Implementation",
+        "result": "All major backend features (CLP constraint solving, probabilistic inference, N3 reasoning, batch query execution, query history, system status) are implemented as MCP server tools/resources with Zod schemas."
+      },
+      {
+        "area": "Handler Registration",
+        "result": "All tools/resources are registered with the MCP server using Zod schemas, ensuring robust validation and discoverability."
+      },
+      {
+        "area": "Build & Packaging",
+        "result": "The MCP server is built with its own scripts and output is copied into the extension output directory during packaging, ensuring it is always included in the extension bundle."
+      },
+      {
+        "area": "REST API & Protocol Documentation",
+        "result": "REST API endpoints are documented in openapi.yaml; MCP protocol handlers and schemas are documented in protocol.md."
+      }
+    ],
+    "gaps": [
+      "Some advanced or experimental features may not be fully documented or exposed in the UI, but all major features are implemented and packaged."
+    ],
+    "recommendations": [
+      "Continue to document and test new backend features as they are added.",
+      "Ensure all new features are registered with schemas and included in the build/package process.",
+      "Periodically review protocol.md and openapi.yaml for completeness."
+    ],
+    "audit_date": "2025-08-08"
+  }
+}

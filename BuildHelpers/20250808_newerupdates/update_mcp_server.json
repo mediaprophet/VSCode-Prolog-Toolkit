@@ -1,0 +1,30 @@
+[
+  {
+    "task": "Review new features and APIs in the Prolog Toolkit backend and extension.",
+    "details": "Identify all new endpoints, logic modules, and capabilities (e.g., advanced concurrency, batch queries, CLP, probabilistic logic, N3 reasoning, query notifications, resource utilities, etc.) that should be exposed via the MCP server."
+  },
+  {
+    "task": "Map new backend features to MCP server tools/resources.",
+    "details": "For each new feature, determine if it should be exposed as a new MCP tool (e.g., 'clp_constraint_solving', 'probabilistic_inference', 'n3_semantic_reasoning', 'batch_query_execution', 'query_history', 'system_status', etc.) or as a resource (e.g., 'prolog://history', 'prolog://system-status')."
+  },
+  {
+    "task": "Update MCP server tool list and schemas.",
+    "details": "Add new tool definitions to the MCP server's ListToolsRequestSchema handler, including input schemas and descriptions for each new capability."
+  },
+  {
+    "task": "Implement new tool handlers in MCP server.",
+    "details": "For each new tool, implement a handler in the MCP server that calls the appropriate backend API endpoint (e.g., /api/reasoning/clp, /api/reasoning/probabilistic, /api/n3/reason, /api/batch, /api/history, /api/status, etc.). Format and return results as required by the MCP protocol."
+  },
+  {
+    "task": "Update MCP server resource list and handlers.",
+    "details": "Add new resources to the ListResourcesRequestSchema handler and implement corresponding ReadResourceRequestSchema handlers for new resource URIs (e.g., 'prolog://history', 'prolog://system-status')."
+  },
+  {
+    "task": "Update documentation and OpenAPI specs.",
+    "details": "Document all new tools and resources in the MCP server README and update any OpenAPI or interface definitions to reflect the expanded API surface."
+  },
+  {
+    "task": "Add/Update tests for new MCP server endpoints.",
+    "details": "Ensure all new tools and resources are covered by automated tests, including edge cases and error handling."
+  }
+]

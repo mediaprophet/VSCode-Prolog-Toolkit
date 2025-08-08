@@ -15,7 +15,7 @@ This document summarizes the comprehensive UI/UX and LSP enhancements implemente
 - Adding LSP-style features provides advanced functionality without the complexity of a separate server
 - Better integration with existing backend architecture
 
-**Implementation**: Created [`PrologLSPExtension`](../src/features/prologLSPExtension.ts) class that provides:
+**Implementation**: (Legacy) Created `PrologLSPExtension` class (now removed; logic migrated to modular LSP server/client):
 - Custom query execution commands
 - Enhanced help lookup with backend integration
 - N3 diagnostics and validation
@@ -53,7 +53,7 @@ This document summarizes the comprehensive UI/UX and LSP enhancements implemente
 
 ### 4. LSP Custom Requests Implementation
 
-**File**: [`src/features/prologLSPExtension.ts`](../src/features/prologLSPExtension.ts)
+**File**: (Removed) `src/features/prologLSPExtension.ts` (all features now in modular LSP server/client)
 
 **Features Implemented**:
 - ✅ **Custom Query Execution** (`prolog.lsp.executeQuery`)
@@ -157,7 +157,7 @@ This document summarizes the comprehensive UI/UX and LSP enhancements implemente
 - [`src/extension.ts`](../src/extension.ts) - Enhanced chat handlers and LSP integration
 
 ### Created Files
-- [`src/features/prologLSPExtension.ts`](../src/features/prologLSPExtension.ts) - LSP extension implementation
+// `src/features/prologLSPExtension.ts` - (Removed; all features migrated to modular LSP server/client)
 - [`test/ui-ux-validation.test.ts`](../test/ui-ux-validation.test.ts) - Comprehensive validation tests
 - [`docs/step8-ui-ux-enhancements-summary.md`](./step8-ui-ux-enhancements-summary.md) - This summary document
 

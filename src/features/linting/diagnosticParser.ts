@@ -1,7 +1,7 @@
 import fg from 'fast-glob';
-import { DiagnosticSeverity, Position, Range, Diagnostic, TextDocument, workspace } from 'vscode';
-import { Utils } from '../../utils/utils';
-import { IDiagnosticParser, IDiagnosticInfo } from './interfaces';
+import { Diagnostic, DiagnosticSeverity, Position, Range, TextDocument, workspace } from 'vscode';
+import { PrologExecUtils } from '../../utils/utils';
+import { IDiagnosticInfo, IDiagnosticParser } from './interfaces';
 
 /**
  * Handles parsing of Prolog compiler output into diagnostic information
@@ -85,9 +85,9 @@ export class DiagnosticParser implements IDiagnosticParser {
     filePathIds: { [id: string]: string },
     lineErr: string
   ): void {
-    if (Utils.DIALECT === 'ecl' && !/checking completed/.test(output)) {
+    if (PrologExecUtils.DIALECT === 'ecl' && !/checking completed/.test(output)) {
       const lines = output.split('\n');
-      
+
       for (const line of lines) {
         if (/^File\s*/.test(line)) {
           if (lineErr) {
@@ -95,7 +95,7 @@ export class DiagnosticParser implements IDiagnosticParser {
             if (diagnostic) diagnostics.push(diagnostic);
             lineErr = '';
           }
-          
+
           const match = line.match(/File\s*([^,]+),.*line\s*(\d+):\s*(.*)/);
           if (match) {
             let fullName: string;
@@ -130,7 +130,7 @@ export class DiagnosticParser implements IDiagnosticParser {
   ): void {
     const lines = errorOutput.split('\n');
 
-    switch (Utils.DIALECT) {
+    switch (PrologExecUtils.DIALECT) {
       case 'swi':
         this.processSwiStderr(lines, diagnostics, filePathIds, lineErr);
         break;
@@ -257,14 +257,14 @@ export class DiagnosticParser implements IDiagnosticParser {
    */
   public groupDiagnosticsByFile(diagnostics: IDiagnosticInfo[]): { [fileName: string]: IDiagnosticInfo[] } {
     const grouped: { [fileName: string]: IDiagnosticInfo[] } = {};
-    
+
     for (const diagnostic of diagnostics) {
       if (!grouped[diagnostic.fileName]) {
         grouped[diagnostic.fileName] = [];
       }
       grouped[diagnostic.fileName].push(diagnostic);
     }
-    
+
     return grouped;
   }
 }

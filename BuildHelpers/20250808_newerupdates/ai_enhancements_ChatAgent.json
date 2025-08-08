@@ -1,0 +1,44 @@
+{
+  "ai_enhancements": [
+    {
+      "id": 1,
+      "feature": "Agent Context Awareness",
+      "description": "Expose workspace, file, and debug context to chat/LLM agents. Allow querying environment state via chat commands (e.g., /env, /list_files, /active_file)."
+    },
+    {
+      "id": 2,
+      "feature": "Debug & Troubleshooting Commands",
+      "description": "Implement /debug and /troubleshoot commands for diagnostics, health checks, and actionable suggestions. Add /logs and /errors commands to fetch recent logs or error summaries."
+    },
+    {
+      "id": 3,
+      "feature": "Agent-Driven Actions",
+      "description": "Allow LLM agents to trigger extension actions (reload backend, restart debug session, open settings) via chat. Add /run_task and /install commands for automation."
+    },
+    {
+      "id": 4,
+      "feature": "Rich Feedback & Telemetry",
+      "description": "Enhance telemetry to log agent context, error stack traces, and user/system actions. Provide feedback and next-step suggestions to agents."
+    },
+    {
+      "id": 5,
+      "feature": "Streaming & Progress Improvements",
+      "description": "Standardize progress and streaming feedback for all long-running commands. Allow agents to subscribe to backend events via chat."
+    },
+    {
+      "id": 6,
+      "feature": "Extensible Command Registry",
+      "description": "Support dynamic registration of new commands at runtime for agent extensibility."
+    },
+    {
+      "id": 7,
+      "feature": "Structured Output for LLMs",
+      "description": "Support both Markdown and structured JSON output for LLM consumption. Add /describe command for code intelligence."
+    },
+    {
+      "id": 8,
+      "feature": "Error Recovery & Suggestions",
+      "description": "On error, suggest relevant documentation, commands, or next troubleshooting steps. Integrate with Problems panel and diagnostics."
+    }
+  ]
+}

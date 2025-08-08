@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ErrorHandler, PrologError } from './errorHandler';
 import { InstallationChecker } from './installationChecker';
-import { QueryHistoryManager } from './queryHistoryManager';
+import { QueryHistoryOrchestrator } from './queryHistoryManager/QueryHistoryOrchestrator';
 import { QueryNotificationManager } from './queryNotificationManager';
 
 export interface PrologTreeItem {
@@ -23,7 +23,7 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
     this._onDidChangeTreeData.event;
 
   private installationChecker: InstallationChecker;
-  private queryHistory: QueryHistoryManager;
+  private queryHistory: QueryHistoryOrchestrator;
   private queryNotificationManager: QueryNotificationManager;
   private errorHandler: ErrorHandler;
   private recentErrors: PrologError[] = [];
@@ -48,7 +48,7 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
 
   constructor(private context: vscode.ExtensionContext) {
     this.installationChecker = InstallationChecker.getInstance();
-    this.queryHistory = QueryHistoryManager.getInstance();
+    this.queryHistory = new QueryHistoryOrchestrator();
     this.queryNotificationManager = new QueryNotificationManager();
     this.errorHandler = new ErrorHandler();
     this.checkInstallation();
@@ -249,9 +249,9 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
     const items: PrologTreeItem[] = [];
 
     try {
-      const history = await this.queryHistory.getRecentQueries(10);
+      const history = await this.queryHistory.getHistory({ limit: 10 });
 
-      if (history.length === 0) {
+      if (!Array.isArray(history) || history.length === 0) {
         items.push({
           id: 'no-queries',
           label: 'No recent queries',
@@ -261,18 +261,18 @@ export class PrologActivityProvider implements vscode.TreeDataProvider<PrologTre
           contextValue: 'no-queries',
         });
       } else {
-        history.forEach((query, index) => {
+        history.forEach((query: any, index: number) => {
           items.push({
             id: `query-${index}`,
-            label: query.query.length > 30 ? `${query.query.substring(0, 30)}...` : query.query,
-            description: query.success ? '✓' : '✗',
-            tooltip: `Query: ${query.query}\nResult: ${query.success ? 'Success' : 'Failed'}\nTime: ${new Date(query.timestamp).toLocaleString()}`,
-            iconPath: new vscode.ThemeIcon(query.success ? 'check' : 'error'),
+            label: typeof query.cmd === 'string' && query.cmd.length > 30 ? `${query.cmd.substring(0, 30)}...` : query.cmd,
+            description: query.status === 'completed' ? '✓' : '✗',
+            tooltip: `Query: ${query.cmd}\nResult: ${query.status === 'completed' ? 'Success' : 'Failed'}\nTime: ${query.startTime ? new Date(query.startTime).toLocaleString() : ''}`,
+            iconPath: new vscode.ThemeIcon(query.status === 'completed' ? 'check' : 'error'),
             contextValue: 'query-item',
             command: {
               command: 'prolog.rerunQuery',
               title: 'Rerun Query',
-              arguments: [query.query],
+              arguments: [query.cmd],
             },
           });
         });

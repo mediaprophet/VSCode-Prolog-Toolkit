@@ -1,0 +1,73 @@
+{
+  "title": "VSCode Prolog Toolkit Tree View UI/UX Enhancements",
+  "enhancements": [
+    {
+      "category": "Context Menus & Commands",
+      "details": [
+        "Add right-click context menus for each node type (file, query, folder)",
+        "Prolog Files: Open, Consult, Reveal in Explorer, Delete, Rename",
+        "Query History: Re-run, Copy Query, View Result, Delete Entry",
+        "Explorer: New File/Folder, Refresh, Collapse All"
+      ]
+    },
+    {
+      "category": "Icons, Badges, and Status",
+      "details": [
+        "Use VS Code icons for files, folders, and query status (success, error, running)",
+        "Add badges for counts (e.g., number of queries, files)",
+        "Show status overlays (e.g., warning/error for files with issues)"
+      ]
+    },
+    {
+      "category": "Live Updates & Event Handling",
+      "details": [
+        "Use file system watchers and backend event listeners for real-time refresh",
+        "Auto-refresh on file changes, query execution, or session switch"
+      ]
+    },
+    {
+      "category": "Advanced Filtering & Grouping",
+      "details": [
+        "Query History: Filter by status, session, file, or date",
+        "Prolog Files: Group by folder, show recently modified files at the top",
+        "Explorer: Collapsible folders, search/filter bar"
+      ]
+    },
+    {
+      "category": "Quick Actions & Toolbar Buttons",
+      "details": [
+        "Add 'New Query', 'Clear History', 'Add File', 'Refresh' buttons above each panel",
+        "Support drag-and-drop for files in Explorer"
+      ]
+    },
+    {
+      "category": "Accessibility & Internationalization",
+      "details": [
+        "Ensure ARIA labels and keyboard navigation for all tree items",
+        "Use VS Code’s localization APIs for all labels/tooltips"
+      ]
+    },
+    {
+      "category": "Performance & Robustness",
+      "details": [
+        "Debounce refreshes and avoid unnecessary data reloads",
+        "Graceful error handling if backend is unavailable or data is missing"
+      ]
+    },
+    {
+      "category": "User Customization",
+      "details": [
+        "Allow users to configure which panels are visible and their order",
+        "Support custom file patterns for Prolog files"
+      ]
+    },
+    {
+      "category": "Testing & Documentation",
+      "details": [
+        "Add unit/integration tests for each provider and command",
+        "Update documentation and in-extension help for new features"
+      ]
+    }
+  ],
+  "notes": "These enhancements will provide a modern, robust, and user-friendly experience for all Prolog Toolkit users."
+}

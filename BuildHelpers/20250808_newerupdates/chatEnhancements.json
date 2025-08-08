@@ -1,0 +1,52 @@
+[
+  {
+    "job": 1,
+    "title": "Command Discovery & Autocomplete",
+    "description": "Implement a way for users to discover available commands (e.g., tab-completion, suggestions as they type, or a /list-commands command). Provide command usage hints and argument descriptions dynamically."
+  },
+  {
+    "job": 2,
+    "title": "Richer Error Handling & Feedback",
+    "description": "Standardize error responses with error codes and actionable suggestions. Log errors and user actions for better diagnostics and telemetry."
+  },
+  {
+    "job": 3,
+    "title": "Contextual Awareness",
+    "description": "Pass more context (e.g., active file, selection, workspace state) to command handlers for smarter responses. Allow commands to access previous chat history for multi-turn interactions."
+  },
+  {
+    "job": 4,
+    "title": "Asynchronous/Streaming Output",
+    "description": "Support streaming partial results for long-running commands (e.g., /query, /consult). Allow users to cancel or pause/resume long-running operations."
+  },
+  {
+    "job": 5,
+    "title": "Extensibility",
+    "description": "Enable dynamic registration/unregistration of chat commands at runtime (e.g., via plugins or user scripts). Support user-defined aliases or macros for frequently used command sequences."
+  },
+  {
+    "job": 6,
+    "title": "Enhanced Help System",
+    "description": "Provide detailed help for each command, including examples and related commands. Allow inline help (e.g., /help <command>) and context-sensitive tips."
+  },
+  {
+    "job": 7,
+    "title": "User Experience",
+    "description": "Add markdown formatting, code highlighting, and clickable links in chat responses. Support attachments or file uploads for commands that require file input."
+  },
+  {
+    "job": 8,
+    "title": "Telemetry & Analytics",
+    "description": "Track command usage, errors, and performance for continuous improvement. Provide users with analytics about their own usage (e.g., most used commands)."
+  },
+  {
+    "job": 9,
+    "title": "Multi-user/Collaboration Support",
+    "description": "(If relevant) Allow multiple users to interact with the chat system in a shared workspace."
+  },
+  {
+    "job": 10,
+    "title": "Testing & Robustness",
+    "description": "Add more comprehensive automated tests for chat command dispatch, error cases, and edge scenarios. Ensure robust handling of backend restarts, timeouts, and partial failures."
+  }
+]

@@ -1,0 +1,34 @@
+# SWI-Prolog Path Helper for Windows
+
+This script helps you add SWI-Prolog (`swipl.exe`) to your system PATH so it can be used from any terminal or by VS Code extensions.
+
+## Instructions
+
+1. **Locate SWI-Prolog Installation:**
+   - Default location: `C:\Program Files\swipl\bin`
+   - If you installed elsewhere, find the folder containing `swipl.exe`.
+
+2. **Run the Helper Script:**
+   - Open PowerShell as Administrator.
+   - Run the following command, replacing the path if needed:
+
+```powershell
+$prologPath = "C:\Program Files\swipl\bin"
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + $prologPath, [EnvironmentVariableTarget]::Machine)
+Write-Host "SWI-Prolog path added to system PATH. Please restart VS Code and your terminal."
+```
+
+3. **Verify Installation:**
+   - Open a new PowerShell window.
+   - Run: `swipl --version`
+   - You should see the SWI-Prolog version output.
+
+---
+
+## Troubleshooting
+- If you still get 'swipl' not recognized, double-check the path and repeat the steps.
+- You may need to restart your computer for changes to take effect in all applications.
+
+---
+
+_Last updated: 2025-08-08_

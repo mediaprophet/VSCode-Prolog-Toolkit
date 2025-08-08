@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
-import { ConcurrencyManager, QueryPriority } from './concurrencyManager';
-import { QueryHistoryManager } from './queryHistoryManager';
+import { QueryPriority } from '../types/backend';
+import { ConcurrencyManagerOrchestrator } from './concurrencyManager/ConcurrencyManagerOrchestrator';
+import { QueryHistoryOrchestrator } from './queryHistoryManager/QueryHistoryOrchestrator';
 
 export interface ScheduledQuery {
   id: string;
@@ -51,16 +52,16 @@ export interface SchedulerStats {
  */
 export class QueryScheduler extends EventEmitter {
   private options: SchedulerOptions;
-  private concurrencyManager: ConcurrencyManager;
-  private historyManager?: QueryHistoryManager;
+  private concurrencyManager: ConcurrencyManagerOrchestrator;
+  private historyManager: QueryHistoryOrchestrator | undefined;
   private scheduledQueries: Map<string, ScheduledQuery> = new Map();
   private schedulerInterval?: ReturnType<typeof setInterval>;
   private dependencyGraph: Map<string, Set<string>> = new Map(); // queryId -> dependents
   private conditionEvaluator: Map<string, () => boolean> = new Map();
 
   constructor(
-    concurrencyManager: ConcurrencyManager,
-    historyManager?: QueryHistoryManager,
+    concurrencyManager: ConcurrencyManagerOrchestrator,
+    historyManager?: QueryHistoryOrchestrator,
     options: Partial<SchedulerOptions> = {}
   ) {
     super();
@@ -76,8 +77,7 @@ export class QueryScheduler extends EventEmitter {
       enableDependencies: true,
       defaultPriority: {
         level: 'normal',
-        weight: 10,
-        timeout: 30000,
+        weight: 10
       },
       ...options,
     };
@@ -116,7 +116,7 @@ export class QueryScheduler extends EventEmitter {
       createdAt: Date.now(),
       executionCount: 0,
       status: 'scheduled',
-      metadata,
+      ...(metadata !== undefined ? { metadata } : {}),
     };
 
     // Validate schedule configuration
@@ -244,7 +244,7 @@ export class QueryScheduler extends EventEmitter {
       recurringQueries: queries.filter(q => q.scheduleType === 'recurring').length,
       conditionalQueries: queries.filter(q => q.scheduleType === 'conditional').length,
       dependentQueries: queries.filter(q => q.scheduleConfig.dependencies?.length).length,
-      nextExecutionTime: nextExecution,
+      ...(nextExecution !== undefined ? { nextExecutionTime: nextExecution } : {}),
     };
   }
 
@@ -439,7 +439,12 @@ export class QueryScheduler extends EventEmitter {
       this.emit('queryScheduleExecutionStarted', query);
 
       // Queue the query in the concurrency manager
-      await this.concurrencyManager.queueQuery(query.id, query.cmd, query.params, query.priority);
+      await this.concurrencyManager.queueQuery({
+        id: query.id,
+        cmd: query.cmd,
+        params: query.params,
+        priority: query.priority
+      });
     } catch (error: unknown) {
       query.status = 'failed';
       this.emit('queryScheduleExecutionFailed', { query, error });

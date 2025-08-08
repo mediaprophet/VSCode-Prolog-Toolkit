@@ -1,20 +1,17 @@
+import {
+  OutputEvent,
+  StoppedEvent,
+  TerminatedEvent
+} from '@vscode/debugadapter';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import { spawn } from 'process-promises';
-import { DebugProtocol } from '@vscode/debugprotocol';
-import { PrologDebugSession } from './prologDebugSession';
-import {
-  StoppedEvent,
-  StackFrame,
-  Source,
-  OutputEvent,
-  TerminatedEvent,
-} from '@vscode/debugadapter';
-import { basename, resolve } from 'path';
 import jsesc from 'jsesc';
-import { InstallationGuide } from './installationGuide';
+import { spawn } from 'process-promises';
 import { commands, window } from 'vscode';
 import { PlatformUtils } from '../utils/platformUtils';
+import { InstallationGuide } from './installationGuide';
+import { PrologDebugSession } from './prologDebugSession';
 
 export interface ITraceCmds {
   continue: string[2];
@@ -90,7 +87,7 @@ export class PrologDebugger extends EventEmitter {
     lengths.unshift(0); // Add a starting index of 0 to the lengths array
     // Accumulate the lengths to get the character position for each line
     for (let i = 1; i < lengths.length; i++) {
-      lengths[i] += lengths[i - 1];
+      lengths[i] = (lengths[i] ?? 0) + (lengths[i - 1] ?? 0);
     }
     this._soureLineLocations[source] = lengths; // Cache the line locations for the source file
   }
@@ -98,18 +95,21 @@ export class PrologDebugger extends EventEmitter {
   // Helper function to convert startChar to line and column
   private fromStartCharToLineChar(source: string, startChar: number) {
     this.getSourceLineLocations(source); // Ensure that line locations for the source file are available
+    const lineLocations = this._soureLineLocations[source] ?? [];
+    if (!Array.isArray(lineLocations) || lineLocations.length === 0) {
+      return { file: source, line: 1, startChar };
+    }
     let i = 0;
-    for (
-      ;
-      this._soureLineLocations[source]?.[i] !== undefined &&
-      this._soureLineLocations[source][i] < startChar;
-      i++
-    ); // Find the line index where the given character position is located
-    // Calculate the line number and column offset for the character position
+    let current: number | undefined = lineLocations[0];
+    while (typeof current === 'number' && current < startChar && i < lineLocations.length) {
+      i++;
+      current = lineLocations[i];
+    }
+    const baseChar = typeof lineLocations[i] === 'number' ? lineLocations[i] as number : 0;
     return {
       file: source,
       line: i + 1,
-      startChar: startChar - (this._soureLineLocations[source]?.[i] ?? 0),
+      startChar: startChar - baseChar,
     };
   }
   //Handles the output received from the Prolog debugger, parsing and processing relevant information.
@@ -206,8 +206,8 @@ export class PrologDebugger extends EventEmitter {
     ];
     // Iterate through the predefined regular expressions
     for (let i = 0; i < regs.length; i++) {
-      // Test if the data matches any of the regular expressions
-      if (regs[i].test(data)) {
+      const reg = regs[i] ?? null;
+      if (reg && typeof reg.test === 'function' && reg.test(data)) {
         return true; // Return true if a match is found (filter off)
       }
     }
@@ -230,8 +230,8 @@ export class PrologDebugger extends EventEmitter {
       this._prologProc.stdin.write(`
             use_module('${dbg}').\n
             prolog_debugger:load_source_file('${jsesc(
-              PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
-            )}').
+        PlatformUtils.normalizePath(this._launchRequestArguments.program || '')
+      )}').
               `);
     }
   }
@@ -284,9 +284,8 @@ export class PrologDebugger extends EventEmitter {
           'code' in error &&
           (error as any).code === 'ENOENT'
         ) {
-          message = `Cannot debug the prolog file. The Prolog executable '${
-            this._launchRequestArguments.runtimeExecutable || ''
-          }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
+          message = `Cannot debug the prolog file. The Prolog executable '${this._launchRequestArguments.runtimeExecutable || ''
+            }' was not found. Correct 'runtimeExecutable' setting in launch.json file.`;
 
           // Show enhanced error message with installation guidance
           const action = await window.showErrorMessage(
@@ -317,13 +316,12 @@ export class PrologDebugger extends EventEmitter {
         } else {
           message =
             error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof (error as any).message === 'string'
+              typeof error === 'object' &&
+              'message' in error &&
+              typeof (error as any).message === 'string'
               ? (error as any).message
-              : `Failed to run swipl using path: ${
-                  this._launchRequestArguments.runtimeExecutable || ''
-                }. Reason is unknown.`;
+              : `Failed to run swipl using path: ${this._launchRequestArguments.runtimeExecutable || ''
+              }. Reason is unknown.`;
         }
         // Output the error message to the debug session and throw an error
         this._debugSession.debugOutput('\n' + message);

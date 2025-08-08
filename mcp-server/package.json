@@ -1,6 +1,6 @@
 {
   "name": "vscode-prolog-toolkit-mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Model Context Protocol server for VSCode Prolog Toolkit",
   "main": "dist/index.js",
   "type": "module",

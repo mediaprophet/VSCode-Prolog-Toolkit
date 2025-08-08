@@ -1,12 +1,12 @@
+import * as path from 'path';
+import { ExtensionContext, window, workspace } from 'vscode';
 import {
   LanguageClient,
   LanguageClientOptions,
+  RevealOutputChannelOn,
   ServerOptions,
   TransportKind,
-  RevealOutputChannelOn,
 } from 'vscode-languageclient/node';
-import { ExtensionContext, workspace, window } from 'vscode';
-import * as path from 'path';
 
 export class PrologLSPClient {
   private client: LanguageClient | null = null;
@@ -24,7 +24,7 @@ export class PrologLSPClient {
     try {
       // The server is implemented as a separate Node.js module
       const serverModule = this.context.asAbsolutePath(
-        path.join('out', 'pub', 'features', 'prologLSPServer.js')
+        path.join('out', 'pub', 'features', 'lsp', 'server.js')
       );
 
       // The debug options for the server
@@ -249,7 +249,7 @@ export class PrologLSPClient {
   private getWordAtPosition(text: string, position: any): string | null {
     const lines = text.split('\n');
     const line = lines[position.line];
-    if (!line) {
+    if (typeof line !== 'string') {
       return null;
     }
 
@@ -257,10 +257,11 @@ export class PrologLSPClient {
     let start = char;
     let end = char;
 
-    while (start > 0 && /[a-zA-Z0-9_]/.test(line[start - 1])) {
+    // Defensive: check bounds and types
+    while (start > 0 && /[a-zA-Z0-9_]/.test(line.charAt(start - 1))) {
       start--;
     }
-    while (end < line.length && /[a-zA-Z0-9_]/.test(line[end])) {
+    while (end < line.length && /[a-zA-Z0-9_]/.test(line.charAt(end))) {
       end++;
     }
 

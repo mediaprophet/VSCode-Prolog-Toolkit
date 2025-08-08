@@ -3,7 +3,7 @@
     "prolog": {
       "command": "node",
       "args": [
-        "./out/pub/features/prologLSPServer.js",
+        "./out/pub/features/lsp/server.js",
         "--stdio"
       ],
       "filetypes": [

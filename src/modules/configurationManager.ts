@@ -1,17 +1,14 @@
 'use strict';
 
-import { ExtensionContext, workspace } from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
-import jsesc from 'jsesc';
-import { Utils } from '../utils/utils';
-import { PlatformUtils, getPlatform, getPlatformDefaults } from '../utils/platformUtils';
+import { ExtensionContext, workspace } from 'vscode';
 import { AuthConfig } from '../features/apiMiddleware';
+import { PlatformUtils, getPlatform, getPlatformDefaults } from '../utils/platformUtils';
 
 export class ConfigurationManager {
   private static instance: ConfigurationManager;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): ConfigurationManager {
     if (!ConfigurationManager.instance) {
@@ -33,14 +30,10 @@ export class ConfigurationManager {
     }
     exec = PlatformUtils.normalizePath(exec);
 
-    Utils.LINTERTRIGGER = section.get<string>('linter.run') || 'never';
-    Utils.FORMATENABLED = section.get<boolean>('format.enabled') || false;
-    Utils.DIALECT = dialect || 'swi';
-    Utils.RUNTIMEPATH = jsesc(exec);
+    // TODO: Refactor to use PrologExecUtils and modular config
 
     // Use platform-aware path construction
     const exPath = PlatformUtils.normalizePath(context.extensionPath);
-    Utils.EXPATH = exPath;
 
     // check if the dialect links have already been done
     const diaFile = PlatformUtils.joinPath(exPath, '.vscode', 'dialect.json');

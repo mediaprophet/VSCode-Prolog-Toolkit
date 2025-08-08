@@ -1,0 +1,63 @@
+[
+  {
+    "category": "Advanced Concurrency Controls",
+    "features": [
+      "Dynamic Resource Scaling: Adjust quotas based on system load or user preferences.",
+      "Fairness Policies: Implement round-robin or weighted-fair scheduling for queued queries.",
+      "Preemption: Allow high-priority queries to preempt lower-priority ones."
+    ]
+  },
+  {
+    "category": "Query History & Analytics",
+    "features": [
+      "Rich Query Metadata: Track user, session, and context for each query.",
+      "Search & Tagging: Allow users to search, filter, and tag queries in history.",
+      "Visual Analytics: Provide charts for query rates, errors, durations, and resource usage."
+    ]
+  },
+  {
+    "category": "Session Management",
+    "features": [
+      "Session Snapshots & Restore: Allow users to save and restore session state.",
+      "Session Sharing: Enable collaborative sessions or export/import of session data.",
+      "Session Expiry/Auto-Cleanup: Automatically clean up idle or expired sessions."
+    ]
+  },
+  {
+    "category": "Robustness & Observability",
+    "features": [
+      "Audit Logging: Log all significant actions and events for traceability.",
+      "Health Checks: Expose health endpoints or events for monitoring.",
+      "Self-Healing: Detect and recover from failed queries, resource exhaustion, or corrupted state."
+    ]
+  },
+  {
+    "category": "User Experience",
+    "features": [
+      "Live Notifications: Push real-time updates to the UI for query status, resource changes, etc.",
+      "Customizable Policies: Let users configure quotas, retention, and history options via settings.",
+      "Undo/Redo: Support undo/redo for session and query actions."
+    ]
+  },
+  {
+    "category": "Extensibility",
+    "features": [
+      "Plugin System: Allow third-party modules to hook into events or extend manager logic.",
+      "API Exposure: Provide a public API for external tools or scripts to interact with the managers."
+    ]
+  },
+  {
+    "category": "Security & Access Control",
+    "features": [
+      "Role-Based Access: Restrict actions based on user roles or permissions.",
+      "Audit Trails: Track who did what and when for compliance."
+    ]
+  },
+  {
+    "category": "Performance & Scalability",
+    "features": [
+      "Batch Processing: Optimize for bulk query/history operations.",
+      "Async/Parallel Execution: Support parallel query execution where safe."
+    ]
+  }
+]

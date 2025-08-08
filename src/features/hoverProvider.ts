@@ -1,15 +1,15 @@
 'use strict';
+import * as cp from 'child_process';
 import {
+  CancellationToken,
+  Hover,
   HoverProvider,
   MarkdownString,
   Position,
-  TextDocument,
-  CancellationToken,
-  Hover,
   Range,
+  TextDocument,
 } from 'vscode';
-import * as cp from 'child_process';
-import { Utils } from '../utils/utils';
+import { PrologExecUtils, SnippetUtils } from '../utils/utils';
 
 export default class PrologHoverProvider implements HoverProvider {
   // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash
@@ -29,7 +29,7 @@ export default class PrologHoverProvider implements HoverProvider {
     if (!wordRange) {
       return undefined;
     }
-    const pred = Utils.getPredicateUnderCursor(doc, position); // Get the predicate under the cursor using utility function
+    const pred = SnippetUtils.getPredicateUnderCursor(doc, position); // Get the predicate under the cursor using utility function
     // Return early if no predicate is found
     if (!pred) {
       return undefined;
@@ -40,17 +40,17 @@ export default class PrologHoverProvider implements HoverProvider {
     }
     const contents = new MarkdownString('', true); // Create a MarkdownString to hold the hover contents
     // Switch based on the Prolog dialect (e.g., "swi" or "ecl")
-    switch (Utils.DIALECT) {
+    switch (PrologExecUtils.DIALECT) {
       case 'swi': {
         // Extract module and predicate information for SWI-Prolog
         const pi = pred.pi.indexOf(':') > -1 ? pred.pi.split(':')[1] : pred.pi;
         if (!pi) {
           return undefined;
         }
-        const modules: string[] = Utils.getPredModules(pi);
+        const modules: string[] = SnippetUtils.getPredModules(pi);
         // Check if there are no modules associated with the predicate
         if (modules.length === 0) {
-          const desc = Utils.getPredDescriptions(pi);
+          const desc = SnippetUtils.getPredDescriptions(pi);
           // Append code block with either the description or the predicate itself
           if (desc == '') {
             contents.appendCodeblock(pi, 'prolog');
@@ -62,7 +62,7 @@ export default class PrologHoverProvider implements HoverProvider {
           if (modules.length > 0) {
             modules.forEach(module => {
               contents.appendText(module + ':' + pi + '\n');
-              const desc = Utils.getPredDescriptions(module + ':' + pi);
+              const desc = SnippetUtils.getPredDescriptions(module + ':' + pi);
               contents.appendCodeblock(desc, 'prolog');
             });
           }
@@ -71,8 +71,8 @@ export default class PrologHoverProvider implements HoverProvider {
       }
       case 'ecl':
         // Execute a help command for ECLiPSe Prolog and append result to contents
-        if (Utils.RUNTIMEPATH) {
-          const pro = cp.spawnSync(Utils.RUNTIMEPATH, ['-e', `help(${pred.pi})`]);
+        if (PrologExecUtils.RUNTIMEPATH) {
+          const pro = cp.spawnSync(PrologExecUtils.RUNTIMEPATH, ['-e', `help(${pred.pi})`]);
           // Check if the command execution was successful
           if (pro.status === 0 && pro.output) {
             const outputStr = pro.output.toString();
