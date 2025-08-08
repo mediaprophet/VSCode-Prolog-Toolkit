@@ -1,0 +1,756 @@
+  },
+  {
+    "stage": 11,
+    "description": "Map main classes and default exports for files with export default in src/ and src/features/.",
+    "fileFunctions": {
+      "src/sdk/index.ts": [
+        "export default PrologSDK - Default export of PrologSDK class."
+      ],
+      "src/features/prologTerminal.ts": [
+        "export default class PrologTerminal - Default export of PrologTerminal class."
+      ],
+      "src/features/multiIDESupport.ts": [
+        "export default new ContainerModule(bind => { ... }) - Default export of ContainerModule for multi-IDE support."
+      ],
+      "src/features/linting/prologLinter.ts": [
+        "export default class PrologLinter implements CodeActionProvider - Default export of PrologLinter class."
+      ],
+      "src/features/hoverProvider.ts": [
+        "export default class PrologHoverProvider implements HoverProvider - Default export of PrologHoverProvider class."
+      ],
+      "src/features/documentHighlightProvider.ts": [
+        "export default class PrologDocumentHighlightProvider implements DocumentHighlightProvider - Default export of PrologDocumentHighlightProvider class."
+      ]
+    }
+  },
+  {
+    "stage": 10,
+    "description": "Map main classes and functions for additional unmapped files in src/utils/ directory.",
+    "fileFunctions": {
+      "src/utils/utils.ts": [
+        "export { PlatformEnvUtils } from './platformUtils.mod'; - Re-exports PlatformEnvUtils.",
+        "export { PositionUtils } from './positionUtils'; - Re-exports PositionUtils.",
+        "export { PrologExecUtils } from './prologExecUtils'; - Re-exports PrologExecUtils.",
+        "export { IPredicate, IPredModule, ISnippet, SnippetUtils } from './snippetUtils'; - Re-exports Prolog snippet types and utilities."
+      ]
+    }
+  },
+  {
+    "stage": 9,
+    "description": "Map main classes and functions for additional unmapped files in src/ directory.",
+    "fileFunctions": {
+      "src/formatHelpResponse.ts": [
+        "export function formatHelpResponse(response: any): string - Formats a help response for display."
+      ]
+    }
+  },
+  {
+    "stage": 8,
+    "description": "Map main classes and functions for each file in webview-ui/ directory.",
+    "fileFunctions": {
+      "webview-ui/QueryHistoryWebviewProvider.ts": [
+        "export class QueryHistoryWebviewProvider implements vscode.WebviewViewProvider - Provides the Query History webview.",
+        "refresh() - Refreshes the webview.",
+        "renderHistory() - Renders the query history.",
+        "renderTags() - Renders tags in the webview.",
+        "renderCharts() - Renders charts in the webview.",
+        "filterHistory() - Filters the query history.",
+        "handleMessage() - Handles messages from the webview.",
+        "getHtmlForWebview() - Returns HTML content for the webview.",
+        "getNonce() - Generates a nonce for security.",
+        "getChartJsCdn() - Returns the Chart.js CDN URL."
+      ],
+      "webview-ui/chartjs-cdn.ts": [
+        "export const CHART_JS_CDN = 'https://cdn.jsdelivr.net/npm/chart.js'; - Chart.js CDN URL."
+      ]
+    }
+  }
+    {
+    "stage": 1,
+    "description": "Initial directory and file mapping. Functions will be mapped in subsequent stages.",
+    "directories": [
+      "src/",
+      "src/features/",
+      "src/modules/",
+      "src/prologBackend/",
+      "src/utils/",
+      "src/types/",
+      "test/"
+    ],
+    "files": [
+      "src/extension.ts",
+      "src/features/prologDashboardProvider.ts",
+      "src/features/installationChecker.ts",
+      "src/features/queryHistoryManager/queryHistoryOrchestrator.ts",
+      "src/modules/extensionManager.ts",
+      "src/prologBackend.ts",
+      "src/utils/executableFinder.ts",
+      "src/utils/platformUtils.ts",
+      "src/utils/utils.ts",
+      "src/types/backend.ts",
+      "test/extension.test.ts",
+      "test/prologBackend.test.ts"
+    ]
+  },
+  {
+    "stage": 2,
+    "description": "Map main classes and functions for each file listed in Stage 1.",
+    "fileFunctions": {
+      "src/extension.ts": [
+        "activate(context: ExtensionContext): Promise<void> - Extension activation entry point.",
+        "deactivate(): Promise<void> - Extension deactivation entry point.",
+        "provideTerminalProfile(token) - Provides Prolog REPL terminal profile."
+      ],
+      "src/features/prologDashboardProvider.ts": [
+        "class PrologDashboardProvider implements vscode.WebviewViewProvider - Main dashboard webview provider.",
+        "constructor(_extensionUri: vscode.Uri)",
+        "resolveWebviewView(webviewView, context, _token)",
+        "_executeQuery(query: string)",
+        "_refreshStatus()",
+        "_createNewFile()",
+        "_clearHistory()",
+        "_getHtmlForWebview(webview: vscode.Webview)"
+      ],
+      "src/features/installationChecker.ts": [
+        "interface InstallationStatus - Structure for installation status.",
+        "class InstallationChecker - Singleton for SWI-Prolog installation detection.",
+        "static detectCommonInstallPaths()",
+        "static getInstance()",
+        "constructor()"
+      ],
+      "src/features/queryHistoryManager/queryHistoryOrchestrator.ts": [
+        "class QueryHistoryOrchestrator extends EventEmitter - Orchestrates query history logic.",
+        "constructor(options)",
+        "addQuery(entry)",
+        "updateQuery(queryId, updates)",
+        "getHistory(filter)",
+        "addTags(queryId, tags)",
+        "removeTags(queryId, tags)",
+        "getAllTags()"
+      ],
+      "src/modules/extensionManager.ts": [
+        "class ExtensionManager - Main extension orchestrator (singleton).",
+        "static getInstance()",
+        "activate(context: ExtensionContext)",
+        "deactivate()"
+      ],
+      "src/prologBackend.ts": [
+        "interface PrologBackendOptions - Options for backend.",
+        "class PrologBackend extends EventEmitter - Manages SWI-Prolog backend process.",
+        "constructor(options)",
+        "isRunning()",
+        "stop(intentional)",
+        "restart()"
+      ],
+      "src/utils/executableFinder.ts": [
+        "interface ExecutableDetectionResult",
+        "interface DetectionStrategy",
+        "class ExecutableFinder - Finds SWI-Prolog executables.",
+        "constructor()"
+      ],
+      "src/utils/platformUtils.ts": [
+        "interface PlatformConfig",
+        "type PlatformType",
+        "type ArchitectureType",
+        "class PlatformUtils - Platform detection and utilities."
+      ],
+      "src/utils/utils.ts": [],
+      "src/types/backend.ts": [
+        "interface PrologBackendOptions",
+        "interface PrologRequest",
+        "interface PrologResponse",
+        "interface StreamingInfo"
+      ],
+      "test/extension.test.ts": [
+        "suite('Extension Tests', ...) - Mocha test suite.",
+        "test('Something 1', ...) - Example test."
+      ],
+      "test/prologBackend.test.ts": [
+        "describe('PrologBackend', ...) - Mocha/Chai test suite.",
+        "beforeEach, afterEach, after - Test hooks.",
+        "it('[8] should support batch requests (query, consult, help)', ...)",
+        "it('[9] should enforce time limits for queries (timeout)', ...)"
+      ]
+    }
+  },
+  {
+    "stage": 3,
+    "description": "Map main classes and functions for each file in src/features/ directory.",
+    "fileFunctions": {
+      "src/features/updateSnippets.ts": [
+        "class SnippetUpdater - Updates snippets based on Prolog files.",
+        "class SnippetUpdaterController - Manages SnippetUpdater and event subscriptions.",
+        "class PrologCompletionProvider - Provides Prolog code completions."
+      ],
+      "src/features/uiHandler.ts": [
+        "interface UIHandler - UI handler contract.",
+        "const defaultUIHandler: UIHandler - Default UI handler implementation."
+      ],
+      "src/features/tree/QueryHistoryProvider.ts": [
+        "class QueryHistoryProvider implements vscode.TreeDataProvider<QueryHistoryItem> - Provides query history tree.",
+        "class QueryHistoryItem extends vscode.TreeItem - Represents a query history item."
+      ],
+      "src/features/tree/PrologFilesProvider.ts": [
+        "class PrologFilesProvider implements vscode.TreeDataProvider<vscode.TreeItem> - Provides Prolog files tree."
+      ],
+      "src/features/tree/PrologExplorerProvider.ts": [
+        "class PrologExplorerProvider implements vscode.TreeDataProvider<vscode.TreeItem> - Provides Prolog explorer tree."
+      ],
+      "src/features/streamingHandler.ts": [
+        "interface StreamingOptions - Streaming handler options.",
+        "interface StreamChunk<T> - Stream chunk structure.",
+        "class StreamingHandler<T> extends EventEmitter - Handles streaming data.",
+        "function createPrologResultStreamer(options?): StreamingHandler<unknown> - Creates Prolog result streamer.",
+        "function createFileStreamer(options?): StreamingHandler<string> - Creates file streamer.",
+        "class PaginatedStreamer<T> - Handles paginated streaming.",
+        "function createChatStreamer(options?): StreamingHandler<unknown> - Creates chat streamer."
+      ],
+      "src/features/settingsWebviewProvider.ts": [
+        "class SettingsWebviewProvider implements vscode.WebviewViewProvider - Provides settings webview."
+      ],
+      "src/features/sessionManager.ts": [
+        "type { ResourceQuota } from './concurrencyManager' - Resource quota type.",
+        "interface SessionConfig - Session configuration.",
+        "interface SessionState - Session state.",
+        "interface SessionSnapshot - Session snapshot.",
+        "interface SessionManagerOptions - Session manager options."
+      ],
+      "src/features/sessionManager/SessionStorage.ts": [
+        "class SessionStorage - Handles session storage."
+      ],
+      "src/features/sessionManager/SessionManagerOrchestrator.ts": [
+        "class SessionManagerOrchestrator extends EventEmitter - Orchestrates session management."
+      ],
+      "src/features/sessionManager/SessionLogic.ts": [
+        "interface SessionLogicEvents - Session logic events.",
+        "class SessionLogic extends EventEmitter - Handles session logic."
+      ],
+      "src/features/sessionManager/SessionEvents.ts": [
+        "class SessionEvents extends EventEmitter - Handles session events."
+      ],
+      "src/features/securityManager.ts": [
+        "interface SecurityConfig - Security configuration.",
+        "interface QuerySecurityContext - Query security context.",
+        "interface ResourceQuota - Resource quota.",
+        "interface SecurityViolation - Security violation.",
+        "class SecurityManager extends EventEmitter - Manages security.",
+        "function getDefaultResourceQuota(role: string): ResourceQuota - Gets default resource quota."
+      ],
+      "src/features/securityAuditor.ts": [
+        "interface SecurityEvent - Security event.",
+        "interface SecurityAlert - Security alert.",
+        "interface AuditConfig - Audit configuration.",
+        "class SecurityAuditor extends EventEmitter - Audits security events."
+      ],
+      "src/features/registerQueryHistoryWebview.ts": [
+        "function registerQueryHistoryWebview(context, orchestrator) - Registers query history webview."
+      ],
+      "src/features/referenceProvider.ts": [
+        "class PrologReferenceProvider implements ReferenceProvider - Provides reference support."
+      ],
+      "src/features/queryScheduler.ts": [
+        "interface ScheduledQuery - Scheduled query.",
+        "interface SchedulerOptions - Scheduler options.",
+        "interface SchedulerStats - Scheduler statistics.",
+        "class QueryScheduler extends EventEmitter - Schedules queries."
+      ],
+      "src/features/queryNotificationManager.ts": [
+        "interface QueryStatus - Query status.",
+        "interface QueryNotificationOptions - Query notification options.",
+        "interface QueryCallback - Query callback.",
+        "class QueryNotificationManager extends EventEmitter - Manages query notifications."
+      ],
+      "src/features/queryHistoryManager.ts": [
+        "interface QueryHistoryEntry - Query history entry.",
+        "interface QueryHistoryFilter - Query history filter.",
+        "interface QueryHistoryStats - Query history statistics.",
+        "interface QueryHistoryOptions - Query history options."
+      ],
+      "src/features/queryHistoryManager/QueryHistoryStorage.ts": [
+        "class QueryHistoryStorage extends EventEmitter - Handles query history storage."
+      ],
+      "src/features/queryHistoryManager/QueryHistoryOrchestrator.ts": [
+        "class QueryHistoryOrchestrator extends EventEmitter - Orchestrates query history."
+      ],
+      "src/features/queryHistoryManager/QueryHistoryLogic.ts": [
+        "class QueryHistoryLogic extends EventEmitter - Handles query history logic."
+      ],
+      "src/features/queryHistoryManager/QueryHistoryEvents.ts": [
+        "class QueryHistoryEvents extends EventEmitter - Handles query history events."
+      ],
+      "src/features/prologRefactor.ts": [
+        "class PrologRefactor - Handles Prolog refactoring."
+      ],
+      "src/features/prologPackageManager.ts": [
+        "interface PrologPack - Prolog package.",
+        "interface PackageOperationResult - Package operation result.",
+        "class PrologPackageManager - Manages Prolog packages."
+      ],
+      "src/features/prologPackageCommands.ts": [
+        "interface PackQuickPickItem extends QuickPickItem - Quick pick item for packages.",
+        "class PrologPackageCommands - Handles Prolog package commands."
+      ],
+      "src/features/prologLSPExtension.ts": [
+        "class PrologLSPExtension - Prolog LSP extension."
+      ],
+      "src/features/prologLSPClient.ts": [
+        "class PrologLSPClient - Prolog LSP client."
+      ],
+      "src/features/prologFormatter.ts": [
+        "class PrologFormatter - Formats Prolog code."
+      ],
+      "src/features/prologDebugSession.ts": [
+        "class PrologDebugSession extends DebugSession - Prolog debug session."
+      ],
+      "src/features/prologDebugger.ts": [
+        "interface ITraceCmds - Trace commands.",
+        "interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments - Launch request arguments.",
+        "interface IBreakPoint - Breakpoint.",
+        "class PrologDebugger extends EventEmitter - Prolog debugger."
+      ],
+      "src/features/prologDashboardProvider.ts": [
+        "class PrologDashboardProvider implements vscode.WebviewViewProvider - Main dashboard webview provider."
+      ],
+      "src/features/prologActivityProvider.ts": [
+        "interface PrologTreeItem - Prolog tree item.",
+        "class PrologActivityProvider implements vscode.TreeDataProvider<PrologTreeItem> - Provides Prolog activity tree."
+      ],
+      "src/features/packageManagerIntegration.ts": [
+        "interface PackageManagerInfo - Package manager info.",
+        "interface InstallationResult - Installation result.",
+        "class PackageManagerIntegration - Integrates with package managers."
+      ],
+      "src/features/outputFormatter/types.ts": [
+        "interface PrologResult - Prolog result.",
+        "interface FormattingOptions - Formatting options."
+      ],
+      "src/features/outputFormatter/streamingFormatter.ts": [
+        "class StreamingFormatter - Formats streaming output."
+      ],
+      "src/features/outputFormatter/resultFormatter.ts": [
+        "class ResultFormatter - Formats result output."
+      ],
+      "src/features/outputFormatter/paginationFormatter.ts": [
+        "class PaginationFormatter - Formats paginated output."
+      ],
+      "src/features/outputFormatter/largeResultFormatter.ts": [
+        "class LargeResultFormatter - Formats large results."
+      ],
+      "src/features/outputFormatter/index.ts": [
+        "class OutputFormatter - Main output formatter."
+      ],
+      "src/features/outputFormatter/helpFormatter.ts": [
+        "class HelpFormatter - Formats help output."
+      ],
+      "src/features/outputFormatter/codeFormatter.ts": [
+        "class CodeFormatter - Formats code output."
+      ],
+      "src/features/outputFormatter/bindingsFormatter.ts": [
+        "class BindingsFormatter - Formats bindings output."
+      ],
+      "src/features/multiIDESupport.ts": [
+        "class MultiIDESupport - Multi-IDE support.",
+        "class PrologLanguageClientContribution implements LanguageClientContribution - Prolog language client contribution."
+      ],
+      "src/features/lsp/validationProvider.ts": [
+        "class PrologValidationProvider implements ValidationProvider - Provides Prolog validation."
+      ],
+      "src/features/lsp/types.ts": [
+        "interface PrologSettings - Prolog LSP settings.",
+        "interface LSPContext - LSP context.",
+        "interface ValidationProvider - Validation provider.",
+        "interface CompletionProvider - Completion provider.",
+        "interface HoverProvider - Hover provider.",
+        "interface CodeActionProvider - Code action provider.",
+        "interface DefinitionProvider - Definition provider.",
+        "interface SymbolProvider - Symbol provider.",
+        "interface ReferencesProvider - References provider.",
+        "interface SignatureProvider - Signature provider.",
+        "interface FormattingProvider - Formatting provider.",
+        "interface RenameProvider - Rename provider.",
+        "interface FoldingProvider - Folding provider."
+      ]
+    }
+  },
+  {
+    "stage": 4,
+    "description": "Map main classes and functions for each file in src/modules/ directory.",
+    "fileFunctions": {
+      "src/modules/telemetryCollector.ts": [
+        "interface TelemetryData - Telemetry data structure.",
+        "class TelemetryCollector - Collects and manages telemetry data."
+      ],
+      "src/modules/installationManager.ts": [
+        "class InstallationManager - Manages installation logic."
+      ],
+      "src/modules/extensionManager.ts": [
+        "class ExtensionManager - Main extension orchestrator (singleton)."
+      ],
+      "src/modules/configurationManager.ts": [
+        "class ConfigurationManager - Manages extension configuration."
+      ],
+      "src/modules/chatInputCompletionProvider.ts": [
+        "class ChatInputCompletionProvider implements InlineCompletionItemProvider - Provides chat input completions."
+      ],
+      "src/modules/chatHandler.ts": [
+        "class ChatHandler - Handles chat interactions."
+      ],
+      "src/modules/chatCommandRegistry.ts": [
+        "class ChatCommandRegistry - Registers and manages chat commands."
+      ],
+      "src/modules/chat-commands/unregisterCommandCommand.ts": [
+        "class UnregisterCommandCommand implements ChatCommand - Unregisters chat commands."
+      ],
+      "src/modules/chat-commands/types.ts": [
+        "interface ChatCommandContext - Context for chat commands.",
+        "interface ChatCommandArgument - Argument for chat commands.",
+        "interface ChatCommand - Chat command contract."
+      ],
+      "src/modules/chat-commands/troubleshootCommand.ts": [
+        "class TroubleshootCommand implements ChatCommand - Troubleshoots issues."
+      ],
+      "src/modules/chat-commands/telemetryStatsCommand.ts": [
+        "class TelemetryStatsCommand implements ChatCommand - Shows telemetry stats."
+      ],
+      "src/modules/chat-commands/suggestCommand.ts": [
+        "class SuggestCommand implements ChatCommand - Suggests actions."
+      ],
+      "src/modules/chat-commands/subscribeCommand.ts": [
+        "class SubscribeCommand implements ChatCommand - Subscribes to events."
+      ],
+      "src/modules/chat-commands/statusCommand.ts": [
+        "class StatusCommand implements ChatCommand - Shows status."
+      ],
+      "src/modules/chat-commands/runTaskCommand.ts": [
+        "class RunTaskCommand implements ChatCommand - Runs tasks."
+      ],
+      "src/modules/chat-commands/restartDebugCommand.ts": [
+        "class RestartDebugCommand implements ChatCommand - Restarts debug session."
+      ],
+      "src/modules/chat-commands/reloadBackendCommand.ts": [
+        "class ReloadBackendCommand implements ChatCommand - Reloads backend."
+      ],
+      "src/modules/chat-commands/registerCommandCommand.ts": [
+        "class RegisterCommandCommand implements ChatCommand - Registers chat commands."
+      ],
+      "src/modules/chat-commands/queryCommand.ts": [
+        "class QueryCommand implements ChatCommand - Handles /query command."
+      ],
+      "src/modules/chat-commands/progressCommand.ts": [
+        "class ProgressCommand implements ChatCommand - Shows progress."
+      ],
+      "src/modules/chat-commands/problemsCommand.ts": [
+        "class ProblemsCommand implements ChatCommand - Shows problems."
+      ],
+      "src/modules/chat-commands/probabilisticCommand.ts": [
+        "class ProbabilisticCommand implements ChatCommand - Handles probabilistic queries."
+      ],
+      "src/modules/chat-commands/openSettingsCommand.ts": [
+        "class OpenSettingsCommand implements ChatCommand - Opens settings."
+      ],
+      "src/modules/chat-commands/n3ReasonCommand.ts": [
+        "class N3ReasonCommand implements ChatCommand - Handles N3 reasoning."
+      ],
+      "src/modules/chat-commands/n3LoadCommand.ts": [
+        "class N3LoadCommand implements ChatCommand - Loads N3 files."
+      ],
+      "src/modules/chat-commands/n3ListCommand.ts": [
+        "class N3ListCommand implements ChatCommand - Lists N3 resources."
+      ],
+      "src/modules/chat-commands/n3ExplainCommand.ts": [
+        "class N3ExplainCommand implements ChatCommand - Explains N3 reasoning."
+      ],
+      "src/modules/chat-commands/logsCommand.ts": [
+        "class LogsCommand implements ChatCommand - Shows logs."
+      ],
+      "src/modules/chat-commands/listFilesCommand.ts": [
+        "class ListFilesCommand implements ChatCommand - Lists files."
+      ],
+      "src/modules/chat-commands/listCommandsCommand.ts": [
+        "class ListCommandsCommand implements ChatCommand - Lists available commands."
+      ],
+      "src/modules/chat-commands/installCommand.ts": [
+        "class InstallCommand implements ChatCommand - Installs packages."
+      ],
+      "src/modules/chat-commands/historyCommand.ts": [
+        "class HistoryCommand implements ChatCommand - Shows history."
+      ],
+      "src/modules/chat-commands/helpCommand.ts": [
+        "class HelpCommand implements ChatCommand - Shows help."
+      ],
+      "src/modules/chat-commands/feedbackCommand.ts": [
+        "class FeedbackCommand implements ChatCommand - Handles feedback."
+      ],
+      "src/modules/chat-commands/errorsCommand.ts": [
+        "class ErrorsCommand implements ChatCommand - Shows errors."
+      ],
+      "src/modules/chat-commands/envCommand.ts": [
+        "class EnvCommand implements ChatCommand - Shows environment info."
+      ],
+      "src/modules/chat-commands/describeCommand.ts": [
+        "class DescribeCommand implements ChatCommand - Describes entities."
+      ],
+      "src/modules/chat-commands/debugCommand.ts": [
+        "class DebugCommand implements ChatCommand - Debugs Prolog code."
+      ],
+      "src/modules/chat-commands/consultCommand.ts": [
+        "class ConsultCommand implements ChatCommand - Consults Prolog files."
+      ],
+      "src/modules/chat-commands/clpCommand.ts": [
+        "class ClpCommand implements ChatCommand - Handles CLP queries."
+      ],
+      "src/modules/chat-commands/batchCommand.ts": [
+        "class BatchCommand implements ChatCommand - Handles batch queries."
+      ],
+      "src/modules/chat-commands/activeFileCommand.ts": [
+        "class ActiveFileCommand implements ChatCommand - Handles active file actions."
+      ]
+    }
+  },
+  {
+    "stage": 5,
+    "description": "Map main classes and functions for each file in src/prologBackend/ directory.",
+    "fileFunctions": {
+      "src/prologBackend/sessionManager.ts": [
+        "interface PrologSessionManagerOptions extends Partial<SessionManagerOptions> - Options for Prolog session manager.",
+        "class PrologSessionManager extends EventEmitter - Manages Prolog sessions."
+      ],
+      "src/prologBackend/requestManager.ts": [
+        "interface PrologRequestManagerOptions - Options for Prolog request manager.",
+        "class PrologRequestManager - Manages Prolog requests."
+      ],
+      "src/prologBackend/processManager.ts": [
+        "interface PrologProcessOptions - Options for Prolog process manager.",
+        "class PrologProcessManager extends EventEmitter - Manages Prolog processes."
+      ],
+      "src/prologBackend/notificationManager.ts": [
+        "interface PrologNotificationManagerOptions - Options for Prolog notification manager.",
+        "class PrologNotificationManager extends EventEmitter - Manages Prolog notifications."
+      ],
+      "src/prologBackend/index.ts": [
+        "interface ModularPrologBackendOptions - Options for modular Prolog backend.",
+        "class ModularPrologBackend - Modular Prolog backend implementation."
+      ],
+      "src/prologBackend/historyManager.ts": [
+        "interface PrologHistoryManagerOptions extends Partial<QueryHistoryOptions> - Options for Prolog history manager.",
+        "class PrologHistoryManager extends EventEmitter - Manages Prolog history."
+      ],
+      "src/prologBackend/concurrencyManager.ts": [
+        "interface PrologConcurrencyManagerOptions - Options for Prolog concurrency manager.",
+        "class PrologConcurrencyManager extends EventEmitter - Manages Prolog concurrency."
+      ]
+    }
+  },
+  {
+    "stage": 6,
+    "description": "Map main classes, interfaces, and functions for each file in src/utils/ and src/types/ directories.",
+    "fileFunctions": {
+      "src/utils/snippetUtils.ts": [
+        "interface ISnippet - Prolog snippet structure.",
+        "interface IPredModule - Prolog predicate module structure.",
+        "interface IPredicate - Prolog predicate structure.",
+        "class SnippetUtils - Utilities for Prolog snippets."
+      ],
+      "src/utils/safeAccess.ts": [
+        "function safeGet<T, K extends keyof T>(obj, key): T[K] | undefined - Safe property access.",
+        "function safeGetNested<T>(obj, path): T | undefined - Safe nested property access.",
+        "function withDefault<T>(value, defaultValue): T - Default value fallback.",
+        "function isNotNullish<T>(value): value is T - Type guard for non-nullish.",
+        "function filterNullish<T>(array): T[] - Filter nullish values.",
+        "function safeArrayAccess<T>(array, index): T | undefined - Safe array access.",
+        "function safeCall<T extends (...args: any[]) => any>(fn, ...args): ReturnType<T> | undefined - Safe function call.",
+        "function createSafeAccessor<T>(obj): accessor - Create safe accessor.",
+        "function safeJsonParse<T>(json): T | undefined - Safe JSON parse.",
+        "function safeToString(value): string - Safe to string.",
+        "function safeToNumber(value): number | undefined - Safe to number.",
+        "function safeToBoolean(value): boolean - Safe to boolean."
+      ],
+      "src/utils/prologExecUtils.ts": [
+        "class PrologExecUtils - Utilities for executing Prolog code."
+      ],
+      "src/utils/prologAnalysisUtils.ts": [
+        "class PrologAnalysisUtils - Utilities for analyzing Prolog code."
+      ],
+      "src/utils/positionUtils.ts": [
+        "class PositionUtils - Utilities for code positions."
+      ],
+      "src/utils/platformUtils.ts": [
+        "interface PlatformConfig - Platform configuration.",
+        "type PlatformType - Platform type.",
+        "type ArchitectureType - Architecture type.",
+        "interface EnvironmentVariables - Environment variables.",
+        "class PlatformUtils - Platform utilities.",
+        "function getPlatform(): PlatformType - Get platform.",
+        "function getArchitecture(): ArchitectureType - Get architecture.",
+        "function getPlatformDefaults(): PlatformConfig - Get platform defaults.",
+        "function normalizePath(inputPath): string - Normalize path.",
+        "function getExecutableExtension(): string - Get executable extension.",
+        "function getPathSeparator(): string - Get path separator.",
+        "function getHomeDirectory(): string - Get home directory.",
+        "function getTempDirectory(): string - Get temp directory."
+      ],
+      "src/utils/platformUtils.mod.ts": [
+        "class PlatformEnvUtils - Platform environment utilities."
+      ],
+      "src/utils/extensionLogProvider.ts": [
+        "class ExtensionLogProvider - Provides extension logs."
+      ],
+      "src/utils/executableFinder.ts": [
+        "interface ExecutableDetectionResult - Executable detection result.",
+        "interface DetectionStrategy - Detection strategy.",
+        "class ExecutableFinder - Finds executables."
+      ],
+      "src/utils/errorHandling.ts": [
+        "function isError(error): error is Error - Type guard for Error.",
+        "function hasErrorProperty<K extends string>(error, key): boolean - Checks error property.",
+        "function getErrorMessage(error): string - Get error message.",
+        "function getErrorCode(error): string | undefined - Get error code.",
+        "function getErrorStack(error): string | undefined - Get error stack.",
+        "interface StandardError - Standardized error.",
+        "function standardizeError(error): StandardError - Standardize error.",
+        "function safeExecuteSync<T>(fn): SafeResult<T> - Safe sync execution.",
+        "interface SafeResult<T, E = StandardError> - Safe result type.",
+        "function wrapWithResultSync<T>(fn): SafeResult<T> - Wrap with result.",
+        "function assertNotNull<T>(value, message?): asserts value - Assert not null.",
+        "function assert(condition, message?): asserts condition - Assert condition.",
+        "class TypedError<T extends string = string> extends Error - Typed error.",
+        "class ValidationError extends TypedError<'validation'> - Validation error.",
+        "class NetworkError extends TypedError<'network'> - Network error.",
+        "class TimeoutError extends TypedError<'timeout'> - Timeout error."
+      ],
+      "src/types/vscode.ts": [
+        "interface ExtensionState - Extension state.",
+        "interface ExtensionConfiguration - Extension configuration.",
+        "interface PrologDocument - Prolog document.",
+        "interface PrologPosition extends Position - Prolog position.",
+        "interface PrologRange extends Range - Prolog range.",
+        "interface PrologLocation extends Location - Prolog location.",
+        "interface PrologHoverInfo - Prolog hover info.",
+        "interface PrologHover extends Hover - Prolog hover.",
+        "interface PrologDefinition - Prolog definition.",
+        "interface PrologReference - Prolog reference.",
+        "interface PrologDocumentHighlight extends DocumentHighlight - Prolog document highlight.",
+        "interface PrologCompletionItem extends CompletionItem - Prolog completion item.",
+        "interface PrologCodeAction extends CodeAction - Prolog code action.",
+        "interface PrologDiagnostic extends Diagnostic - Prolog diagnostic.",
+        "interface PrologFormattingOptions - Prolog formatting options.",
+        "interface PrologTextEdit extends TextEdit - Prolog text edit.",
+        "interface PrologLinterOptions - Prolog linter options.",
+        "interface PrologLinterResult - Prolog linter result.",
+        "interface PrologTerminalOptions - Prolog terminal options.",
+        "interface PrologTerminal extends Omit<Terminal, 'exitStatus'> - Prolog terminal.",
+        "interface PrologChatContext - Prolog chat context.",
+        "interface PrologChatResult extends ChatResult - Prolog chat result.",
+        "interface PrologChatCommand - Prolog chat command.",
+        "interface TelemetryData - Telemetry data.",
+        "interface TelemetryCollector - Telemetry collector.",
+        "interface PrologDebugConfiguration - Prolog debug configuration.",
+        "interface PrologDebugSession - Prolog debug session.",
+        "interface PrologSnippet - Prolog snippet.",
+        "interface SnippetCollection - Snippet collection.",
+        "interface PrologRefactorAction - Prolog refactor action.",
+        "interface PrologWorkspace - Prolog workspace.",
+        "interface ExtensionEventMap - Extension event map.",
+        "interface PrologCommand - Prolog command.",
+        "interface SettingsWebViewMessage - Settings webview message.",
+        "interface SettingsWebViewState - Settings webview state.",
+        "interface IDEConfiguration - IDE configuration.",
+        "interface SupportedIDE - Supported IDE."
+      ],
+      "src/types/utils.ts": [
+        "type SafeArrayAccess<T> - Safe array access type.",
+        "type SafeObjectAccess<T> - Safe object access type.",
+        "type SafePropertyAccess<T, K> - Safe property access type.",
+        "type ConfigValue<T> - Config value type.",
+        "type DeepConfigValue<T> - Deep config value type.",
+        "interface ErrorInfo - Error info.",
+        "type ErrorHandler - Error handler type.",
+        "type ErrorLogger - Error logger type.",
+        "type ErrorFormatter - Error formatter type.",
+        "type TypeGuard<T> - Type guard type.",
+        "type ErrorTypeGuard - Error type guard.",
+        "type StringTypeGuard - String type guard.",
+        "type NumberTypeGuard - Number type guard.",
+        "type ObjectTypeGuard - Object type guard.",
+        "type ArrayTypeGuard<T> - Array type guard.",
+        "interface ValidationRule<T> - Validation rule.",
+        "interface ValidationResult - Validation result.",
+        "type Validator<T> - Validator type.",
+        "interface FileInfo - File info.",
+        "interface DirectoryInfo - Directory info.",
+        "type FileReader - File reader type.",
+        "type FileWriter - File writer type.",
+        "type FileExists - File exists type.",
+        "type DirectoryLister - Directory lister type.",
+        "interface StringUtils - String utilities.",
+        "interface ArrayUtils - Array utilities.",
+        "interface ObjectUtils - Object utilities.",
+        "interface DateUtils - Date utilities.",
+        "interface PromiseUtils - Promise utilities.",
+        "interface Logger - Logger interface.",
+        "interface LoggerConfig - Logger config.",
+        "interface CacheEntry<T> - Cache entry.",
+        "interface Cache<T> - Cache.",
+        "interface EventEmitterUtils - Event emitter utilities.",
+        "interface PathUtils - Path utilities.",
+        "interface UrlUtils - URL utilities.",
+        "interface CryptoUtils - Crypto utilities.",
+        "interface PerformanceTimer - Performance timer.",
+        "interface PerformanceUtils - Performance utilities.",
+        "interface DebounceOptions - Debounce options.",
+        "interface ThrottleOptions - Throttle options.",
+        "interface TimingUtils - Timing utilities.",
+        "interface Utils - General utilities."
+      ],
+      "src/types/index.ts": [
+        "type Awaitable<T> - Awaitable type.",
+        "type Optional<T, K> - Optional type.",
+        "type RequiredKeys<T, K> - Required keys type.",
+        "type DeepPartial<T> - Deep partial type.",
+        "interface ErrorWithCode extends Error - Error with code.",
+        "interface ValidationError extends ErrorWithCode - Validation error.",
+        "type EventCallback<T> - Event callback type.",
+        "type EventMap - Event map type.",
+        "interface Result<T, E> - Result type.",
+        "interface PaginatedResult<T> - Paginated result.",
+        "interface TimeRange - Time range.",
+        "interface Timestamp - Timestamp.",
+        "type UUID - UUID type.",
+        "type EntityId - Entity ID type.",
+        "type Status - Status type.",
+        "type Priority - Priority type.",
+        "interface BaseConfig - Base config.",
+        "type LogLevel - Log level type.",
+        "interface LogEntry - Log entry."
+      ],
+      "src/types/configuration.ts": [
+        "interface BaseConfiguration - Base configuration.",
+        "interface PrologConfiguration - Prolog configuration."
+      ]
+    }
+  },
+  {
+    "stage": 7,
+    "description": "Map main classes, test suites, and functions for each file in test/ directory.",
+    "fileFunctions": {
+      "test/vscode-mock.js": [
+        "Mock for the vscode module when running tests outside of VS Code environment.",
+        "showInformationMessage(message, ...items) - Mocked info message.",
+        "showWarningMessage(message, options, ...items) - Mocked warning message.",
+        "showErrorMessage(message, ...items) - Mocked error message.",
+        "createWebviewPanel(viewType, title, showOptions, options) - Mocked webview panel.",
+        "withProgress(options, task) - Mocked progress API."
+      ],
+      "test/validation/vsix-installation-test.js": [
+        "class VSIXInstallationTester - VSIX installation and validation logic.",
+        "setupTestEnvironment() - Sets up test environment.",
+        "checkVSCodeAvailability() - Checks VS Code availability.",
+        "testExtensionInVSCode(workspaceDir) - Tests extension in VS Code.",
+        "runAutomatedTests() - Runs automated tests.",
+        "runFullInstallationTest() - Runs full installation test."
+      ]
+    }
+  }
+}
+}
+}

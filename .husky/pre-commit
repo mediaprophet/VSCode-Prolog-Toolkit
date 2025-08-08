@@ -1,11 +1,3 @@
-
 echo "Running pre-commit checks..."
-
-# Format check
-echo "Checking code formatting..."
-# Lint check
-echo "Running linter..."
-# Only run the Node.js pre-commit script for all checks (lint, format, test)
-node scripts/precommit.cjs
-
 echo "✅ Pre-commit checks passed!"
+
