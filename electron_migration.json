@@ -1,0 +1,17 @@
+{
+  "plan": [
+    "1. Scaffold a new Electron app in a subfolder. Set up TypeScript, Node.js, and Electron dependencies.",
+    "2. Create 'main/' for the Electron main process (system shell, menu, window management) and 'web/' for the web interface (React/Vue/HTML UI).",
+    "3. Move all backend logic from src/prologBackend, src/features/apiServer, src/features/concurrencyManager, src/features/sessionManager, src/features/queryHistoryManager, and related helpers into the Electron app under 'prologBackend/' and 'features/'. Organize as modules/extensions.",
+    "4. Integrate the Prolog system as a module or core-extension to the Electron app, not as the primary app shell. The Electron app is the primary system, Prolog is a module.",
+    "5. Expose a local HTTP and/or WebSocket API from the Electron app (reuse src/features/apiServer and SDK).",
+    "6. Add a main system menu and tray, and serve a web interface for local management and diagnostics.",
+    "7. Refactor the VS Code extension to remove all backend logic. Keep only UI, command registration, and a thin API/WebSocket client (reuse src/sdk).",
+    "8. Update the VS Code extension to launch/connect to the Electron app on activation, and forward all user actions (queries, session ops, etc.) via the API.",
+    "9. Implement robust error handling, reconnection, and version checks between the extension and Electron app.",
+    "10. Write integration tests for the Electron app API, web interface, and for the VS Code extension's client logic.",
+    "11. Document the new architecture, setup, and developer workflow in the README for both projects.",
+    "12. Gradually deprecate or remove legacy backend code from the extension repo as confidence in the Electron app grows."
+  ],
+  "notes": "The Electron app is the primary system shell, with a menu and web interface. The Prolog system is integrated as a module or core extension. This enables a robust, modular backend, a maintainable VS Code extension as a thin client, and future extensibility."
+}

@@ -1,0 +1,19 @@
+{
+  "doc": "troubleshooting.md",
+  "features": [
+    "Installation and backend troubleshooting",
+    "Error code reference and debugging steps",
+    "Community and professional support"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Update troubleshooting logic and error code references for Electron deployment.",
+    "Ensure all backend and installation troubleshooting steps are valid for Electron.",
+    "Document community and professional support options for Electron users."
+  ],
+  "electronIntegration": [
+    "electron/docs: Troubleshooting and support documentation (to be created)",
+    "electron/features/errorHandler: Error code and debugging logic"
+  ],
+  "testCoverage": "pending"
+}

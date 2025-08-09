@@ -1,0 +1,26 @@
+{
+  "doc": "api-reference.md",
+  "features": [
+    "REST API endpoints for query, batch, session, reasoning, history, status",
+    "Authentication (API Key, JWT, OAuth2, local-only)",
+    "User roles and rate limits",
+    "WebSocket API for real-time notifications",
+    "Error handling and SDK usage",
+    "Configuration and best practices"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Electron backend must provide all documented REST endpoints, mapped to internal modules.",
+    "Authentication and role-based access must be enforced at the API layer.",
+    "WebSocket server must be integrated for notifications and real-time events.",
+    "Error handling must follow documented formats and codes.",
+    "Configuration options must be exposed and documented for Electron deployment."
+  ],
+  "electronIntegration": [
+    "electron/features/apiServer: REST and WebSocket server logic",
+    "electron/features/sessionManager: Session management",
+    "electron/features/queryHistoryManager: History endpoints",
+    "electron/features/concurrencyManager: Rate limiting, resource quotas"
+  ],
+  "testCoverage": "pending"
+}

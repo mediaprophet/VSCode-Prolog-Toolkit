@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VSCode Prolog Toolkit System</title>
+  <link rel="icon" href="icon.png">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+
+    header {
+      background: #222;
+      color: #fff;
+      padding: 1rem;
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    .status {
+      margin: 1rem 0;
+    }
+
+    .prolog-status {
+      color: #007acc;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>VSCode Prolog Toolkit System</h1>
+  </header>
+  <main>
+    <div class="status">
+      <span>Prolog System Status: </span>
+      <span class="prolog-status" id="prolog-status">Stopped</span>
+    </div>
+    <button onclick="startProlog()">Start Prolog</button>
+    <button onclick="stopProlog()">Stop Prolog</button>
+    <div id="console"></div>
+  </main>
+  <script>
+    function startProlog() {
+      document.getElementById('prolog-status').textContent = 'Running';
+      // TODO: Call backend to start Prolog
+    }
+    function stopProlog() {
+      document.getElementById('prolog-status').textContent = 'Stopped';
+      // TODO: Call backend to stop Prolog
+    }
+  </script>
+</body>
+
+</html>

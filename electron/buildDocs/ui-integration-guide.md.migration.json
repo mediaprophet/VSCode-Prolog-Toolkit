@@ -1,0 +1,22 @@
+{
+  "doc": "ui-integration-guide.md",
+  "features": [
+    "Chat command integration (chat palette, dashboard, activity bar)",
+    "Batch query and reasoning UI",
+    "Query history and analytics panels",
+    "Error display and troubleshooting integration"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port chat command and dashboard UI logic to Electron web UI.",
+    "Implement batch query and advanced reasoning UI in the Electron web interface.",
+    "Integrate query history and analytics panels with backend modules.",
+    "Ensure error display and troubleshooting are consistent with documentation."
+  ],
+  "electronIntegration": [
+    "electron/web: Web UI components for chat, dashboard, analytics",
+    "electron/features/apiServer: Backend for UI commands and analytics",
+    "electron/features/queryHistoryManager: History and analytics integration"
+  ],
+  "testCoverage": "pending"
+}

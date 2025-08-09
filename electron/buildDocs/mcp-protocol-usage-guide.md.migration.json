@@ -1,0 +1,20 @@
+{
+  "doc": "mcp-protocol-usage-guide.md",
+  "features": [
+    "MCP protocol handlers, tools, and resources",
+    "JSON protocol over stdio/HTTP",
+    "Schema validation and error handling"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port MCP protocol handler logic to Electron backend.",
+    "Ensure all tools/resources are registered and discoverable via Electron MCP server.",
+    "Implement schema validation and error handling as per documentation."
+  ],
+  "electronIntegration": [
+    "electron/features/mcpServer: MCP protocol handler (to be created)",
+    "electron/features/apiServer: HTTP/JSON protocol integration",
+    "electron/features/toolSchemas: Zod schema validation (to be created)"
+  ],
+  "testCoverage": "pending"
+}

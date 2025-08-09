@@ -1,0 +1,20 @@
+{
+  "doc": "step3-package-management.md",
+  "features": [
+    "PrologPackageManager (list, install, uninstall, update, info, search, servers)",
+    "Chat command interface for package management",
+    "Server-side Prolog predicates for pack operations"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port PrologPackageManager and related chat command logic to Electron backend.",
+    "Implement server-side Prolog predicates for pack operations in Electron context.",
+    "Ensure package management UI and API are robust and testable."
+  ],
+  "electronIntegration": [
+    "electron/features/prologPackageManager: Package management logic (to be created)",
+    "electron/features/apiServer: API endpoints for package management",
+    "electron/prologBackend: Prolog integration for pack operations"
+  ],
+  "testCoverage": "pending"
+}

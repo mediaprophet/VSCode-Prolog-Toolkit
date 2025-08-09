@@ -1,0 +1,180 @@
+{
+  "_meta": {
+    "description": "Tracks migration of documentation-identified features to the new Electron build.",
+    "generated": "2025-08-09T00:00:00Z",
+    "status": "in-progress"
+  },
+  "docs": [
+    {
+      "doc": "implementation-summary.md",
+      "features": [
+        "Public API Exposure (REST, WebSocket, SDK)",
+        "Security and Access Control (API Key, JWT, RBAC, sandboxing, auditing)",
+        "MCP Server Integration (tools, resources, protocol)",
+        "Comprehensive Documentation (OpenAPI, API reference, integration guides)",
+        "Testing (TypeScript strict mode, integration tests, performance tests)"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "api-reference.md",
+      "features": [
+        "REST API endpoints for query, batch, session, reasoning, history, status",
+        "Authentication (API Key, JWT, OAuth2, local-only)",
+        "User roles and rate limits",
+        "WebSocket API for real-time notifications",
+        "Error handling and SDK usage",
+        "Configuration and best practices"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "ai-agent-integration-guide.md",
+      "features": [
+        "SDK usage for queries, sessions, batch, advanced reasoning",
+        "WebSocket integration for notifications",
+        "MCP server integration for Claude Desktop and custom tools",
+        "Authentication setup (API Key, JWT, OAuth2)",
+        "Troubleshooting and best practices"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "automated-testing-guide.md",
+      "features": [
+        "Automated test structure and logging",
+        "Problems file generation and validation",
+        "Best practices for test coverage and reporting"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "callback-notification-system.md",
+      "features": [
+        "Real-time progress tracking for long-running queries",
+        "WebSocket-based notifications",
+        "Query cancellation and status management",
+        "Batch processing with individual query tracking"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "lsp-integration-guide.md",
+      "features": [
+        "LSP server/client for Prolog (core LSP features, advanced diagnostics, multi-IDE support)",
+        "Custom requests for query execution, help, N3 diagnostics",
+        "Performance optimization and troubleshooting"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "ui-integration-guide.md",
+      "features": [
+        "Chat command integration (chat palette, dashboard, activity bar)",
+        "Batch query and reasoning UI",
+        "Query history and analytics panels",
+        "Error display and troubleshooting integration"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "mcp-protocol-usage-guide.md",
+      "features": [
+        "MCP protocol handlers, tools, and resources",
+        "JSON protocol over stdio/HTTP",
+        "Schema validation and error handling"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "advanced-concurrency-features.md",
+      "features": [
+        "ConcurrencyManager (resource quotas, priority queues, cancellation)",
+        "QueryHistoryManager (persistent storage, filtering, statistics)",
+        "QueryScheduler (immediate, delayed, recurring, conditional queries)"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "n3-reasoning-guide.md",
+      "features": [
+        "N3 logic reasoning (load, list, reason, explain)",
+        "N3/Turtle file support and error handling",
+        "Integration with Prolog backend"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "performance-scalability.md",
+      "features": [
+        "Streaming responses and chunked processing",
+        "Pagination for large result sets",
+        "Progress indicators and optimized output formatting"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "step3-package-management.md",
+      "features": [
+        "PrologPackageManager (list, install, uninstall, update, info, search, servers)",
+        "Chat command interface for package management",
+        "Server-side Prolog predicates for pack operations"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "step4-output-formatting-error-handling.md",
+      "features": [
+        "OutputFormatter (multi-format, streaming, markdown, code highlighting)",
+        "ErrorHandler (structured codes, user guidance, localization)",
+        "StreamingHandler (chunked processing, progress, cancellation)",
+        "LocalizationManager (multi-language support)"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "step7-implementation-summary.md",
+      "features": [
+        "Automated integration and unit tests",
+        "Test environment setup and CI",
+        "Comprehensive documentation and troubleshooting"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "step8-ui-ux-enhancements-summary.md",
+      "features": [
+        "LSP-style commands and chat enhancements",
+        "Context-aware followups and markdown formatting",
+        "Enhanced help, result formatting, and UI/UX improvements"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "troubleshooting.md",
+      "features": [
+        "Installation and backend troubleshooting",
+        "Error code reference and debugging steps",
+        "Community and professional support"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "protocol.md",
+      "features": [
+        "MCP protocol handlers, Zod schemas, tool/resource registration",
+        "Extending protocol with new tools/resources"
+      ],
+      "migrationStatus": "pending"
+    },
+    {
+      "doc": "installation-guide.md",
+      "features": [
+        "Platform-specific installation and setup wizard",
+        "Automatic detection and configuration",
+        "Verification and troubleshooting"
+      ],
+      "migrationStatus": "pending"
+    }
+  ]
+}

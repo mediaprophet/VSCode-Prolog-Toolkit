@@ -1,0 +1,19 @@
+{
+  "doc": "automated-testing-guide.md",
+  "features": [
+    "Automated test structure and logging",
+    "Problems file generation and validation",
+    "Best practices for test coverage and reporting"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Test runner and logging logic must be ported to work with Electron backend.",
+    "Problems file generation must reference Electron log files and use unique identifiers.",
+    "Test coverage and reporting must be validated for Electron modules."
+  ],
+  "electronIntegration": [
+    "electron/test: Test runner and log management (to be created)",
+    "electron/utils: Logging utilities"
+  ],
+  "testCoverage": "pending"
+}

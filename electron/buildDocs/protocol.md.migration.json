@@ -1,0 +1,18 @@
+{
+  "doc": "protocol.md",
+  "features": [
+    "MCP protocol handlers, Zod schemas, tool/resource registration",
+    "Extending protocol with new tools/resources"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port MCP protocol handler and Zod schema logic to Electron backend.",
+    "Ensure all tool/resource registration and extension points are available in Electron MCP server.",
+    "Document and test protocol extension for new tools/resources."
+  ],
+  "electronIntegration": [
+    "electron/features/mcpServer: MCP protocol handler (to be created)",
+    "electron/features/toolSchemas: Zod schema definitions (to be created)"
+  ],
+  "testCoverage": "pending"
+}

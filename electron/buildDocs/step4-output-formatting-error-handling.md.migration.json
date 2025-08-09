@@ -1,0 +1,23 @@
+{
+  "doc": "step4-output-formatting-error-handling.md",
+  "features": [
+    "OutputFormatter (multi-format, streaming, markdown, code highlighting)",
+    "ErrorHandler (structured codes, user guidance, localization)",
+    "StreamingHandler (chunked processing, progress, cancellation)",
+    "LocalizationManager (multi-language support)"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port OutputFormatter, ErrorHandler, and StreamingHandler modules to Electron backend and web UI.",
+    "Implement LocalizationManager for multi-language support in Electron context.",
+    "Ensure all formatting, error handling, and streaming features are robust and testable."
+  ],
+  "electronIntegration": [
+    "electron/features/outputFormatter: Output formatting logic (to be created)",
+    "electron/features/errorHandler: Error handling logic (to be created)",
+    "electron/features/streamingHandler: Streaming logic (to be created)",
+    "electron/features/localization: Localization support (to be created)",
+    "electron/web: UI integration for formatting and errors"
+  ],
+  "testCoverage": "pending"
+}

@@ -1,0 +1,20 @@
+{
+  "doc": "performance-scalability.md",
+  "features": [
+    "Streaming responses and chunked processing",
+    "Pagination for large result sets",
+    "Progress indicators and optimized output formatting"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port streaming, chunked processing, and pagination logic to Electron backend and web UI.",
+    "Implement progress indicators and optimized output formatting in Electron web interface.",
+    "Ensure performance features are robust and testable in Electron context."
+  ],
+  "electronIntegration": [
+    "electron/features/streamingHandler: Streaming and chunked processing (to be created)",
+    "electron/web: Progress indicators and output formatting",
+    "electron/features/apiServer: Backend support for streaming and pagination"
+  ],
+  "testCoverage": "pending"
+}

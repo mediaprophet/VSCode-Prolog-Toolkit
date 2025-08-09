@@ -1,0 +1,20 @@
+{
+  "doc": "lsp-integration-guide.md",
+  "features": [
+    "LSP server/client for Prolog (core LSP features, advanced diagnostics, multi-IDE support)",
+    "Custom requests for query execution, help, N3 diagnostics",
+    "Performance optimization and troubleshooting"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port LSP server/client logic to Electron, ensuring all documented features are supported.",
+    "Implement custom requests for query execution, help, and N3 diagnostics in Electron context.",
+    "Optimize for performance and provide troubleshooting tools for Electron deployment."
+  ],
+  "electronIntegration": [
+    "electron/features/lspServer: LSP server implementation (to be created)",
+    "electron/features/lspClient: LSP client integration (to be created)",
+    "electron/features/apiServer: Backend integration for LSP features"
+  ],
+  "testCoverage": "pending"
+}

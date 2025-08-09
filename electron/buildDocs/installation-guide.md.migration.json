@@ -1,0 +1,20 @@
+{
+  "doc": "installation-guide.md",
+  "features": [
+    "Platform-specific installation and setup wizard",
+    "Automatic detection and configuration",
+    "Verification and troubleshooting"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port installation and setup wizard logic to Electron onboarding flow.",
+    "Implement automatic detection and configuration for Electron environment.",
+    "Update verification and troubleshooting steps for Electron deployment."
+  ],
+  "electronIntegration": [
+    "electron/web: Onboarding and setup wizard UI",
+    "electron/features/installer: Detection and configuration logic (to be created)",
+    "electron/docs: Installation and troubleshooting documentation"
+  ],
+  "testCoverage": "pending"
+}

@@ -1,0 +1,22 @@
+{
+  "doc": "callback-notification-system.md",
+  "features": [
+    "Real-time progress tracking for long-running queries",
+    "WebSocket-based notifications",
+    "Query cancellation and status management",
+    "Batch processing with individual query tracking"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port QueryNotificationManager and notification logic to Electron backend.",
+    "Integrate WebSocket server for real-time updates and query lifecycle events.",
+    "Implement query cancellation and status APIs in Electron context.",
+    "Ensure batch processing and per-query tracking are robust and testable."
+  ],
+  "electronIntegration": [
+    "electron/features/apiServer: WebSocket and notification logic",
+    "electron/features/concurrencyManager: Query lifecycle integration",
+    "electron/features/queryHistoryManager: Batch and status tracking"
+  ],
+  "testCoverage": "pending"
+}

@@ -1,0 +1,20 @@
+{
+  "doc": "n3-reasoning-guide.md",
+  "features": [
+    "N3 logic reasoning (load, list, reason, explain)",
+    "N3/Turtle file support and error handling",
+    "Integration with Prolog backend"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port N3 logic reasoning commands and engine to Electron backend.",
+    "Ensure N3/Turtle file support and error handling are robust.",
+    "Integrate N3 reasoning with Prolog backend in Electron context."
+  ],
+  "electronIntegration": [
+    "electron/features/n3Reasoning: N3 logic engine (to be created)",
+    "electron/features/apiServer: N3 endpoints and error handling",
+    "electron/prologBackend: Prolog integration"
+  ],
+  "testCoverage": "pending"
+}

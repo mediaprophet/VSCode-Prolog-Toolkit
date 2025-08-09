@@ -1,0 +1,21 @@
+{
+  "doc": "advanced-concurrency-features.md",
+  "features": [
+    "ConcurrencyManager (resource quotas, priority queues, cancellation)",
+    "QueryHistoryManager (persistent storage, filtering, statistics)",
+    "QueryScheduler (immediate, delayed, recurring, conditional queries)"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Port ConcurrencyManager, QueryHistoryManager, and QueryScheduler modules to Electron backend.",
+    "Ensure resource quotas, priority queues, and cancellation are robust and configurable.",
+    "Integrate persistent history and statistics with Electron storage.",
+    "Implement scheduling for immediate, delayed, recurring, and conditional queries."
+  ],
+  "electronIntegration": [
+    "electron/features/concurrencyManager: Concurrency and resource management",
+    "electron/features/queryHistoryManager: Persistent history and statistics",
+    "electron/features/queryScheduler: Query scheduling (to be created)"
+  ],
+  "testCoverage": "pending"
+}

@@ -1,0 +1,24 @@
+{
+  "doc": "ai-agent-integration-guide.md",
+  "features": [
+    "SDK usage for queries, sessions, batch, advanced reasoning",
+    "WebSocket integration for notifications",
+    "MCP server integration for Claude Desktop and custom tools",
+    "Authentication setup (API Key, JWT, OAuth2)",
+    "Troubleshooting and best practices"
+  ],
+  "migrationStatus": "in-progress",
+  "notes": [
+    "Electron SDK modules must provide the same API as documented for agent integration.",
+    "WebSocket client/server logic must be ported and tested in Electron.",
+    "MCP server and tool integration must be validated for Electron context.",
+    "Authentication flows must be supported and documented for Electron.",
+    "Troubleshooting steps must be updated for Electron deployment."
+  ],
+  "electronIntegration": [
+    "electron/sdk: SDK modules and client logic",
+    "electron/features/apiServer: API endpoints for agent integration",
+    "electron/features/sessionManager: Session and state management"
+  ],
+  "testCoverage": "pending"
+}
