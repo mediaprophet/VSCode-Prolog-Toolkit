@@ -1,0 +1,40 @@
+{
+  "stubs": [
+    {
+      "file": "src/prologBackend.ts",
+      "description": "Planned Node.js module for robust SWI-Prolog backend management (child process, JSON protocol). Not fully implemented; referenced in docs and plans."
+    },
+    {
+      "file": "src/features/advancedRefactoring.ts",
+      "description": "Stub or partial implementation for advanced refactoring features. Placeholder for future language tooling."
+    },
+    {
+      "file": "src/features/n3Diagnostics.ts",
+      "description": "Stub or partial implementation for N3 logic diagnostics. Placeholder for future semantic tooling."
+    },
+    {
+      "file": "src/features/lspIntegration.ts",
+      "description": "Planned LSP integration for advanced language features. Not yet implemented."
+    },
+    {
+      "file": "utils/snippetExtractor.ts",
+      "description": "Utility script for snippet extraction; may contain stub functions for future expansion."
+    },
+    {
+      "file": "test/installation-integration.test.ts",
+      "description": "Test scaffolding for installation integration; may include stub or placeholder tests."
+    },
+    {
+      "file": "test/resources/sample-n3-file.n3",
+      "description": "Sample resource for N3 logic; may be a placeholder for future test cases."
+    },
+    {
+      "file": "src/features/telemetry.ts",
+      "description": "Stub for planned telemetry/analytics integration. Not yet implemented."
+    },
+    {
+      "file": "src/features/accessibility.ts",
+      "description": "Stub for accessibility and localization features. Not yet implemented."
+    }
+  ]
+}

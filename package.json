@@ -1,5 +1,6 @@
 {
   "name": "vscode-prolog-toolkit",
+  "type": "module",
   "displayName": "VSCode Prolog Toolkit",
   "description": "Advanced Prolog language support, debugging, and tooling for Visual Studio Code.",
   "version": "1.4.5",
@@ -7,8 +8,7 @@
   "icon": "images/vsplogo.png",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.102.0",
-    "node": ">=20.0.0"
+    "vscode": ">=1.97.0"
   },
   "categories": [
     "Programming Languages",
@@ -67,9 +67,8 @@
   "activationEvents": [
     "onView:prologExplorer",
     "onView:queryHistory",
-    "onView:prologFiles",
-    "onView:prologDashboard",
-    "onView:prologSettings"
+    "onDebug:prolog",
+    "onChatParticipant:prolog"
   ],
   "contributes": {
     "terminal": {
@@ -1032,18 +1031,18 @@
     "@types/node": "^20.11.30",
     "@types/sinon": "^17.0.4",
     "@types/uuid": "^10.0.0",
-    "@types/vscode": "^1.102.0",
+    "@types/vscode": "^1.97.0",
     "@types/which": "^3.0.4",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^9.0.0",
-    "@typescript-eslint/parser": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/test-web": "^0.0.41",
-    "@vscode/vsce": "^3.16.0",
+    "@vscode/vsce": "3.6.0",
     "chai": "^5.2.1",
     "cross-env": "^10.0.0",
     "esbuild": "^0.25.8",
-    "eslint": "^9.32.0",
+    "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "husky": "^9.1.7",

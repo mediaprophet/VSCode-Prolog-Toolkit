@@ -10,7 +10,7 @@ import jsesc from 'jsesc';
 import { spawn } from 'process-promises';
 import { commands, window } from 'vscode';
 import { PlatformUtils } from '../utils/platformUtils';
-import { InstallationGuide } from './installationGuide';
+import { InstallationGuide } from './installation/InstallationGuide';
 import { PrologDebugSession } from './prologDebugSession';
 
 export interface ITraceCmds {

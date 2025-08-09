@@ -223,44 +223,63 @@ If automatic detection fails, configure manually:
 }
 ```
 
-## Setup Wizard
 
-The Setup Wizard provides guided configuration:
+## Setup Wizard (Modern Multi-Step)
 
-### 1. Launch Wizard
-- Command Palette → "Prolog: Setup Wizard"
-- Or click notification when SWI-Prolog is not found
+The Setup Wizard is a modern, interactive, multi-step webview that guides you through the entire installation and configuration process, including HTTP backend setup and troubleshooting. It is the recommended way to get started and resolve most issues.
 
-### 2. Platform Detection
-- Automatically detects your operating system
-- Shows platform-specific recommendations
+### 1. Launch the Setup Wizard
+- Open the Command Palette (`Ctrl+Shift+P`) and select **Prolog: Setup Wizard**
+- Or click the notification if SWI-Prolog or the backend is not detected
 
-### 3. SWI-Prolog Detection
-- Searches common installation locations
-- Provides installation suggestions if not found
+### 2. Platform & Environment Detection
+- The wizard auto-detects your operating system and environment
+- Platform-specific instructions and recommendations are shown
 
-### 4. Package Manager Integration
-- Detects available package managers
-- Offers automated installation options
+### 3. SWI-Prolog Detection & Installation
+- Searches common installation locations for SWI-Prolog
+- If not found, provides direct download links and package manager options
+- Offers automated installation via detected package managers (e.g., Chocolatey, Homebrew, apt)
 
-### 5. Configuration
-- Sets up optimal default settings
-- Configures platform-specific options
+### 4. HTTP Backend Configuration
+- Dedicated step for HTTP backend setup
+- Configure backend port, test connectivity, and view troubleshooting tips
+- Wizard will test backend startup and report actionable diagnostics
 
-### 6. Verification
-- Tests SWI-Prolog installation
-- Validates configuration
-- Runs sample queries
+### 5. Configuration & Verification
+- Sets up optimal default settings and platform-specific options
+- Verifies SWI-Prolog and backend installation
+- Runs sample queries to confirm end-to-end functionality
 
-## Verification
+### 6. Troubleshooting & Help
+- Integrated troubleshooting help for common issues (installation, backend, chat, N3 logic, etc.)
+- Actionable recommendations and direct links to documentation
+- Diagnostic logs and error codes are referenced for advanced users
 
-### Test Installation
+### 7. Completion
+- On success, the wizard confirms your environment is ready
+- If issues remain, the wizard provides next steps and support resources
 
-1. **Open Prolog File**: Create or open a `.pl` file
-2. **Check Syntax Highlighting**: Verify Prolog syntax is highlighted
-3. **Test Linting**: Introduce a syntax error and check for diagnostics
-4. **Run Query**: Use `Ctrl+Shift+Q` to execute a query
-5. **Load Document**: Use `Alt+X L` to load current document
+
+---
+
+**Tip:** You can re-run the Setup Wizard at any time to reconfigure, test, or troubleshoot your environment.
+
+
+## Verification & End-to-End Test
+
+After completing the Setup Wizard:
+
+1. **Open a Prolog file** (`.pl`) to verify syntax highlighting and linting
+2. **Test the backend**: Use chat commands or the command palette to run a query (e.g., `/query member(X, [1,2,3])`)
+3. **Check HTTP backend**: If using HTTP, ensure the backend status is "Running" in the status bar and test connectivity in the wizard
+4. **Run sample queries**: Use the following in the chat or terminal:
+   ```prolog
+   ?- hello_world.
+   ?- factorial(5, X).
+   ?- trace, factorial(3, X).
+   ```
+5. **Review diagnostics**: If any step fails, use the wizard's troubleshooting help or refer to the [Troubleshooting Guide](./troubleshooting.md)
 
 ### Sample Test File
 
@@ -268,96 +287,38 @@ Create `test.pl`:
 ```prolog
 % Test file for VSCode Prolog Toolkit
 hello_world :-
-    write('Hello, World!'),
-    nl.
+  write('Hello, World!'),
+  nl.
 
 factorial(0, 1) :- !.
 factorial(N, F) :-
-    N > 0,
-    N1 is N - 1,
-    factorial(N1, F1),
-    F is N * F1.
+  N > 0,
+  N1 is N - 1,
+  factorial(N1, F1),
+  F is N * F1.
 ```
 
-### Test Commands
 
-```prolog
-?- hello_world.
-?- factorial(5, X).
-?- trace, factorial(3, X).
-```
+## Troubleshooting & Diagnostics
 
-## Troubleshooting
+If you encounter issues at any step, use the integrated troubleshooting help in the Setup Wizard or refer to the [Troubleshooting Guide](./troubleshooting.md). Common issues include:
 
-### Common Issues
+### SWI-Prolog Not Found
+- Run the Setup Wizard to auto-detect or manually configure the path
+- Ensure SWI-Prolog is in your system PATH
+- Use the wizard's "Manual Configuration" to browse to your installation
 
-#### 1. SWI-Prolog Not Found
+### HTTP Backend/Connection Issues
+- Use the wizard's HTTP backend step to test connectivity and view diagnostics
+- If the backend fails to start, check port availability and firewall settings
+- Adjust backend port in the wizard or settings if needed
 
-**Symptoms:**
-- "SWI-Prolog executable not found" error
-- No syntax highlighting or linting
-
-**Solutions:**
-1. Run Setup Wizard: `Ctrl+Shift+P` → "Prolog: Setup Wizard"
-2. Check PATH: Ensure SWI-Prolog is in system PATH
-3. Manual configuration: Set `prolog.executablePath` in settings
-4. Reinstall SWI-Prolog using package manager
-
-#### 2. Permission Errors
-
-**Windows:**
-```powershell
-# Run as Administrator
-# Check execution policy
-Get-ExecutionPolicy
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-**macOS:**
-```bash
-# Remove quarantine
-sudo xattr -rd com.apple.quarantine /Applications/SWI-Prolog.app
-# Fix permissions
-chmod +x /usr/local/bin/swipl
-```
-
-**Linux:**
-```bash
-# Fix permissions
-sudo chmod +x /usr/bin/swipl
-# Check ownership
-ls -la /usr/bin/swipl
-```
-
-#### 3. Path Issues
-
-**Environment Variables:**
-- Windows: `%PROGRAMFILES%\swipl\bin`
-- macOS: `$HOME/.local/bin`
-- Linux: `$HOME/.local/bin`
-
-**Configuration:**
-```json
-{
-  "prolog.platform.pathExpansion": true,
-  "prolog.executablePath": "${env:PROGRAMFILES}\\swipl\\bin\\swipl.exe"
-}
-```
-
-#### 4. Terminal Integration
-
-**Shell Detection:**
-```json
-{
-  "prolog.terminal.shell": "powershell",  // Windows
-  "prolog.terminal.shell": "zsh",         // macOS
-  "prolog.terminal.shell": "bash"         // Linux
-}
-```
+### Permission & Path Issues
+- See platform-specific instructions in the wizard and below
+- Ensure correct permissions and environment variables
 
 ### Diagnostic Commands
-
-#### Check Installation
+Use these commands to verify your setup:
 ```bash
 # Verify SWI-Prolog
 swipl --version
@@ -368,26 +329,14 @@ code --version
 code --list-extensions | grep prolog
 ```
 
-#### Platform Information
-```bash
-# Windows
-systeminfo | findstr /B /C:"OS Name"
-
-# macOS
-system_profiler SPSoftwareDataType
-
-# Linux
-uname -a && lsb_release -a
-```
-
 ### Log Files
-
-**Extension Logs:**
+Extension logs are available at:
 - Windows: `%APPDATA%\Code\logs\*\exthost*\output_logging_*`
 - macOS: `~/Library/Application Support/Code/logs/*/exthost*/output_logging_*`
 - Linux: `~/.config/Code/logs/*/exthost*/output_logging_*`
 
-## Advanced Setup
+
+## Advanced & Multi-Platform Setup
 
 ### Multi-Platform Development
 

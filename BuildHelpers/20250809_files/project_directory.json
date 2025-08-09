@@ -1,4 +1,3 @@
-  },
   {
     "stage": 11,
     "description": "Map main classes and default exports for files with export default in src/ and src/features/.",

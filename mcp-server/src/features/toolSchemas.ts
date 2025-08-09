@@ -1,12 +1,12 @@
 export const ListResourcesRequestSchema = z.object({ method: z.literal('listResources') });
 export const ReadResourceRequestSchema = z.object({ method: z.literal('readResource'), params: z.object({ uri: z.string() }) });
 // Zod schemas for each tool request
-export const BatchQueryExecutionRequestSchema = z.object({ method: z.literal('batch_query_execution'), params: z.object({ queries: z.array(z.string()), sessionId: z.string().optional(), timeout: z.number().optional() }) });
-export const ClpConstraintSolvingRequestSchema = z.object({ method: z.literal('clp_constraint_solving'), params: z.object({ constraints: z.string(), sessionId: z.string().optional(), timeout: z.number().optional() }) });
-export const ProbabilisticInferenceRequestSchema = z.object({ method: z.literal('probabilistic_inference'), params: z.object({ query: z.string(), sessionId: z.string().optional(), timeout: z.number().optional() }) });
-export const N3SemanticReasoningRequestSchema = z.object({ method: z.literal('n3_semantic_reasoning'), params: z.object({ n3Input: z.string(), query: z.string(), timeout: z.number().optional() }) });
-export const QueryHistoryRequestSchema = z.object({ method: z.literal('query_history'), params: z.object({ sessionId: z.string().optional(), limit: z.number().optional() }) });
-export const SystemStatusRequestSchema = z.object({ method: z.literal('system_status'), params: z.object({}) });
+export const BatchQueryExecutionRequestSchema = z.object({ method: z.literal('batch_query_execution'), params: z.object({ queries: z.array(z.string()), sessionId: z.string().optional(), timeout: z.number().optional() }).optional() });
+export const ClpConstraintSolvingRequestSchema = z.object({ method: z.literal('clp_constraint_solving'), params: z.object({ constraints: z.string(), sessionId: z.string().optional(), timeout: z.number().optional() }).optional() });
+export const ProbabilisticInferenceRequestSchema = z.object({ method: z.literal('probabilistic_inference'), params: z.object({ query: z.string(), sessionId: z.string().optional(), timeout: z.number().optional() }).optional() });
+export const N3SemanticReasoningRequestSchema = z.object({ method: z.literal('n3_semantic_reasoning'), params: z.object({ n3Input: z.string(), query: z.string(), timeout: z.number().optional() }).optional() });
+export const QueryHistoryRequestSchema = z.object({ method: z.literal('query_history'), params: z.object({ sessionId: z.string().optional(), limit: z.number().optional() }).optional() });
+export const SystemStatusRequestSchema = z.object({ method: z.literal('system_status'), params: z.object({}).optional() });
 // Zod schema for ListToolsRequest
 import { z } from 'zod';
 export const ListToolsRequestSchema = z.object({

@@ -11,4 +11,9 @@ export class PrologHistoryManager extends EventEmitter {
     // ...setup logic...
   }
   // ...history, statistics logic...
+
+  public async getQueryHistory(filter?: any) {
+    // TODO: Implement real logic
+    return [];
+  }
 }

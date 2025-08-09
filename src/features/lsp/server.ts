@@ -54,10 +54,8 @@ async function initializePrologBackend() {
   try {
     const settings = await configurationManager.getGlobalSettings();
     prologBackend = new PrologBackend({
-      swiplPath: settings.executablePath,
+      executablePath: settings.executablePath,
       port: 3061,
-      streamingEnabled: true,
-      maxResultsPerChunk: 50,
     });
     prologBackend.on('ready', () => connection.console.log('Prolog backend ready for LSP server'));
     prologBackend.on('error', (error: any) => connection.console.error(`Prolog backend error: ${error}`));

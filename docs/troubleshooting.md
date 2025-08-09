@@ -190,27 +190,35 @@ The extension now includes **intelligent installation detection and setup assist
    - Select "New-VSC-Prolog" from dropdown
    - Look for error messages
 
-### Setup Wizard Issues
+
+### Setup Wizard & Guided Troubleshooting
 
 **Symptoms:**
-- Setup wizard fails to detect SWI-Prolog
-- Wizard shows "No installations found"
-- Auto-detection not working properly
+- Setup wizard fails to detect SWI-Prolog or backend
+- Wizard shows "No installations found" or "Backend not running"
+- Auto-detection or HTTP backend test not working properly
 
 **Solutions:**
 
-1. **Manual path specification:**
-   - In the setup wizard, choose "Manual Configuration"
-   - Browse to your SWI-Prolog installation directory
-   - The wizard will validate the selected path
+1. **Use Integrated Troubleshooting:**
+   - The Setup Wizard includes a dedicated troubleshooting/help step
+   - Follow actionable recommendations and review error codes shown in the wizard
 
-2. **Refresh detection:**
-   - Click "Refresh" in the setup wizard
-   - The wizard will re-scan common installation paths
-   - Try after installing SWI-Prolog if not already installed
+2. **Manual path specification:**
+   - In the wizard, choose "Manual Configuration" to browse to your SWI-Prolog installation
+   - The wizard will validate the selected path and permissions
 
-3. **Platform-specific issues:**
-   - **Windows:** Ensure SWI-Prolog is installed in standard locations
+3. **HTTP Backend Troubleshooting:**
+   - Use the HTTP backend step to test connectivity and view diagnostics
+   - If the backend fails to start, check port availability, firewall, and adjust the port in the wizard
+   - Review backend logs and error codes for more details
+
+4. **Refresh detection:**
+   - Click "Refresh" in the wizard to re-scan installation paths and backend status
+   - Try after installing SWI-Prolog or resolving backend issues
+
+5. **Platform-specific issues:**
+   - **Windows:** Ensure SWI-Prolog is installed in standard locations and not blocked by security software
    - **macOS:** Check both Intel and Apple Silicon Homebrew paths
    - **Linux:** Verify package manager installation completed successfully
 
@@ -584,14 +592,18 @@ The extension now includes **intelligent installation detection and setup assist
      -d '{"goal": "member(X, [1,2,3])"}'
    ```
 
-## Getting Help
+
+## Getting Help & Support
 
 ### Before Reporting Issues
 
-1. **Check this troubleshooting guide**
-2. **Search existing issues:** [GitHub Issues](https://github.com/AmauryRabouan/new-vsc-prolog/issues)
-3. **Try with minimal example**
-4. **Collect diagnostic information**
+1. **Use the Setup Wizard:**
+   - The wizard provides integrated troubleshooting and diagnostics for most issues
+   - Review actionable recommendations and error codes in the wizard
+2. **Check this troubleshooting guide**
+3. **Search existing issues:** [GitHub Issues](https://github.com/mediaprophet/VSCode-Prolog-Toolkit/issues)
+4. **Try with a minimal example**
+5. **Collect diagnostic information**
 
 ### Reporting Bugs
 
@@ -604,9 +616,9 @@ Include the following information:
    - SWI-Prolog version
 
 2. **Steps to reproduce:**
-   - Exact commands used
+   - Exact commands used (including wizard steps if relevant)
    - Expected vs actual behavior
-   - Error messages
+   - Error messages (including any shown in the wizard)
 
 3. **Logs:**
    - Extension output logs

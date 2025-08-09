@@ -1,0 +1,18 @@
+{
+  "plan": [
+    "1. For each missing method used by dependent files (e.g., sendRequestWithNotifications, listSessions, createSession, getSession, getSessionStatistics, deleteSession, saveSessionState, getQueryHistory, getConcurrencyStatus, getQueryStatistics, getSchedulerStatistics), add a public method to PrologBackend that delegates to the appropriate manager.",
+    "2. If a manager does not yet implement the required method, add a stub or minimal implementation to that manager (e.g., sessionManager, historyManager, concurrencyManager, notificationManager, requestManager).",
+    "3. Ensure all new methods are modular, documented, and only delegate (do not duplicate logic).",
+    "4. Rebuild and check for remaining TypeScript errors after each step, iterating as needed.",
+    "5. Once all errors are resolved, review and refactor for clarity and maintainability, ensuring all managers remain decoupled and testable."
+  ],
+  "notes": "This plan restores full API compatibility for dependent files, keeps the codebase modular, and avoids loss of functionality.",
+  "progress": [
+    "Added delegating API methods to PrologBackend for all missing methods.",
+    "Stubs for all required methods have been added to PrologSessionManager, PrologHistoryManager, and PrologConcurrencyManager. These methods currently return placeholder values and are not fully implemented.",
+    "The following methods are still only stubs and lack real, production-grade logic: PrologSessionManager: listSessions, createSession, getSession, getSessionStatistics, deleteSession, saveSessionState; PrologHistoryManager: getQueryHistory; PrologConcurrencyManager: getConcurrencyStatus, getQueryStatistics, getSchedulerStatistics.",
+    "In src/features/concurrencyManager: ConcurrencyLogic.ts methods (queueQuery, cancelQuery, getStatus, updateResourceQuota) are present but all marked as TODO for robust logic and are not fully implemented. ConcurrencyQueue.ts implements real queueing and cancellation, but the completeness of executeQuery is unclear. ConcurrencyResource.ts implements quota scaling and status, but memory and CPU usage estimation are still marked as TODO.",
+    "In src/features/apiServer: No major stubs or TODOs found, but error handling for double-start in server.ts is present.""There has been a recurring cycle of partial implementations, breaking changes, deletions, and incomplete reimplementations over the past week. This has led to a lack of stable, production-grade solutions and wasted development time.",
+    "Recommendation: Adopt a systematic, test-driven approach. For each required feature, write or update tests first, then implement the feature fully, validate with tests, and only then refactor for modularity. Document all changes and ensure no regressions before moving to the next feature."
+  ]
+}

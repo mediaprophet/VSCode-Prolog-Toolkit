@@ -1,0 +1,165 @@
+{
+  "criticalProblems": [
+    {
+      "category": "package.json configuration",
+      "problems": [
+        "Invalid VS Code engine version (should be >=1.80.0, not ^1.102.0)",
+        "Node.js engine version should not be specified (VS Code provides its own)",
+        "Missing or redundant activationEvents (should only include onView, onDebug, onChatParticipant)",
+        "Not all commands and features are registered in activationEvents and contributes.commands"
+      ]
+    },
+    {
+      "category": "Command and feature registration",
+      "problems": [
+        "Many commands referenced in documentation are not registered in package.json or extension code",
+        "Chat and debugger features missing proper activation and registration"
+      ]
+    },
+    {
+      "category": "Backend/process management",
+      "problems": [
+        "Use of HTTP server and child process management lacks robust error handling and port management",
+        "Synchronous file system operations (fs.readFileSync, fs.writeFileSync, etc.) block the UI thread",
+        "Missing async error handling for file and process operations",
+        "No handling for process crashes, missing executables, or port conflicts"
+      ]
+    },
+    {
+      "category": "Webview and chat integration",
+      "problems": [
+        "Missing CSP headers and message validation in webview content",
+        "Overly complex chat command parsing and lack of error boundaries",
+        "Webview <-> extension message passing is incomplete or insecure"
+      ]
+    },
+    {
+      "category": "Debugger integration",
+      "problems": [
+        "Debugger features (breakpoints, variable inspection) are broken or incomplete",
+        "Debug adapter lacks proper lifecycle and error management"
+      ]
+    },
+    {
+      "category": "Platform detection logic",
+      "problems": [
+        "Synchronous file system access for platform detection",
+        "No async error handling for permission or path errors",
+        "Complex path resolution and race conditions"
+      ]
+    },
+    {
+      "category": "Configuration and settings",
+      "problems": [
+        "Settings schema and actual values are inconsistent",
+        "Platform defaults and migration logic are incomplete or buggy"
+      ]
+    },
+    {
+      "category": "Testing and CI",
+      "problems": [
+        "Test coverage is superficial for complex backend and integration features",
+        "Platform and integration tests are incomplete or missing"
+      ]
+    }
+  ],
+  "immediateActions": [
+    "Fix package.json: set valid VS Code engine version, remove node engine, clean up activationEvents",
+    "Register all commands and features in both package.json and extension code",
+    "Refactor all synchronous fs operations to async and add robust error handling",
+    "Add CSP headers and message validation to all webviews",
+    "Simplify chat command parsing and add error boundaries",
+    "Fix or remove broken debugger features",
+    "Refactor platform detection to be async and robust",
+    "Align settings schema with actual usage and add migration tests",
+    "Add unit and integration tests for core features"
+  ],
+  "backendCriticalProblems": [
+    {
+      "category": "Backend Architecture",
+      "problems": [
+        "HTTP server used for local communication: causes port conflicts, firewall issues, security risks, and performance overhead.",
+        "No process cleanup: HTTP server and child processes may persist after extension deactivation.",
+        "Direct process communication (stdin/stdout) not used; should replace HTTP server."
+      ]
+    },
+    {
+      "category": "Child Process Management",
+      "problems": [
+        "No mechanism to detect and recover from SWI-Prolog process crashes.",
+        "Zombie processes: child processes not cleaned up on extension exit.",
+        "Executable path detection failures leave broken process references.",
+        "Resource leaks: file descriptors and memory not properly released.",
+        "No timeout or cancellation for long-running Prolog queries."
+      ]
+    },
+    {
+      "category": "JSON Communication Protocol",
+      "problems": [
+        "Prolog term serialization to JSON is fragile and loses type information.",
+        "Variable bindings and compound terms not reliably represented in JSON.",
+        "Character encoding and Unicode issues in Prolog strings.",
+        "Performance issues with large Prolog terms in JSON."
+      ]
+    },
+    {
+      "category": "Async/Await and Promise Handling",
+      "problems": [
+        "Unhandled promise rejections in backend operations.",
+        "Race conditions: multiple concurrent Prolog queries without proper queuing.",
+        "Memory leaks: pending promises not cleaned up.",
+        "No request timeout or cancellation mechanisms."
+      ]
+    },
+    {
+      "category": "Platform-Specific Backend Issues",
+      "problems": [
+        "Path separator and permission inconsistencies across platforms.",
+        "Shell argument escaping and environment variable handling not robust.",
+        "Synchronous file system access for path detection blocks UI."
+      ]
+    },
+    {
+      "category": "Advanced Feature Backend Failures",
+      "problems": [
+        "N3 logic and CLP integration likely broken due to library dependencies and error handling gaps.",
+        "Memory and performance issues with large knowledge bases and complex reasoning.",
+        "Advanced features fail silently or with poor error messages."
+      ]
+    },
+    {
+      "category": "Backend State Management",
+      "problems": [
+        "No session cleanup on extension reload.",
+        "File modification tracking and module dependency resolution issues.",
+        "Memory leaks from abandoned sessions and accumulated state."
+      ]
+    },
+    {
+      "category": "Error Handling and Recovery",
+      "problems": [
+        "Inadequate error recovery for process crashes, syntax errors, resource exhaustion, and platform-specific issues.",
+        "Unhelpful error messages shown to users."
+      ]
+    },
+    {
+      "category": "Performance and Resource Issues",
+      "problems": [
+        "Memory leaks from child processes and HTTP connections.",
+        "CPU usage from inefficient polling or blocking operations.",
+        "File handle leaks and unclosed network resources."
+      ]
+    }
+  ],
+  "backendImmediateActions": [
+    "Remove HTTP server; use direct process communication via stdin/stdout.",
+    "Implement robust process management: restart, cleanup, error recovery for SWI-Prolog.",
+    "Add comprehensive error handling and specific error messages for all backend operations.",
+    "Simplify communication protocol: use text-based or line-delimited messages instead of complex JSON.",
+    "Add request queuing and serialization for Prolog queries.",
+    "Refactor platform detection and process spawning to be async and robust.",
+    "Add session and state cleanup on extension reload and shutdown.",
+    "Test and validate advanced features (N3, CLP) with proper error reporting.",
+    "Add unit and integration tests for backend reliability and error scenarios."
+  ]
+}

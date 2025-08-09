@@ -14,7 +14,7 @@ import {
 } from 'vscode';
 import { ExecutableFinder } from '../utils/executableFinder';
 import { PlatformUtils } from '../utils/platformUtils';
-import { InstallationGuide } from './installationGuide';
+import { InstallationGuide } from './installation/InstallationGuide';
 
 export class PrologFormatter
   implements DocumentRangeFormattingEditProvider, DocumentFormattingEditProvider {
@@ -171,17 +171,19 @@ export class PrologFormatter
     let min = 0;
     const clausesArray = [];
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i] && typeof arrayStart[i].index === 'number' && arrayStart[i].index >= min) {
+      const start = arrayStart[i];
+      if (start !== undefined && typeof start.index === 'number' && start.index >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
+          const end = arrayEnd[j];
           if (
-            arrayEnd[j] &&
-            typeof arrayEnd[j].index === 'number' &&
-            arrayEnd[j].index > (arrayStart[i]?.index ?? 0)
+            end !== undefined &&
+            typeof end.index === 'number' &&
+            end.index > start.index
           ) {
-            min = arrayEnd[j].index;
+            min = end.index;
             clausesArray.push([
-              (arrayStart[i]?.index ?? 0) + (typeof offset === 'number' ? offset : 0),
-              (arrayEnd[j]?.index ?? 0) + (typeof offset === 'number' ? offset : 0),
+              start.index + (typeof offset === 'number' ? offset : 0),
+              end.index + (typeof offset === 'number' ? offset : 0),
             ]);
             break;
           }
@@ -221,17 +223,19 @@ export class PrologFormatter
     const clausesArray = [];
 
     for (let i = 0; i < arrayStart.length; i++) {
-      if (arrayStart[i] && typeof arrayStart[i].index === 'number' && arrayStart[i].index >= min) {
+      const start = arrayStart[i];
+      if (start !== undefined && typeof start.index === 'number' && start.index >= min) {
         for (let j = 0; j < arrayEnd.length; j++) {
+          const end = arrayEnd[j];
           if (
-            arrayEnd[j] &&
-            typeof arrayEnd[j].index === 'number' &&
-            arrayEnd[j].index > (arrayStart[i]?.index ?? 0)
+            end !== undefined &&
+            typeof end.index === 'number' &&
+            end.index > start.index
           ) {
-            min = arrayEnd[j].index;
+            min = end.index;
             clausesArray.push([
-              arrayStart[i]?.index ?? 0,
-              arrayEnd[j]?.index ?? 0,
+              start.index,
+              end.index,
             ]);
             break;
           }
@@ -507,7 +511,7 @@ export class PrologFormatter
         const endLineLength = endLine[i]?.[0]?.length ?? 0;
         const array0deepIndex = array0deep[j]?.index ?? 0;
         const array0deepLength = array0deep[j]?.[0]?.length ?? 0;
-        
+
         if (
           endLineIndex >= array0deepIndex &&
           endLineIndex + endLineLength < array0deepIndex + array0deepLength

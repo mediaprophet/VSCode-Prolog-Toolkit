@@ -14,7 +14,7 @@ import {
 } from 'vscode';
 import { ExecutableFinder } from '../utils/executableFinder';
 import { PlatformType, PlatformUtils } from '../utils/platformUtils';
-import { InstallationGuide } from './installationGuide';
+import { InstallationGuide } from './installation/InstallationGuide';
 
 /**
  * Shell information interface

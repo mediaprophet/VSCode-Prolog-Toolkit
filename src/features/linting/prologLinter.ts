@@ -16,22 +16,22 @@ import {
   window,
   workspace,
 } from 'vscode';
-import { InstallationGuide } from '../installationGuide';
-import { ConfigurationManager } from './configurationManager';
-import { ProcessExecutor } from './processExecutor';
-import { DiagnosticParser } from './diagnosticParser';
+import { InstallationGuide } from '../installation/InstallationGuide';
 import { CodeActionProvider as PrologCodeActionProvider } from './codeActionProvider';
-import { NavigationProvider } from './navigationProvider';
 import { CommandManager } from './commandManager';
+import { ConfigurationManager } from './configurationManager';
+import { DiagnosticParser } from './diagnosticParser';
 import {
-  IConfigurationManager,
-  IProcessExecutor,
-  IDiagnosticParser,
   ICodeActionProvider,
-  INavigationProvider,
   ICommandManager,
+  IConfigurationManager,
+  IDiagnosticParser,
+  INavigationProvider,
+  IProcessExecutor,
   RunTrigger,
 } from './interfaces';
+import { NavigationProvider } from './navigationProvider';
+import { ProcessExecutor } from './processExecutor';
 
 /**
  * Main Prolog Linter class that orchestrates all linting functionality
@@ -52,8 +52,8 @@ export default class PrologLinter implements CodeActionProvider {
   private outputChannel: OutputChannel | null = null;
 
   // Document listeners
-  private documentListener: Disposable;
-  private openDocumentListener: Disposable;
+  private documentListener!: Disposable;
+  private openDocumentListener!: Disposable;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private context: ExtensionContext) {
@@ -62,10 +62,10 @@ export default class PrologLinter implements CodeActionProvider {
     this.processExecutor = new ProcessExecutor(context);
     this.diagnosticParser = new DiagnosticParser();
     this.codeActionProvider = new PrologCodeActionProvider();
-    
+
     // Initialize output channel
     this.initializeOutputChannel();
-    
+
     // Initialize navigation and command managers (they need the diagnostic collection)
     this.diagnosticCollection = languages.createDiagnosticCollection();
     this.navigationProvider = new NavigationProvider(this.diagnosticCollection, this.outputChannel!);
@@ -190,7 +190,9 @@ export default class PrologLinter implements CodeActionProvider {
         : `Failed to run prolog executable. Reason is unknown.`;
     }
 
-    this.outputMsg(message);
+    if (message != null) {
+      this.outputMsg(message);
+    }
   }
 
   /**
@@ -229,7 +231,13 @@ export default class PrologLinter implements CodeActionProvider {
       workspace.textDocuments.forEach(this.triggerLinter, this);
     } catch (error) {
       console.error('Failed to load linter configuration:', error);
-      this.outputMsg(`Configuration error: ${error.message || error}`);
+      let errorMsg = 'Configuration error';
+      if (typeof error === 'object' && error && 'message' in error) {
+        errorMsg = `Configuration error: ${(error as any).message}`;
+      } else {
+        errorMsg = `Configuration error: ${String(error)}`;
+      }
+      this.outputMsg(errorMsg);
     }
   }
 

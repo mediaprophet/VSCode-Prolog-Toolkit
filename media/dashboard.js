@@ -59,6 +59,38 @@
   });
 
   function updateDashboard(data) {
+    // Update backend server status
+    const backendStatus = document.getElementById('backendStatus');
+    const backendIndicator = backendStatus.querySelector('.status-indicator');
+    const backendDetails = document.getElementById('backendDetails');
+    if (data.backend) {
+      let stateIcon = '❔', stateText = 'Unknown', handshakeIcon = '❔', handshakeText = 'Unknown', errorText = '-';
+      switch (data.backend.state) {
+        case 'not_started':
+          stateIcon = '⏹️'; stateText = 'Not Started'; break;
+        case 'starting':
+          stateIcon = '🔄'; stateText = 'Starting...'; break;
+        case 'running':
+          stateIcon = '✅'; stateText = 'Running'; break;
+        case 'error':
+          stateIcon = '❌'; stateText = 'Error'; break;
+      }
+      handshakeIcon = data.backend.handshakeOk ? '🤝' : '❌';
+      handshakeText = data.backend.handshakeOk ? 'Success' : 'Failed';
+      errorText = data.backend.lastError ? escapeHtml(data.backend.lastError) : '-';
+
+      backendIndicator.className = 'status-indicator ' + (data.backend.state === 'running' && data.backend.handshakeOk ? 'success' : (data.backend.state === 'error' ? 'error' : 'loading'));
+      backendIndicator.innerHTML = `<span class="status-icon">${stateIcon}</span><span class="status-text">${stateText}</span>`;
+      document.getElementById('backendState').textContent = stateText;
+      document.getElementById('backendHandshake').innerHTML = `${handshakeIcon} ${handshakeText}`;
+      document.getElementById('backendLastError').textContent = errorText;
+      backendDetails.style.display = 'block';
+    } else {
+      backendIndicator.className = 'status-indicator loading';
+      backendIndicator.innerHTML = '<span class="status-icon">🔄</span><span class="status-text">Checking backend server...</span>';
+      backendDetails.style.display = 'none';
+    }
+
     // Update installation status
     const installationStatus = document.getElementById('installationStatus');
     const statusIndicator = installationStatus.querySelector('.status-indicator');

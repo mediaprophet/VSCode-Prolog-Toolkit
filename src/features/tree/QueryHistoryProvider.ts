@@ -43,9 +43,22 @@ export class QueryHistoryProvider implements vscode.TreeDataProvider<QueryHistor
     this.refresh();
   }
 
-  // Clear the query history (UI only; actual clearing logic can be implemented as needed)
-  public async clearHistory() {
-    // TODO: implement actual clearing if persistent storage is used
+  /**
+   * Clear the query history (persistent and UI)
+   * @param orchestrator Optional QueryHistoryOrchestrator for persistent clearing
+   */
+  public async clearHistory(orchestrator?: any) {
+    if (orchestrator && typeof orchestrator.getHistory === 'function' && typeof orchestrator.updateQuery === 'function') {
+      // Remove all entries from persistent storage
+      const entries = await orchestrator.getHistory();
+      if (Array.isArray(entries)) {
+        for (const entry of entries) {
+          if (entry.id) {
+            await orchestrator.logic.storage.deleteEntry(entry.id);
+          }
+        }
+      }
+    }
     this.setFilterText('');
     this.refresh();
   }

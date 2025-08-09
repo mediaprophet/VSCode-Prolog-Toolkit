@@ -10,10 +10,13 @@ let extensionManager: ExtensionManager | null = null;
 // Your extension is activated the very first time the command is executed
 export async function activate(context: ExtensionContext) {
   try {
+    console.log('[Prolog Toolkit] Extension activation started.');
     // Get the singleton extension manager instance
     extensionManager = ExtensionManager.getInstance();
+    console.log('[Prolog Toolkit] ExtensionManager instance obtained.');
     // Activate the extension through the manager
     await extensionManager.activate(context);
+    console.log('[Prolog Toolkit] ExtensionManager activated.');
 
     // Register Prolog terminal profile provider
     const vscode = await import('vscode');
@@ -23,6 +26,7 @@ export async function activate(context: ExtensionContext) {
           const config = vscode.workspace.getConfiguration('prolog');
           const exe = config.get('executablePath', 'swipl');
           const args = config.get('terminal.runtimeArgs', []);
+          console.log('[Prolog Toolkit] Providing Prolog terminal profile. exe:', exe, 'args:', args);
           return new vscode.TerminalProfile({
             name: 'Prolog REPL',
             shellPath: exe,
@@ -31,6 +35,11 @@ export async function activate(context: ExtensionContext) {
         },
       })
     );
+    console.log('[Prolog Toolkit] Terminal profile provider registered.');
+
+    // Log UI initialization
+    console.log('[Prolog Toolkit] Initiating UI registration and providers.');
+    // If UIService or similar is used, add logs there as well (see uiService.ts)
   } catch (error) {
     console.error('[Extension] Failed to activate extension:', error);
     throw error;
@@ -41,11 +50,12 @@ export async function activate(context: ExtensionContext) {
 export async function deactivate() {
   if (extensionManager) {
     try {
-      await extensionManager.deactivate();
+      console.log('[Prolog Toolkit] Deactivating extension...');
+      // No deactivate method on ExtensionManager; just cleanup reference
+      extensionManager = null;
+      console.log('[Prolog Toolkit] Extension deactivated (reference cleared).');
     } catch (error) {
       console.error('[Extension] Error during deactivation:', error);
-    } finally {
-      extensionManager = null;
     }
   }
 }

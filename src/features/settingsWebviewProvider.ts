@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { PlatformUtils } from '../utils/platformUtils';
-import { InstallationChecker } from './installationChecker';
-import { InstallationGuide } from './installationGuide';
+import { InstallationChecker } from './installation/InstallationChecker';
+import { InstallationGuide } from './installation/InstallationGuide';
 
 export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'prologSettings';
@@ -708,18 +708,18 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
     try {
       const config = vscode.workspace.getConfiguration('prolog');
       const executablePath = config.get<string>('executablePath', 'swipl');
-      const detailedResult = await this.installationChecker.validateSwiplPathDetailed(executablePath);
-      if (detailedResult.found) {
-        const version = detailedResult.version || (await this.installationChecker.getSwiplVersion(executablePath));
+      const isValid = await this.installationChecker.validateSwiplPath(executablePath);
+      if (isValid) {
+        const version = await this.installationChecker.getSwiplVersion(executablePath);
         this._view.webview.postMessage({
           type: 'testResult',
           success: true,
           message: `SWI-Prolog is working correctly (version ${version})`,
           details: {
-            path: detailedResult.path,
+            path: executablePath,
             version,
-            permissions: detailedResult.permissions,
-            issues: detailedResult.issues || [],
+            permissions: 'unknown',
+            issues: [],
           },
         });
       } else {
@@ -728,9 +728,9 @@ export class SettingsWebviewProvider implements vscode.WebviewViewProvider {
           success: false,
           message: 'SWI-Prolog executable is not valid or not accessible.',
           details: {
-            path: detailedResult.path,
-            permissions: detailedResult.permissions,
-            issues: detailedResult.issues || ['Unknown error'],
+            path: executablePath,
+            permissions: 'unknown',
+            issues: ['Unknown error'],
           },
           troubleshooting: [
             'Check that SWI-Prolog is installed and accessible in your PATH.',

@@ -67,6 +67,18 @@ handler(Request) :-
         cors_enable,
         http_read_json_dict(Request, DictIn, [value_string_as(atom)]),
         format(user_error, '[prolog_json_server] Received request: ~w~n', [DictIn]),
+        % Handle file upload endpoint
+        ( DictIn = _{cmd:upload_file, id:Id, filename:Filename, content_base64:ContentB64}
+        -> catch(
+                handle_upload_file(Filename, ContentB64, Id, DictOut),
+                Err,
+                (
+                    format(user_error, '[prolog_json_server] Error in handle_upload_file: ~w~n', [Err]),
+                    DictOut = _{id:Id, status:error, error:Err}
+                )
+            ),
+            reply_json_dict(DictOut, [serialize_unknown(true)])
+        ;
         (   DictIn = _{cmd:Cmd, id:Id}
         ->  catch(
                 handle_cmd(Cmd, DictIn, Id, DictOut),
@@ -81,6 +93,33 @@ handler(Request) :-
         ->  maplist(process_batch_element, DictIn, Responses),
             reply_json_dict(Responses, [serialize_unknown(true)])
         ;   reply_json_dict(_{status:error, error:'missing_cmd_or_id'}, [serialize_unknown(true)])
+        )
+        )
+    ).
+
+% Handle file upload (base64 in JSON)
+handle_upload_file(Filename, ContentB64, Id, DictOut) :-
+    catch(
+        (   setup_call_cleanup(
+                open(Filename, write, Stream, [type(binary)]),
+                (   base64:base64(ContentB64, Bytes),
+                    format(user_error, '[prolog_json_server] Writing ~w bytes to ~w~n', [Bytes, Filename]),
+                    format(Stream, '~s', [Bytes])
+                ),
+                close(Stream)
+            ),
+            % Consult the uploaded file
+            (   catch(user:consult(Filename), Err, (
+                        format(user_error, '[prolog_json_server] Consult after upload failed: ~w~n', [Err]),
+                        DictOut = _{id:Id, status:error, error:Err},
+                        fail
+                    ))
+            ->  DictOut = _{id:Id, status:ok, result:'uploaded_and_consulted'}
+            )
+        ),
+        Err,
+        (   format(user_error, '[prolog_json_server] File upload failed: ~w~n', [Err]),
+            DictOut = _{id:Id, status:error, error:Err}
         )
     ).
 

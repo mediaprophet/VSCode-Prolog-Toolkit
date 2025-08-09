@@ -1,0 +1,67 @@
+{
+  "title": "VSCode-Prolog-Toolkit Setup Refactor & Enhancement Plan",
+  "date": "2025-08-09",
+  "objectives": [
+    "Fully modularize and productionize installation/setup logic.",
+    "Enhance user experience and diagnostics in the setup flow.",
+    "Ensure robust support for HTTP-based Prolog backend integration."
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Audit and remove all legacy installation logic and references. Ensure only the modular InstallationGuide, InstallationChecker, and PackageManagerIntegration are used."
+    },
+    {
+      "step": 2,
+      "description": "Implement all required methods in InstallationGuide (showInstallationGuideDialog, runSetupWizard, etc.) and ensure robust error handling and user feedback."
+    },
+    {
+      "step": 3,
+      "description": "Replace QuickPick-based setup wizard with a modern webview-based wizard for a richer, multi-step, and interactive user experience."
+    },
+    {
+      "step": 4,
+      "description": "Integrate full diagnostics and troubleshooting into the setup wizard, leveraging InstallationChecker for actionable recommendations."
+    },
+    {
+      "step": 5,
+      "description": "Add platform-specific, step-by-step installation instructions, including direct links, commands, and package manager integration."
+    },
+    {
+      "step": 6,
+      "description": "Implement success/failure dialogs with recommendations, and provide a 'Report Issue' button that pre-fills diagnostics for user support."
+    },
+    {
+      "step": 7,
+      "description": "Ensure all setup and installation logic is covered by robust automated tests (unit and integration)."
+    },
+    {
+      "step": 8,
+      "description": "Add accessibility and localization support to all user-facing setup flows."
+    },
+    {
+      "step": 9,
+      "description": "(Optional) Add opt-in telemetry for setup/diagnostics to improve future user experience."
+    },
+    {
+      "step": 10,
+      "description": "Validate that all Prolog setup flows (auto-detect, manual, package manager, etc.) are HTTP-ready and that the Prolog backend is configured to support the HTTP interface (apiServer.enabled, port, etc.)."
+    },
+    {
+      "step": 11,
+      "description": "If any setup method does not use HTTP (e.g., only sets executablePath), add a step to prompt the user to enable and configure the HTTP backend, and verify connectivity."
+    },
+    {
+      "step": 12,
+      "description": "Document the full setup and troubleshooting process in the user guide and developer docs."
+    }
+  ],
+  "http_interface_check": {
+    "non_http_methods_detected": true,
+    "actions": [
+      "Prompt user to enable and configure the HTTP backend after non-HTTP setup.",
+      "Add wizard step to test HTTP connectivity and display backend status.",
+      "Update documentation to clarify HTTP requirements for advanced features."
+    ]
+  }
+}

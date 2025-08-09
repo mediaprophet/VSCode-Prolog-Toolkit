@@ -16,33 +16,62 @@
 // To automate: Add new entry points to the array below.
 
 import fs from 'fs';
+import path from 'path';
 
-// Main extension/server entry points
-const entryPoints = [
-  { src: 'src/features/lsp/server.ts', out: 'out/pub/features/lsp/server.js' },
-  { src: 'src/prologBackend.ts', out: 'out/pub/prologBackend.js' },
-  { src: 'src/features/prologDebugger.ts', out: 'out/pub/features/prologDebugger.js' },
-  { src: 'src/features/prologDebugSession.ts', out: 'out/pub/features/prologDebugSession.js' },
-  { src: 'src/extension.ts', out: 'out/pub/extension.js' },
-];
-
-// Add all webview-ui/*.ts files as entry points (output as .js in out/webview-ui/)
-const webviewUiDir = 'webview-ui';
-const webviewUiOutDir = 'out/webview-ui';
-if (fs.existsSync(webviewUiDir)) {
-  for (const file of fs.readdirSync(webviewUiDir)) {
-    if (file.endsWith('.ts')) {
-      entryPoints.push({
-        src: `${webviewUiDir}/${file}`,
-        out: `${webviewUiOutDir}/${file.replace(/\.ts$/, '.js')}`,
-      });
+// Auto-discover all main entry points in src/ (excluding test, types, utils)
+function discoverSrcEntryPoints() {
+  const srcDir = 'src';
+  const outDir = 'out/pub';
+  const entries = [];
+  function walk(dir) {
+    for (const file of fs.readdirSync(dir)) {
+      const full = path.join(dir, file);
+      if (fs.statSync(full).isDirectory()) {
+        // Skip test, types, utils, and node_modules
+        if (/test|types|utils|node_modules|__mocks__|__tests__/i.test(file)) continue;
+        walk(full);
+      } else if (file.endsWith('.ts')) {
+        // Exclude .d.ts and test files
+        if (file.endsWith('.d.ts') || /test|spec|mock/i.test(file)) continue;
+        // Output path mirrors src/ structure under out/pub/
+        const rel = path.relative(srcDir, full);
+        entries.push({
+          src: full.replace(/\\/g, '/'),
+          out: path.join(outDir, rel).replace(/\\/g, '/').replace(/\.ts$/, '.js'),
+        });
+      }
     }
   }
+  walk(srcDir);
+  return entries;
 }
+
+// Auto-discover all webview-ui/*.ts files
+function discoverWebviewUiEntryPoints() {
+  const webviewUiDir = 'webview-ui';
+  const webviewUiOutDir = 'out/webview-ui';
+  const entries = [];
+  if (fs.existsSync(webviewUiDir)) {
+    for (const file of fs.readdirSync(webviewUiDir)) {
+      if (file.endsWith('.ts')) {
+        entries.push({
+          src: `${webviewUiDir}/${file}`,
+          out: `${webviewUiOutDir}/${file.replace(/\.ts$/, '.js')}`,
+        });
+      }
+    }
+  }
+  return entries;
+}
+
+const entryPoints = [
+  ...discoverSrcEntryPoints(),
+  ...discoverWebviewUiEntryPoints(),
+];
+
 
 
 import esbuild from 'esbuild';
-import path from 'path';
 import { copyDirSync } from './scripts/copyDirSync.js';
 
 

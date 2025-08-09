@@ -12,4 +12,17 @@ export class PrologConcurrencyManager extends EventEmitter {
     // ...setup logic...
   }
   // ...concurrency, queue, resource logic...
+
+  public getConcurrencyStatus() {
+    // TODO: Implement real logic
+    return { status: 'ok' };
+  }
+  public getQueryStatistics() {
+    // TODO: Implement real logic
+    return { stats: {} };
+  }
+  public getSchedulerStatistics() {
+    // TODO: Implement real logic
+    return { scheduler: {} };
+  }
 }
